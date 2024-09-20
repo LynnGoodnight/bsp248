@@ -21,7 +21,7 @@
 srun echo "Starting: in sbatch we asked for 8 threads and 256G meme for count step"
 srun echo `date`
 
-cd /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_247/lily/
+cd /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/
 mkdir -p stages/count
 cd stages/count
 export PATH=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/local/bin/:$PATH
