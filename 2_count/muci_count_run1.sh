@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## run this with: sbatch muci_count_11.sh
+## run this with: sbatch muci_count_run1.sh
 ## check queue with squeue
 ##
 ## this script aligns sequencing reads in FASTQ files to a reference transcriptome and generates a number of  outputs
@@ -31,65 +31,66 @@ reference_transcriptome=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/local
 fastqs_path=/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/demux/run_1_demux/outs/fastq_path/2222W7FNX
 
 # run 1
-# sample 06
+# sample parameter use the same numbering as index file, the id parameter is new assigned to make numbering in analysis clearer
 /mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger count  \
-      --id=muci_sample_06_count \
-      --fastqs=$fastqs_path \
-      --sample=6  \
-      --transcriptome=$reference_transcriptome
-
-# sample 05
-/mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger count  \
-      --id=muci_sample_05_count \
-      --fastqs=$fastqs_path \
-      --sample=5  \
-      --transcriptome=$reference_transcriptome
-
-# sample 04
-/mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger count  \
-      --id=muci_sample_04_count \
+      --id=muci_sample_01_count \
       --fastqs=$fastqs_path \
       --sample=4  \
       --transcriptome=$reference_transcriptome
 
+# sample 05
+/mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger count  \
+      --id=muci_sample_02_count \
+      --fastqs=$fastqs_path \
+      --sample=5  \
+      --transcriptome=$reference_transcriptome
+
+# sample 06
+/mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger count  \
+      --id=muci_sample_03_count \
+      --fastqs=$fastqs_path \
+      --sample=6  \
+      --transcriptome=$reference_transcriptome
+
+
 # sample 07
 /mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger count  \
-      --id=muci_sample_07_count \
+      --id=muci_sample_04_count \
       --fastqs=$fastqs_path \
       --sample=7  \
       --transcriptome=$reference_transcriptome
 
 # sample 08
 /mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger count  \
-      --id=muci_sample_08_count \
+      --id=muci_sample_05_count \
       --fastqs=$fastqs_path \
       --sample=8  \
       --transcriptome=$reference_transcriptome
 
 # sample 09
 /mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger count  \
-      --id=muci_sample_09_count \
+      --id=muci_sample_06_count \
       --fastqs=$fastqs_path \
       --sample=9  \
       --transcriptome=$reference_transcriptome
 
 # sample 10
 /mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger count  \
-      --id=muci_sample_10_count \
+      --id=muci_sample_07_count \
       --fastqs=$fastqs_path \
       --sample=10  \
       --transcriptome=$reference_transcriptome
 
 # sample 11
 /mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger count  \
-      --id=muci_sample_11_count \
+      --id=muci_sample_08_count \
       --fastqs=$fastqs_path \
       --sample=11  \
       --transcriptome=$reference_transcriptome
 
 # sample 12
 /mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger count  \
-      --id=muci_sample_12_count \
+      --id=muci_sample_09_count \
       --fastqs=$fastqs_path \
       --sample=12  \
       --transcriptome=$reference_transcriptome
