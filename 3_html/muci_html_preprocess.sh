@@ -32,7 +32,7 @@ echo "sampSet" $sampSet
 echo "here: " `pwd`
 echo "running date: " `date`
 
-cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code
+cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code/bsp248
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_preprocess_${sampSet}.html"
 
 /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('processing_all_lily.Rmd',  output_file=\"${cF}\")"
