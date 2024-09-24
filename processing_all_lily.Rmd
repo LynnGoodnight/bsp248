@@ -203,217 +203,223 @@ if(file.exists("preprocess2.RData"))
 
 <!-- Swapping was extremely minimal (< 0.01). We've removed the swapped reads anyways, but it was hardly consequential. -->
 
-<!-- # QC of droplets -->
-<!-- ## 3 Filtering out empty droplets -->
-<!-- ### 3.1 check Count by rank plot -->
-<!-- Now we filter empty droplets in each sample separately. -->
-<!-- First we'll look at the Count by rank plot for UMI counts within each droplet, just to get a visual overview of whether anything is odd. -->
-<!-- Each plot shows the total UMI count of each droplet against their rank. Droplets are ranked based on their total UMI count. -->
+# QC of droplets
+## 3 Filtering out empty droplets
+### 3.1 check Count by rank plot
+Now we filter empty droplets in each sample separately.
+First we'll look at the Count by rank plot for UMI counts within each droplet, just to get a visual overview of whether anything is odd.
+Each plot shows the total UMI count of each droplet against their rank. Droplets are ranked based on their total UMI count.
 
-<!-- ```{r produce Count by rank plot for UMI counts, fig.width=10 } -->
+```{r produce Count by rank plot for UMI counts, fig.width=10 }
 
-<!-- Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter_brs = FALSE, before_filter_brs = NULL) -->
-<!-- { -->
-<!--   if(calculate_brs) -->
-<!--   { -->
-<!--   brs <- lapply(sce_list, function(x) { -->
-<!--     temp <- counts(x) -->
-<!--     return(barcodeRanks(temp, lower = 200, fit.bounds = c(300,35000)))}) -->
-<!--   # barcodeRanks function: Compute barcode rank statistics and identify the knee and inflection points on the total count curve. -->
-<!--   } -->
+Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter_brs = FALSE, before_filter_brs = NULL)
+{
+  if(calculate_brs)
+  {
+  brs <- lapply(sce_list, function(x) {
+    temp <- counts(x)
+    return(barcodeRanks(temp, lower = 200, fit.bounds = c(300,35000)))})
+  # barcodeRanks function: Compute barcode rank statistics and identify the knee and inflection points on the total count curve. lower = 200, fit.bounds = c(300,35000) are used to alleviate the effect of noise when fit model
+  # lower	
+  # A numeric scalar specifying the lower bound on the total UMI count, at or below which all barcodes are assumed to correspond to empty droplets.
+  # 
+  # fit.bounds	
+  # A numeric vector of length 2, specifying the lower and upper bounds on the total UMI count from which to obtain a section of the curve for spline fitting.
+  }
 
-<!--   par(mfrow=c(1, 2)) -->
-<!--   for(i in 1:length(brs)){ -->
-<!--     # returning only unique for plotting speed -->
-<!--     uniq <- !duplicated(brs[[i]]$rank) -->
-<!--     plot(brs[[i]]$rank[uniq], brs[[i]]$total[uniq], log="xy", -->
-<!--          xlab="Rank", ylab="Total UMI count", main=unique(sce_list[[i]]$Sample), cex.lab=1.2) -->
-<!--     if(use_before_filter_brs) -->
-<!--     { -->
-<!--     abline(h=metadata(before_filter_brs[[i]])$inflection, col="darkgreen", lty=2) -->
-<!--     abline(h=metadata(before_filter_brs[[i]])$knee, col="dodgerblue", lty=2) -->
-<!--     legend("bottomleft", -->
-<!--            legend=c(paste("Knee",metadata(before_filter_brs[[i]])$knee), -->
-<!--                     paste("Inflection",metadata(before_filter_brs[[i]])$inflection)), -->
-<!--            col=c( "dodgerblue","darkgreen"), lty=2, cex=1) -->
-<!--     }else -->
-<!--     { -->
-<!--     abline(h=metadata(brs[[i]])$inflection, col="darkgreen", lty=2) -->
-<!--     abline(h=metadata(brs[[i]])$knee, col="dodgerblue", lty=2) -->
-<!--     legend("bottomleft", -->
-<!--            legend=c(paste("Knee",metadata(brs[[i]])$knee), -->
-<!--                     paste("Inflection",metadata(brs[[i]])$inflection)), -->
-<!--            col=c( "dodgerblue","darkgreen"), lty=2, cex=1) -->
-<!--     } -->
+  par(mfrow=c(1, 2))
+  for(i in 1:length(brs)){
+    # returning only unique rank for plotting speed
+    uniq <- !duplicated(brs[[i]]$rank)
+    plot(brs[[i]]$rank[uniq], brs[[i]]$total[uniq], log="xy",
+         xlab="Rank", ylab="Total UMI count", main=unique(sce_list[[i]]$Sample), cex.lab=1.2)
+    if(use_before_filter_brs)
+    {
+    # draw Count by rank plot using knee and inflection points derived from sce_list before filtering empty droplets
+    abline(h=metadata(before_filter_brs[[i]])$inflection, col="darkgreen", lty=2)
+    abline(h=metadata(before_filter_brs[[i]])$knee, col="dodgerblue", lty=2)
+    legend("bottomleft",
+           legend=c(paste("Knee",metadata(before_filter_brs[[i]])$knee),
+                    paste("Inflection",metadata(before_filter_brs[[i]])$inflection)),
+           col=c( "dodgerblue","darkgreen"), lty=2, cex=1)
+    }else
+    {
+    # draw Count by rank plot using knee and inflection points derived from current sce_list 
+    abline(h=metadata(brs[[i]])$inflection, col="darkgreen", lty=2)
+    abline(h=metadata(brs[[i]])$knee, col="dodgerblue", lty=2)
+    legend("bottomleft",
+           legend=c(paste("Knee",metadata(brs[[i]])$knee),
+                    paste("Inflection",metadata(brs[[i]])$inflection)),
+           col=c( "dodgerblue","darkgreen"), lty=2, cex=1)
+    }
 
-<!--   } -->
+  }
 
-<!--   # rm(brs) -->
-<!--   # Reset to default plotting layout -->
-<!--   par(mfrow=c(1, 1)) -->
+  # Reset to default plotting layout
+  par(mfrow=c(1, 1))
 
-<!-- } -->
+}
 
-<!-- Count_by_rank_plot(sce_list, TRUE) -->
+Count_by_rank_plot(sce_list, TRUE)
 
 
-<!-- # use before_filter_brs to store the value of knee and inflection points derived from sce_list before filtering  empty droplets -->
-<!-- before_filter_brs <- lapply(sce_list, function(x) { -->
-<!--     temp <- counts(x) -->
-<!--     return(barcodeRanks(temp, lower = 200, fit.bounds = c(300,35000)))}) -->
+# use before_filter_brs to store the value of knee and inflection points derived from sce_list before filtering  empty droplets
+before_filter_brs <- lapply(sce_list, function(x) {
+    temp <- counts(x)
+    return(barcodeRanks(temp, lower = 200, fit.bounds = c(300,35000)))})
 
 
-<!-- ``` -->
+```
 
-<!-- figure 2. Count by rank plot before filtering empty droplets -->
+figure 2. Count by rank plot before filtering empty droplets
 
-<!-- an ideal knee point should locate at the curve where its slope significantly shifts and become steep, ideal y axis value of this point should over 1000 since total UMI count lower than 1000 might fail in cluster step -->
+an ideal knee point should locate at the curve where its slope significantly shifts and become steep, ideal y axis value of this point should over 1000 since total UMI count lower than 1000 might fail in cluster step
 
-<!-- need to check: -->
-<!-- what y-axis value of knee and inflection for this data are reasonable? -->
+need to check:
+what y-axis value of knee and inflection for this data are reasonable?
 
-<!-- an ideal inflection point should locate at the middle of a steep slope of the curve, ideal value over 500 -->
+an ideal inflection point should locate at the middle of a steep slope of the curve, ideal value over 500
 
-<!-- if under default parameter, due to the interfere of outlier droplets with abnormally high total UMI, estimated knee points of Sample 2,7 are too early. -->
+if under default parameter, due to the interfere of outlier droplets with abnormally high total UMI, estimated knee points of Sample 2,7 are too early.
 
-<!-- Sample 17-18 have a not apparent steep first slope, which may indicate more droplets have cell fragments, since there is no clear separation between empty droplets and cell contain droplets. their inflection points are wrongly estimated in the curve. from sample 18 plot, we can find the start point of plateau has x value around 1000, y value around 1000, means the number of droplets whose total UMI higher than 1000 is around 1000. -->
+Sample 17-18 have a not apparent steep first slope, which may indicate more droplets have cell fragments, since there is no clear separation between empty droplets and cell contain droplets. their inflection points are wrongly estimated in the curve. from sample 18 plot, we can find the start point of plateau has x value around 1000, y value around 1000, means the number of droplets whose total UMI higher than 1000 is around 1000.
 
-<!-- Sample 19, 20 have a more smooth curve and not apparent plateau, their estimated inflection point y-axis values are a little higher than other samples but their position at curve is reasonable. but since these 2 samples have different sample types than others, so the higher inflection values are fine. -->
+Sample 19, 20 have a more smooth curve and not apparent plateau, their estimated inflection point y-axis values are a little higher than other samples but their position at curve is reasonable. but since these 2 samples have different sample types than others, so the higher inflection values are fine.
 
 
-<!-- sample 9-16 form run 2 all have relative low inflection values than run 1, which are fine since different sequencing run can produce vastly different UMI counts across multiple samples. and they also have a little more droplets left after empty droplets filtering based on inflection points. -->
+sample 9-16 form run 2 all have relative low inflection values than run 1, which are fine since different sequencing run can produce vastly different UMI counts across multiple samples. and they also have a little more droplets left after empty droplets filtering based on inflection points.
 
 
-<!-- estimated knee point of several samples 10,11,17 might not accurate, but it's fine since we filter based on inflection point. -->
+estimated knee point of several samples 10,11,17 might not accurate, but it's fine since we filter based on inflection point.
 
-<!-- 17,18 suspect wrong wrongly estimated knee and inflection points location. inflection points location of 17, 18 are too low, also result in too much droplets left after inflection based filtering. might due to total UMI of droplets are much lower in these 2 sample, therefore the estimation is interfered. tuning parameter can't fix this estimation. we will keep these low total UMI droplets now, will check their cluster and marker genes expression later to explore if they are technical noise or biological meaningful event, and decide whether to keep these low total UMI droplets -->
-<!-- maybe these low total UMI droplets would be fine. -->
+17,18 suspect wrong wrongly estimated knee and inflection points location. inflection points location of 17, 18 are too low, also result in too much droplets left after inflection based filtering. might due to total UMI of droplets are much lower in these 2 sample, therefore the estimation is interfered. tuning parameter can't fix this estimation. we will keep these low total UMI droplets now, will check their cluster and marker genes expression later to explore if they are technical noise or biological meaningful event, and decide whether to keep these low total UMI droplets
+maybe these low total UMI droplets would be fine.
 
-<!-- ### 3.2 background knowledge supplement -->
-<!-- i think we are less interested in these 3 kinds of droplets mentioned above. -->
-<!-- so i prefer set strict qc metrics first to filter out droplets lower than inflection points. -->
+### 3.2 background knowledge supplement
+i think we are less interested in these 3 kinds of droplets mentioned above.
+so i prefer set strict qc metrics first to filter out droplets lower than inflection points.
 
-<!-- develop later: how much of the filtered droplet can still be used, distinguish droplets have ambient RNAs , droplets have transcription inactive intact droplets. -->
+develop later: how much of the filtered droplet can still be used, distinguish droplets have ambient RNAs , droplets have transcription inactive intact droplets.
 
 
 
-<!-- ### 3.3  validate assumption, droplets containing fewer than 100 UMIs do not contain any real droplets -->
+### 3.3  validate assumption, droplets containing fewer than 100 UMIs do not contain any real droplets
 
-<!-- we retrieve droplets whose total UMI count between 0-100, check their P values (possibility of being non-empty droplets) using 'emptyDrops' function, and plot histogram of the predicted P-Value. -->
-<!-- default assumption is droplets containing fewer than 100 UMIs do not contain any real droplets, therefore, in theory P Value of these droplets should near 1 -->
+we retrieve droplets whose total UMI count between 0-100, check their P values (possibility of being non-empty droplets) using 'emptyDrops' function, and plot histogram of the predicted P-Value.
+default assumption is droplets containing fewer than 100 UMIs do not contain any real droplets, therefore, in theory P Value of these droplets should near 1
 
 
-<!-- ```{r calculate P values for droplets containing fewer than 100 UMIs and plot histogram of their P values} -->
-<!-- if(file.exists("preprocess3.3.RData")) -->
-<!-- { -->
-<!--   load("preprocess3.3.RData") -->
-<!-- }else -->
-<!-- { -->
-<!--   e.out <- vector('list', length=length(sce_list)) -->
-<!--   all.out <- vector('list', length=length(sce_list)) -->
-<!--   for(i in 1:length(sce_list)){ -->
-<!--     set.seed(100) -->
-<!--     e.out[[i]] <- emptyDrops(counts(sce_list[[i]]), niters = 100000, -->
-<!--                              test.ambient = FALSE) -->
-<!--     # Distinguish between droplets containing cell and ambient RNA in a droplet-based single-cell RNA sequencing experiment. -->
+```{r calculate P values for droplets containing fewer than 100 UMIs and plot histogram of their P values to check how accurate the emptyDrops estimate empty droplets}
+if(file.exists("preprocess3.3.RData"))
+{
+  load("preprocess3.3.RData")
+}else
+{
+  e.out <- vector('list', length=length(sce_list))
+  all.out <- vector('list', length=length(sce_list))
+  for(i in 1:length(sce_list)){
+    set.seed(100)
+    e.out[[i]] <- emptyDrops(counts(sce_list[[i]]), niters = 100000,
+                             test.ambient = FALSE)
+    # Distinguish between droplets containing cell and ambient RNA in a droplet-based single-cell RNA sequencing experiment.
 
 
-<!--     set.seed(100) -->
-<!--     limit <- 100   ## set at 100 because this is the default for emptyDrops used above -->
-<!--     # obtain all droplets' possibility of being non-empty droplets -->
+    set.seed(100)
+    limit <- 100   ## set at 100 because this is the default for emptyDrops used above
+    # obtain all droplets' possibility of being non-empty droplets
 
-<!--     all.out[[i]] <- emptyDrops(counts(sce_list[[i]]), lower=limit, test.ambient=TRUE,niters = 100000) -->
-<!--     # test.ambient=TRUE, A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to 'lower'. -->
-<!--     # lower=limit, A numeric scalar specifying the lower bound on the total UMI count,  at or below which all barcodes are assumed to correspond to empty droplets. -->
+    all.out[[i]] <- emptyDrops(counts(sce_list[[i]]), lower=limit, test.ambient=TRUE, niters = 100000)
+    # test.ambient=TRUE, A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to 'lower'.
+    # lower=limit, A numeric scalar specifying the lower bound on the total UMI count,  at or below which all barcodes are assumed to correspond to empty droplets.
 
-<!--   # If test.ambient=TRUE, p-values will be reported for all barcodes with positive total counts, including those not greater than lower, which otherwise were reported as non-NA. This is occasionally useful for diagnostics to ensure that the p-values are well-calibrated for barcodes corresponding to (presumably) empty droplets. -->
+  # If test.ambient=TRUE, p-values will be reported for all barcodes with positive total counts, including those not greater than lower, which otherwise were reported as non-NA. This is occasionally useful for diagnostics to ensure that the p-values are well-calibrated for barcodes corresponding to (presumably) empty droplets.
 
-<!--   # Specifically, if the null hypothesis were true, p-values for low-count barcodes should have a uniform distribution. Any strong peaks in the p-values near zero indicate that emptyDrops is not controlling the FDR correctly. -->
-<!--   # -->
-<!--   # Note that, when setting test.ambient=TRUE in emptyDrops, barcodes less than or equal to lower will still have NA values in FDR. Such barcodes are still explicitly ignored in the correction as these are considered to be uninteresting. -->
+  # Specifically, if the null hypothesis were true, p-values for low-count barcodes should have a uniform distribution. Any strong peaks in the p-values near zero indicate that emptyDrops is not controlling the FDR correctly.
+  #
+  # Note that, when setting test.ambient=TRUE in emptyDrops, barcodes less than or equal to lower will still have NA values in FDR. Such barcodes are still explicitly ignored in the correction as these are considered to be uninteresting.
 
-<!--   save.image("preprocess3.3.RData") -->
+  save.image("preprocess3.3.RData")
 
 
-<!--   } -->
+  }
 
-<!-- } -->
+}
 
-<!-- for(i in 1:length(sce_list)) -->
-<!-- { -->
-<!--   print(summary(e.out[[i]]$FDR <= 0.001)) -->
-<!--   # FDR <= 0.001 indicate droplets containing cell -->
+for(i in 1:length(sce_list))
+{
+  print(summary(e.out[[i]]$FDR <= 0.001))
+  # FDR <= 0.001 indicate droplets containing cell
 
-<!--   print(table(Sig=e.out[[i]]$FDR <= 0.001, Limited=e.out[[i]]$Limited)) -->
-<!--   # niters parameter can be increased in the future if Limited=TRUE and Sig=FALSE  are very high -->
+  print(table(Sig=e.out[[i]]$FDR <= 0.001, Limited=e.out[[i]]$Limited))
+  # niters parameter can be increased in the future if Limited=TRUE and Sig=FALSE  are very high
 
-<!--   hist(all.out[[i]]$PValue[all.out[[i]]$Total <= limit & all.out[[i]]$Total > 0], -->
-<!--      xlab="P-value", main=unique(sce_list[[i]]$Sample), col="grey80") -->
-<!--   # PValue near 0 means this droplet is inferred to be cell contained, near 1 means this droplet is inferred to be ambient RNA, don't contain cell -->
+  hist(all.out[[i]]$PValue[all.out[[i]]$Total <= limit & all.out[[i]]$Total > 0],
+     xlab="P-value", main=unique(sce_list[[i]]$Sample), col="grey80")
+  # PValue near 0 means this droplet is inferred to be cell contained, near 1 means this droplet is inferred to be ambient RNA, don't contain cell
 
-<!-- } -->
+}
 
-<!-- ``` -->
+```
 
-<!-- figure 3. P values histogram of droplets containing fewer than 100 UMIs -->
+figure 3. P values histogram of droplets containing fewer than 100 UMIs
 
-<!-- if Limited=TRUE, it indicates whether the p-value for a droplet is limited by the number of iterations (niters),  it indicate the true p-value could potentially be lower than computed if more iterations were performed. -->
+if Limited=TRUE, it indicates whether the p-value for a droplet is limited by the number of iterations (niters),  it indicate the true p-value could potentially be lower than computed if more iterations were performed.
 
-<!-- "PValue" refers to the statistical p-value obtained from testing each barcode (representing a droplet) for significant deviations from the ambient RNA profile -->
+"PValue" refers to the statistical p-value obtained from testing each barcode (representing a droplet) for significant deviations from the ambient RNA profile
 
-<!-- If any barcodes have Limited=TRUE but does not reject the null hypothesis(), it suggests that niters should be increased. -->
+If any barcodes have Limited=TRUE but does not reject the null hypothesis(), it suggests that niters should be increased.
 
 
-<!-- Number of iterations for all samples looks appropriate now, as all droplets whose value of Limited=TRUE and Sig=FALSE are always 0. -->
+Number of iterations for all samples looks appropriate now, as all droplets whose value of Limited=TRUE and Sig=FALSE are always 0.
 
 
-<!-- i increased niters parameter to 100,000 and the samples 2,5,6,7 now also have number droplets whose value of Limited=TRUE and Sig=FALSE are 0, which improve the results. and also the samples 2 7 have normal FDR values and remain reasonable droplets after filter the empty droplets based on FDR value. -->
+i increased niters parameter to 100,000 and the samples 2,5,6,7 now also have number droplets whose value of Limited=TRUE and Sig=FALSE are 0, which improve the results. and also the samples 2 7 have normal FDR values and remain reasonable droplets after filter the empty droplets based on FDR value.
 
 
 
-<!-- in the histogram, P-values of droplets that are assumed to ambient reads sometimes dip near 1 but have no peaks near 0, coincide with the assumption that droplets containing fewer than 100 UMIs do not contain any real droplets. -->
+in the histogram, P-values of droplets that are assumed to ambient reads sometimes dip near 1 but have no peaks near 0, coincide with the assumption that droplets containing fewer than 100 UMIs do not contain any real droplets.
 
 
 
 
-<!-- ### 3.4 filter the estimated empty droplets and plot total UMI histogram -->
-<!-- Thus we can filter the droplets -->
+### 3.4 filter the estimated empty droplets and plot total UMI histogram
+Thus we can filter the droplets
 
-<!-- ```{r filter the empty droplets based on FDR value and check Count by rank plot after filter the empty droplets,fig.width=10 } -->
+```{r filter the empty droplets based on FDR value and check Count by rank plot after filter the empty droplets, fig.width=10 }
 
-<!-- sce_list_before_filter_empty_droplets <- sce_list -->
-<!-- if(file.exists("preprocess3.4.RData")) -->
-<!-- { -->
-<!--   load("preprocess3.4.RData") -->
-<!-- }else -->
-<!-- { -->
+sce_list_before_filter_empty_droplets <- sce_list
+if(file.exists("preprocess3.4.RData"))
+{
+  load("preprocess3.4.RData")
+}else
+{
 
-<!--   for(i in 1:length(sce_list)) -->
-<!--     { -->
-<!--     sce_list[[i]] <- sce_list[[i]][,which(e.out[[i]]$FDR <= 0.001)] -->
-<!--     # sce_list[[i]] <- sce_list[[i]][,which(e.out[[i]]$Total >= metadata(before_filter_brs[[i]])$inflection )] -->
-<!--     } -->
-<!--     save.image(file = "preprocess3.4.RData") -->
-<!--   } -->
+  for(i in 1:length(sce_list))
+    {
+    sce_list[[i]] <- sce_list[[i]][,which(e.out[[i]]$FDR <= 0.001)]
+    # sce_list[[i]] <- sce_list[[i]][,which(e.out[[i]]$Total >= metadata(before_filter_brs[[i]])$inflection )]
+    }
+    save.image(file = "preprocess3.4.RData")
+  }
 
 
 
-<!-- lapply(sce_list, dim) -->
+lapply(sce_list, dim)
 
 
 
-<!-- Count_by_rank_plot(sce_list, calculate_brs = TRUE, use_before_filter_brs = TRUE, before_filter_brs) -->
+Count_by_rank_plot(sce_list, calculate_brs = TRUE, use_before_filter_brs = TRUE, before_filter_brs)
 
-<!-- ``` -->
-<!-- figure 4. Count by rank plot after filtering empty droplets -->
+```
+figure 4. Count by rank plot after filtering empty droplets
 
-<!-- So the odd slope in Sample 17, 18 also have dramatically large number of droplets that have quiet low total UMI (<600), based on FDR value, these droplets are still estimated as cells and been kept. these low total UMI droplets might be an issue, and we will revisit this as we continue to process and QC. maybe later we will filter all droplets that have quiet low total UMI (<600). -->
+So the odd slope in Sample 17, 18 also have dramatically large number of droplets that have quiet low total UMI (<600), based on FDR value, these droplets are still estimated as cells and been kept. these low total UMI droplets might be an issue, and we will revisit this as we continue to process and QC. maybe later we will filter all droplets that have quiet low total UMI (<600).
 
-<!-- if these droplets are real outliers, them tend to cluster together, with abnormal gene expression, should be observed in UMAP plots. -->
+if these droplets are real outliers, them tend to cluster together, with abnormal gene expression, should be observed in UMAP plots.
 
 
 
-<!-- let's have a look at the distribution total UMI, and filter abnormally high total UMI outlier droplets by set the threshold -->
+let's have a look at the distribution total UMI, and filter abnormally high total UMI outlier droplets by set the threshold
 
 
 <!-- ```{r plot total UMI per droplet histogram before and after filtering and filter abnormally high or low total UMI droplets} -->
