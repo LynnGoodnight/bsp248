@@ -128,12 +128,11 @@ multi_list_bar_plot(sce_list_raw,"before qc filtering", sampNums)
 figure 1. droplet number per sample before preprocess 
 
 
-## 2 Removing swapped drops
+## 2 Removing swapped droplets
 
 Now we want to look for any droplets that have swapped cell barcodes due to use of patterned flow cell sequencing. 8 samples were sequenced in each run, and so swapping could occur anywhere within the sequencing run but not outside of it.
 
 ```{r Removing swapped transcript molecules}
-multi_list_bar_plot <- function(sce, my_flag, sampNums)
 
 if(file.exists("preprocess2.RData"))
 {
@@ -162,50 +161,54 @@ if(file.exists("preprocess2.RData"))
   for (i in 1:9) {
       cleaned[[i]] <- run1[[1]][[i]]
   }
-  for (i in 16:18) {
-      cleaned[[i]] <- run2[[1]][[i-15]]
+  for (i in 10:12) {
+      cleaned[[i]] <- run2[[1]][[i-9]]
+      # head(paste0(colnames(cleaned[[i]]), '-1'))
+      # typeof(run2[[1]][[1]])
+      # names(run2[[1]])
   }
-  
+  # add -1 for each droplet barcode 
   for(i in 1:length(cleaned)){
     colnames(cleaned[[i]]) <- paste0(colnames(cleaned[[i]]), '-1')
   }
-  save.image(file = paste0(work_dir,'preprocess2.RData'))  
-    
-  # take long to run
-
+  
+  # lapply(sce_list, dim)
+  
+  # evaluate how much droplets are removed in this step
+  for (i in 1:9) 
+  {
+    print(i)
+    print(sum(colSums(run1$cleaned[[i]]))/sum(colSums(counts(sce_list[[i]]))))
+  }
+  
+  
+  for (i in 1:3) 
+  {
+    print(i+9)
+    print(sum(colSums(run2$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+9]]))))
+  }
+  
+  # replace original data with clean data that have Removed swapped drops
+  for(i in 1:length(sce_list)){
+    counts(sce_list[[i]])[,colnames(cleaned[[i]])] <- cleaned[[i]]
+      # take long to run this step
+  }
+  
+  rm(cleaned, run1, run2)  
+  save.image(file = paste0(work_dir,'preprocess2.RData'))
 }
-# lapply(sce_list, dim)
 
-
-for (i in 1:9) 
-{
-  print(i)
-  print(sum(colSums(run1$cleaned[[i]]))/sum(colSums(counts(sce_list[[i]]))))
-}
-
-
-for (i in 1:3) 
-{
-  print(sum(colSums(run2$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+16]]))))
-}
-
-# replace original data with clean data that have Removed swapped drops
-for(i in 1:length(sce_list)){
-  counts(sce_list[[i]])[,colnames(cleaned[[i]])] <- cleaned[[i]]
-}
-
-rm(cleaned, run1, run2)
 
 ```
 
 <!-- Swapping was extremely minimal (< 0.01). We've removed the swapped reads anyways, but it was hardly consequential. -->
 
 <!-- # QC of droplets -->
-<!-- ## 3 Filtering out empty droplets  -->
+<!-- ## 3 Filtering out empty droplets -->
 <!-- ### 3.1 check Count by rank plot -->
-<!-- Now we filter empty droplets in each sample separately.  -->
-<!-- First we'll look at the Count by rank plot for UMI counts within each droplet, just to get a visual overview of whether anything is odd.  -->
-<!-- Each plot shows the total UMI count against the rank of the droplets. Droplets are ranked based on their total UMI count. -->
+<!-- Now we filter empty droplets in each sample separately. -->
+<!-- First we'll look at the Count by rank plot for UMI counts within each droplet, just to get a visual overview of whether anything is odd. -->
+<!-- Each plot shows the total UMI count of each droplet against their rank. Droplets are ranked based on their total UMI count. -->
 
 <!-- ```{r produce Count by rank plot for UMI counts, fig.width=10 } -->
 
@@ -215,7 +218,8 @@ rm(cleaned, run1, run2)
 <!--   { -->
 <!--   brs <- lapply(sce_list, function(x) { -->
 <!--     temp <- counts(x) -->
-<!--     return(barcodeRanks(temp, lower = 200, fit.bounds = c(300,35000)))})     -->
+<!--     return(barcodeRanks(temp, lower = 200, fit.bounds = c(300,35000)))}) -->
+<!--   # barcodeRanks function: Compute barcode rank statistics and identify the knee and inflection points on the total count curve. -->
 <!--   } -->
 
 <!--   par(mfrow=c(1, 2)) -->
@@ -228,64 +232,66 @@ rm(cleaned, run1, run2)
 <!--     { -->
 <!--     abline(h=metadata(before_filter_brs[[i]])$inflection, col="darkgreen", lty=2) -->
 <!--     abline(h=metadata(before_filter_brs[[i]])$knee, col="dodgerblue", lty=2) -->
-<!--     legend("bottomleft",  -->
+<!--     legend("bottomleft", -->
 <!--            legend=c(paste("Knee",metadata(before_filter_brs[[i]])$knee), -->
-<!--                     paste("Inflection",metadata(before_filter_brs[[i]])$inflection)),  -->
-<!--            col=c( "dodgerblue","darkgreen"), lty=2, cex=1)       -->
+<!--                     paste("Inflection",metadata(before_filter_brs[[i]])$inflection)), -->
+<!--            col=c( "dodgerblue","darkgreen"), lty=2, cex=1) -->
 <!--     }else -->
 <!--     { -->
 <!--     abline(h=metadata(brs[[i]])$inflection, col="darkgreen", lty=2) -->
 <!--     abline(h=metadata(brs[[i]])$knee, col="dodgerblue", lty=2) -->
-<!--     legend("bottomleft",  -->
+<!--     legend("bottomleft", -->
 <!--            legend=c(paste("Knee",metadata(brs[[i]])$knee), -->
-<!--                     paste("Inflection",metadata(brs[[i]])$inflection)),  -->
-<!--            col=c( "dodgerblue","darkgreen"), lty=2, cex=1)      -->
+<!--                     paste("Inflection",metadata(brs[[i]])$inflection)), -->
+<!--            col=c( "dodgerblue","darkgreen"), lty=2, cex=1) -->
 <!--     } -->
 
 <!--   } -->
 
 <!--   # rm(brs) -->
 <!--   # Reset to default plotting layout -->
-<!--   par(mfrow=c(1, 1))    -->
+<!--   par(mfrow=c(1, 1)) -->
 
 <!-- } -->
 
 <!-- Count_by_rank_plot(sce_list, TRUE) -->
 
+
+<!-- # use before_filter_brs to store the value of knee and inflection points derived from sce_list before filtering  empty droplets -->
 <!-- before_filter_brs <- lapply(sce_list, function(x) { -->
 <!--     temp <- counts(x) -->
-<!--     return(barcodeRanks(temp, lower = 200, fit.bounds = c(300,35000)))})     -->
+<!--     return(barcodeRanks(temp, lower = 200, fit.bounds = c(300,35000)))}) -->
 
 
 <!-- ``` -->
 
-<!-- figure 2. Count by rank plot before filtering empty droplets  -->
+<!-- figure 2. Count by rank plot before filtering empty droplets -->
 
 <!-- an ideal knee point should locate at the curve where its slope significantly shifts and become steep, ideal y axis value of this point should over 1000 since total UMI count lower than 1000 might fail in cluster step -->
 
 <!-- need to check: -->
 <!-- what y-axis value of knee and inflection for this data are reasonable? -->
 
-<!-- an ideal inflection point should locate at the middle of a steep slope of the curve, ideal value over 500   -->
+<!-- an ideal inflection point should locate at the middle of a steep slope of the curve, ideal value over 500 -->
 
 <!-- if under default parameter, due to the interfere of outlier droplets with abnormally high total UMI, estimated knee points of Sample 2,7 are too early. -->
 
-<!-- Sample 17-18 have a not apparent steep first slope, which may indicate more droplets have cell fragments, since there is no clear separation between empty droplets and cell contain droplets. their inflection points are wrongly estimated in the curve. from sample 18 plot, we can find the start point of plateau has x value around 1000, y value around 1000, means the number of droplets whose total UMI higher than 1000 is around 1000.  -->
+<!-- Sample 17-18 have a not apparent steep first slope, which may indicate more droplets have cell fragments, since there is no clear separation between empty droplets and cell contain droplets. their inflection points are wrongly estimated in the curve. from sample 18 plot, we can find the start point of plateau has x value around 1000, y value around 1000, means the number of droplets whose total UMI higher than 1000 is around 1000. -->
 
 <!-- Sample 19, 20 have a more smooth curve and not apparent plateau, their estimated inflection point y-axis values are a little higher than other samples but their position at curve is reasonable. but since these 2 samples have different sample types than others, so the higher inflection values are fine. -->
 
 
-<!-- sample 9-16 form run 2 all have relative low inflection values than run 1, which are fine since different sequencing run can produce vastly different UMI counts across multiple samples. and they also have a little more droplets left after empty droplets filtering based on inflection points.  -->
+<!-- sample 9-16 form run 2 all have relative low inflection values than run 1, which are fine since different sequencing run can produce vastly different UMI counts across multiple samples. and they also have a little more droplets left after empty droplets filtering based on inflection points. -->
 
 
 <!-- estimated knee point of several samples 10,11,17 might not accurate, but it's fine since we filter based on inflection point. -->
 
-<!-- 17,18 suspect wrong wrongly estimated knee and inflection points location. inflection points location of 17, 18 are too low, also result in too much droplets left after inflection based filtering. might due to total UMI of droplets are much lower in these 2 sample, therefore the estimation is interfered. tuning parameter can't fix this estimation. we will keep these low total UMI droplets now, will check their cluster and marker genes expression later to explore if they are technical noise or biological meaningful event, and decide whether to keep these low total UMI droplets   -->
+<!-- 17,18 suspect wrong wrongly estimated knee and inflection points location. inflection points location of 17, 18 are too low, also result in too much droplets left after inflection based filtering. might due to total UMI of droplets are much lower in these 2 sample, therefore the estimation is interfered. tuning parameter can't fix this estimation. we will keep these low total UMI droplets now, will check their cluster and marker genes expression later to explore if they are technical noise or biological meaningful event, and decide whether to keep these low total UMI droplets -->
 <!-- maybe these low total UMI droplets would be fine. -->
 
 <!-- ### 3.2 background knowledge supplement -->
 <!-- i think we are less interested in these 3 kinds of droplets mentioned above. -->
-<!-- so i prefer set strict qc metrics first to filter out droplets lower than inflection points.  -->
+<!-- so i prefer set strict qc metrics first to filter out droplets lower than inflection points. -->
 
 <!-- develop later: how much of the filtered droplet can still be used, distinguish droplets have ambient RNAs , droplets have transcription inactive intact droplets. -->
 
@@ -294,7 +300,7 @@ rm(cleaned, run1, run2)
 <!-- ### 3.3  validate assumption, droplets containing fewer than 100 UMIs do not contain any real droplets -->
 
 <!-- we retrieve droplets whose total UMI count between 0-100, check their P values (possibility of being non-empty droplets) using 'emptyDrops' function, and plot histogram of the predicted P-Value. -->
-<!-- default assumption is droplets containing fewer than 100 UMIs do not contain any real droplets, therefore, in theory P Value of these droplets should near 1  -->
+<!-- default assumption is droplets containing fewer than 100 UMIs do not contain any real droplets, therefore, in theory P Value of these droplets should near 1 -->
 
 
 <!-- ```{r calculate P values for droplets containing fewer than 100 UMIs and plot histogram of their P values} -->
@@ -307,7 +313,7 @@ rm(cleaned, run1, run2)
 <!--   all.out <- vector('list', length=length(sce_list)) -->
 <!--   for(i in 1:length(sce_list)){ -->
 <!--     set.seed(100) -->
-<!--     e.out[[i]] <- emptyDrops(counts(sce_list[[i]]), niters = 100000,  -->
+<!--     e.out[[i]] <- emptyDrops(counts(sce_list[[i]]), niters = 100000, -->
 <!--                              test.ambient = FALSE) -->
 <!--     # Distinguish between droplets containing cell and ambient RNA in a droplet-based single-cell RNA sequencing experiment. -->
 
@@ -323,7 +329,7 @@ rm(cleaned, run1, run2)
 <!--   # If test.ambient=TRUE, p-values will be reported for all barcodes with positive total counts, including those not greater than lower, which otherwise were reported as non-NA. This is occasionally useful for diagnostics to ensure that the p-values are well-calibrated for barcodes corresponding to (presumably) empty droplets. -->
 
 <!--   # Specifically, if the null hypothesis were true, p-values for low-count barcodes should have a uniform distribution. Any strong peaks in the p-values near zero indicate that emptyDrops is not controlling the FDR correctly. -->
-<!--   #  -->
+<!--   # -->
 <!--   # Note that, when setting test.ambient=TRUE in emptyDrops, barcodes less than or equal to lower will still have NA values in FDR. Such barcodes are still explicitly ignored in the correction as these are considered to be uninteresting. -->
 
 <!--   save.image("preprocess3.3.RData") -->
@@ -342,7 +348,7 @@ rm(cleaned, run1, run2)
 <!--   # niters parameter can be increased in the future if Limited=TRUE and Sig=FALSE  are very high -->
 
 <!--   hist(all.out[[i]]$PValue[all.out[[i]]$Total <= limit & all.out[[i]]$Total > 0], -->
-<!--      xlab="P-value", main=unique(sce_list[[i]]$Sample), col="grey80")  -->
+<!--      xlab="P-value", main=unique(sce_list[[i]]$Sample), col="grey80") -->
 <!--   # PValue near 0 means this droplet is inferred to be cell contained, near 1 means this droplet is inferred to be ambient RNA, don't contain cell -->
 
 <!-- } -->
@@ -399,7 +405,7 @@ rm(cleaned, run1, run2)
 <!-- Count_by_rank_plot(sce_list, calculate_brs = TRUE, use_before_filter_brs = TRUE, before_filter_brs) -->
 
 <!-- ``` -->
-<!-- figure 4. Count by rank plot after filtering empty droplets  -->
+<!-- figure 4. Count by rank plot after filtering empty droplets -->
 
 <!-- So the odd slope in Sample 17, 18 also have dramatically large number of droplets that have quiet low total UMI (<600), based on FDR value, these droplets are still estimated as cells and been kept. these low total UMI droplets might be an issue, and we will revisit this as we continue to process and QC. maybe later we will filter all droplets that have quiet low total UMI (<600). -->
 
@@ -407,7 +413,7 @@ rm(cleaned, run1, run2)
 
 
 
-<!-- let's have a look at the distribution total UMI, and filter abnormally high total UMI outlier droplets by set the threshold  -->
+<!-- let's have a look at the distribution total UMI, and filter abnormally high total UMI outlier droplets by set the threshold -->
 
 
 <!-- ```{r plot total UMI per droplet histogram before and after filtering and filter abnormally high or low total UMI droplets} -->
@@ -425,18 +431,18 @@ rm(cleaned, run1, run2)
 
 <!--   lapply(sce_list, function(x){ -->
 
-<!--     hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per cell'), xlab='total UMI counts of a cell', ylab = 'number of droplets',  -->
+<!--     hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per cell'), xlab='total UMI counts of a cell', ylab = 'number of droplets', -->
 <!--          xlim = c(0,20000), breaks = seq(0,200000,by=1000)) -->
 <!--   abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000 -->
 <!--   abline(v=5000, col="blue", lwd=1) -->
 <!--   # a droplet contain an intact cell always have total UMI counts 2000-5000 -->
-<!--   legend("topright", legend=c("2000", "5000"),  -->
+<!--   legend("topright", legend=c("2000", "5000"), -->
 <!--          col=c("red", "blue"), lty=2, cex=1.2) -->
 
 <!-- }) -->
 
 <!-- # Reset to default plotting layout -->
-<!-- par(mfrow=c(1, 1))    -->
+<!-- par(mfrow=c(1, 1)) -->
 <!-- } -->
 <!-- plot_total_UMI_distribution(sce_list) -->
 
@@ -465,7 +471,7 @@ rm(cleaned, run1, run2)
 
 <!-- figure 5. plot total UMI per droplet histogram before and after filtering -->
 
-<!-- from the distribution total UMI plot of sample 17-18, we observe after filtering the low total UMI droplets, the distribution plot looks clearer and the number of droplets with 2000-5000 total UMI is over 3000, which is good and comparable with sample 19-20 in the same run.  -->
+<!-- from the distribution total UMI plot of sample 17-18, we observe after filtering the low total UMI droplets, the distribution plot looks clearer and the number of droplets with 2000-5000 total UMI is over 3000, which is good and comparable with sample 19-20 in the same run. -->
 
 <!-- need to check: -->
 <!-- but in sample 18 the number of droplets with 2000-5000 total UMI is too little. let's check the cluster results of sample 18 to see how severe the issue is and if this sample can provide enough information. -->
@@ -480,7 +486,7 @@ rm(cleaned, run1, run2)
 
 <!-- # Count_by_rank_plot(sce_list, calculate_brs = TRUE, use_before_filter_brs = FALSE) -->
 
-<!-- #plot number of droplets per sample  -->
+<!-- #plot number of droplets per sample -->
 <!-- multi_list_bar_plot(sce_list,"after filtering empty droplets based on inflection point") -->
 
 <!-- for(i in 1:length(sce_list)) -->
@@ -530,7 +536,7 @@ rm(cleaned, run1, run2)
 
 <!-- We then perform quantile-quantile mapping of counts in y from the old to new averages. This approach preserves the mean-variance relationship and improves the precision of estimate of the ambient contribution, but relies on a sensible grouping of similar droplets, e.g., unsupervised clusters or cell type annotations. As such, this function is best used at the end of the analysis to clean up expression -->
 
-<!-- from documentation of function 'removeAmbience', it says this function is largely intended for plot beautification after clustering and cell type annotations finished. rather than real analysis. so i am not sure if it's suitable there to do this step.  -->
+<!-- from documentation of function 'removeAmbience', it says this function is largely intended for plot beautification after clustering and cell type annotations finished. rather than real analysis. so i am not sure if it's suitable there to do this step. -->
 <!-- i don't run this step now. -->
 
 
@@ -540,28 +546,28 @@ rm(cleaned, run1, run2)
 <!-- # sce_list_raw <- sce_list -->
 <!-- # for(i in 1:length(sce_list)){ -->
 <!-- #   amb <- metadata(e.out[[i]])$ambient[,1] -->
-<!-- #   # e.out is the output of function emptyDrops in last step  -->
-<!-- #   # amb save each gene's contribution as ambient in one sample  -->
-<!-- #  -->
+<!-- #   # e.out is the output of function emptyDrops in last step -->
+<!-- #   # amb save each gene's contribution as ambient in one sample -->
+<!-- # -->
 <!-- #   amb_full <- rep(0, nrow((sce_list[[i]]))) -->
 <!-- #   # amb_full has the length of 33028, the number of all genes measured across all sample -->
 <!-- #   names(amb_full) <- rownames(sce_list[[i]]) -->
 <!-- #   amb_full[names(amb)] <- amb -->
-<!-- #   # assign value to some of the elements of amb_full  -->
+<!-- #   # assign value to some of the elements of amb_full -->
 <!-- #   assays(sce_list[[i]], withDimnames=FALSE)$counts <- removeAmbience(counts(sce_list[[i]]), -->
 <!-- #                    ambient=amb_full, groups=sce_list[[i]]$label) -->
-<!-- #   # removeAmbience function there is from DropletUtils library  -->
+<!-- #   # removeAmbience function there is from DropletUtils library -->
 <!-- # } -->
 <!-- # head(amb) -->
 <!-- # head(amb_full) -->
 <!-- # rm(e.out, amb_full, amb) -->
-<!-- #  -->
+<!-- # -->
 <!-- # for(i in 1:length(sce_list)) -->
 <!-- # { -->
 <!-- #   print(sum(assays(sce_list[[i]], withDimnames=FALSE)$counts) / sum(assays(sce_list_raw[[i]], withDimnames=FALSE)$counts)) -->
 <!-- #   # cell number doesn't change for each sample, the total UMI of each sample might change -->
 <!-- # } -->
-<!-- #  -->
+<!-- # -->
 <!-- # rm(sce_list_raw) -->
 
 
@@ -613,7 +619,7 @@ rm(cleaned, run1, run2)
 
 <!-- ## 5 Cellranger filtering comparison -->
 
-<!-- For comparison, we will also read in the cellranger filtered output to see how results compare in terms of number of droplets.  -->
+<!-- For comparison, we will also read in the cellranger filtered output to see how results compare in terms of number of droplets. -->
 
 <!-- ```{r load cellranger filtered output and compare with our filtered output} -->
 <!-- library(SingleCellExperiment) -->
