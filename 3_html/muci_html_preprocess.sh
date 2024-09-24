@@ -25,7 +25,7 @@ module load tools
 
 
 export sampSet="all"
-export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages"
+export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/"
 
 echo "sampSet" $sampSet
 
