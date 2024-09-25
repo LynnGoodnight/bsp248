@@ -489,7 +489,7 @@ we try produce Count by rank plot again using previously predicted inflation and
 # Count_by_rank_plot(sce_list, calculate_brs = TRUE, use_before_filter_brs = FALSE)
 
 #plot number of droplets per sample
-multi_list_bar_plot(sce_list,"after filtering empty droplets based on inflection point")
+multi_list_bar_plot(sce_list,"after filtering empty droplets based on inflection point" )
 
 for(i in 1:length(sce_list))
 {
