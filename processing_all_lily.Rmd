@@ -101,27 +101,30 @@ sce_list_raw <- Filter(Negate(is.null), sce_list_raw)
 sampNums <- length(sce_list_raw)
 
 
-
-multi_list_bar_plot <- function(sce, my_flag, sampNums)
+sce = sce_list_raw
+multi_list_bar_plot <- function(sce, my_flag, seperate_run = 9.5)
 {
   df <- as.data.frame(lapply(sce, dim))
-  colnames(df) = sampNums
-  df =  as.data.frame(t(df))
-  colnames(df) = c("gene_number","droplet_number")
-  df$sample = as.factor(sampNums)
+  df <- as.data.frame(t(df))
+  colnames(df) <- c("gene_number","droplet_number")
+  df$sample <- as.factor(rownames(df))
   library(ggplot2)
   # Basic barplot
-  ggplot(data=df, aes(x=sample, y=droplet_number)) +
+  p1 <- ggplot(data=df, aes(x=sample, y=droplet_number)) +
     geom_bar(stat="identity")+
     geom_text(aes(label=droplet_number), vjust=-0.3, size=3.5) +
-    geom_vline(xintercept = 8.5, color = "red", linetype = "dashed", size = 1)+
-  geom_vline(xintercept = 16.5, color = "blue", linetype = "dashed", size = 1)+
-    ggtitle(paste0("droplet number summary ",my_flag))
-
+    geom_vline(xintercept = seperate_run, color = "red", linetype = "dashed", size = 1)+
+    ggtitle(paste0("droplet number summary ", my_flag))+
+  theme(axis.text.x = element_text(angle = 90)) 
+  # geom_vline(xintercept = 16.5, color = "blue", linetype = "dashed", size = 1)+
+  
+  png(filename='/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/test.png')
+  print(p1)
+  dev.off()
 
 }
 
-multi_list_bar_plot(sce_list_raw,"before qc filtering", sampNums)
+multi_list_bar_plot(sce_list_raw,"before qc filtering", seperate_run = 9.5 )
 
 ```
 
