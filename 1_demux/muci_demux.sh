@@ -24,7 +24,7 @@ mkdir -p lily/stages/demux/
 cd lily/stages/demux/
 export PATH=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/local/bin/:$PATH
 
-/mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger mkfastq --run=/mnt/lustre/RDS-archive/Sequencing/NEXTSEQ/240711_VH01203_33_2222W7FNX/ --sample-sheet=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/sample_index_run1.csv --id=run_1_demux
+# /mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger mkfastq --run=/mnt/lustre/RDS-archive/Sequencing/NEXTSEQ/240711_VH01203_33_2222W7FNX/ --sample-sheet=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/sample_index_run1.csv --id=run_1_demux
 
 /mnt/lustre/RDS-ephemeral/angelopoulos/local/src/cellranger-7.1.0/bin/cellranger mkfastq --run=/mnt/lustre/RDS-archive/Sequencing/NEXTSEQ/240802_VH01203_36_2223K37NX/ --sample-sheet=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/sample_index_run2.csv --id=run_2_demux
 
