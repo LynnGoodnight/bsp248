@@ -152,9 +152,13 @@ if(file.exists("preprocess2.RData"))
 
 ## run 2
   
-  fs <- paste0('muci_sample_', as.character(10:18), '_count/outs/molecule_info.h5')
+  fs <- paste0('muci_sample_', as.character(c(10:14, 16:18)), '_count/outs/molecule_info.h5')
   run2 <- swappedDrops(fs)
+  run2_n <- 8
 
+
+  
+  
 
   # create a empty list to save the data that have Removed swapped drops
   cleaned <- list()
@@ -162,7 +166,7 @@ if(file.exists("preprocess2.RData"))
   for (i in 1:9) {
       cleaned[[i]] <- run1[[1]][[i]]
   }
-  for (i in 10:18) {
+  for (i in 10: (9+run2_n)) {
       cleaned[[i]] <- run2[[1]][[i-9]]
       # head(paste0(colnames(cleaned[[i]]), '-1'))
       # typeof(run2[[1]][[1]])
@@ -183,7 +187,7 @@ if(file.exists("preprocess2.RData"))
   }
   
   
-  for (i in 1:9) 
+  for (i in 1:run2_n) 
   {
     print(i+9)
     print(sum(colSums(run2$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+9]]))))
@@ -475,7 +479,8 @@ print('total UMI per droplet histogram after filtering droplets with abnormally 
 
 plot_total_UMI_distribution(sce_list)
 
-lapply(sce_list, dim)
+# lapply(sce_list, dim)
+multi_list_bar_plot(sce_list,"after filter droplets droplets abnormally high or low total UMI", seperate_run = 9.5 )
 
 ```
 
@@ -498,9 +503,8 @@ we try produce Count by rank plot again using previously predicted inflation and
 
 # Count_by_rank_plot(sce_list, calculate_brs = TRUE, use_before_filter_brs = FALSE)
 
-#plot number of droplets per sample
-multi_list_bar_plot(sce_list,"after filtering empty droplets based on inflection point" )
 
+print('the proportion of droplets remained after filtering empty droplets')
 for(i in 1:length(sce_list))
 {
   print(dim(sce_list[[i]])[2] / dim(sce_list_raw[[i]])[2])
