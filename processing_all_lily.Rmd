@@ -117,7 +117,7 @@ multi_list_bar_plot <- function(sce, my_flag, seperate_run = 9.5)
     ggtitle(paste0("droplet number summary ", my_flag))+
   theme(axis.text.x = element_text(angle = 90)) 
   # geom_vline(xintercept = 16.5, color = "blue", linetype = "dashed", size = 1)+
-  
+  print(p1)
 
 
 }
@@ -152,7 +152,7 @@ if(file.exists("preprocess2.RData"))
 
 ## run 2
   
-  fs <- paste0('muci_sample_', as.character(16:18), '_count/outs/molecule_info.h5')
+  fs <- paste0('muci_sample_', as.character(10:18), '_count/outs/molecule_info.h5')
   run2 <- swappedDrops(fs)
 
 
@@ -162,7 +162,7 @@ if(file.exists("preprocess2.RData"))
   for (i in 1:9) {
       cleaned[[i]] <- run1[[1]][[i]]
   }
-  for (i in 10:12) {
+  for (i in 10:18) {
       cleaned[[i]] <- run2[[1]][[i-9]]
       # head(paste0(colnames(cleaned[[i]]), '-1'))
       # typeof(run2[[1]][[1]])
@@ -183,7 +183,7 @@ if(file.exists("preprocess2.RData"))
   }
   
   
-  for (i in 1:3) 
+  for (i in 1:9) 
   {
     print(i+9)
     print(sum(colSums(run2$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+9]]))))
@@ -400,7 +400,8 @@ if(file.exists("preprocess3.4.RData"))
 
 
 
-lapply(sce_list, dim)
+# lapply(sce_list, dim)
+multi_list_bar_plot(sce_list,"after filter empty droplets", seperate_run = 9.5 )
 
 
 
@@ -418,7 +419,7 @@ if these droplets are real outliers, them tend to cluster together, with abnorma
 let's have a look at the distribution total UMI, and filter abnormally high total UMI outlier droplets by set the threshold
 
 
-```{r plot total UMI per droplet histogram before and after filtering and filter droplets with abnormally high or low total UMI }
+```{r plot total UMI per droplet histogram before and after filtering droplets with abnormally high or low total UMI }
 library("scuttle")
 sce_list <- lapply(sce_list, function(x){
   stats <- perCellQCMetrics(x)
@@ -440,13 +441,18 @@ plot_total_UMI_distribution <- function(sce_list)
   # a droplet contain an intact cell always have total UMI counts 2000-5000
   legend("topright", legend=c("2000", "5000"),
          col=c("red", "blue"), lty=2, cex=1.2)
-
+# better to combine plots 
 })
 
 # Reset to default plotting layout
 par(mfrow=c(1, 1))
 }
+
+print('total UMI per droplet histogram before filtering droplets with abnormally high or low total UMI')
+
 plot_total_UMI_distribution(sce_list)
+
+
 
 # remove droplets with extreme high or low Total UMI
  for(i in 1:length(sce_list)){
@@ -455,7 +461,8 @@ plot_total_UMI_distribution(sce_list)
 
    sce_list[[i]]$UMI_counts_outlier <- (sce_list[[i]]$sum_counts >= 50000) | (sce_list[[i]]$sum_counts <= 500)
    # maybe will filter sum_counts <= 800 in the future. sample 18 have too many droplets around 800 total UMI, need to check if them can cluster successfully
-   print(i)
+   print(paste('TRUE = the number of droplets that will be filtered due to abnormally high 50,000 or low total UMI 500 in sample', i ))
+   
    print(table(sce_list[[i]]$UMI_counts_outlier))
 
    sce_list[[i]] <- sce_list[[i]][,!sce_list[[i]]$UMI_counts_outlier]
@@ -464,6 +471,7 @@ plot_total_UMI_distribution(sce_list)
 
 
 
+print('total UMI per droplet histogram after filtering droplets with abnormally high or low total UMI')
 
 plot_total_UMI_distribution(sce_list)
 
@@ -473,15 +481,17 @@ lapply(sce_list, dim)
 
 figure 5. plot total UMI per droplet histogram before and after filtering
 
-from the distribution total UMI plot of sample 17-18, we observe after filtering the low total UMI droplets, the distribution plot looks clearer and the number of droplets with 2000-5000 total UMI is over 3000, which is good and comparable with sample 19-20 in the same run.
 
-need to check:
-but in sample 18 the number of droplets with 2000-5000 total UMI is too little. let's check the cluster results of sample 18 to see how severe the issue is and if this sample can provide enough information.
+issue of most droplets have total UMI lower than 2000, too few droplets have total UMI 2000-5000.
+severe: samples 1 3 5 7 8 
+moderate: samples 2 4 6 9 17
+
+good quality samples: 16 18
 
 need to check:
 shall we filter sum_counts >= 20,000 in the future?
 
-we try produce Count by rank plot again using previously predicted inflation and knee points, them fits the new filtered clean data better in most samples.  and we also calculate the percentage of droplets been filtered in this step and the number of droplets left after this filtering step.
+we try produce Count by rank plot again using previously predicted inflation and knee points, them fits the new filtered clean data better in most samples. and we also calculate the percentage of droplets been filtered in this step and the number of droplets left after this filtering step.
 
 ```{r plot number of droplets per sample, fig.width=10 }
 
