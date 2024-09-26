@@ -225,16 +225,18 @@ Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter
       brs_result <- try(barcodeRanks(counts(sce_list[[i]]), lower = 200, fit.bounds = c(300,35000)), silent = FALSE  )
       
       # Check if an error occurred
-      if (inherits(sce_result, "try-error")) {
+      if (inherits(brs_result, "try-error")) {
           print(paste("Error for sample", samps[i]))
         
       } else {
           # If no error, store the result in the list
           brs[[i]] <- brs_result
-          print(paste('Success sample', names(sce_list)[i]))
+          print(paste('Success sample', names(sce_list)[i], i))
       }
       # brs[[i]] <- barcodeRanks(counts(sce_list[[i]]), lower = 200, fit.bounds = c(300,35000))
     }
+  brs <- Filter(Negate(is.null), brs)
+  
   # brs <- lapply(sce_list, function(x) {
   #   temp <- counts(x)
   #   print(x)
@@ -247,7 +249,7 @@ Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter
   # A numeric vector of length 2, specifying the lower and upper bounds on the total UMI count from which to obtain a section of the curve for spline fitting.
   }
 
-  par(mfrow=c(1, 2))
+  # par(mfrow=c(1, 2))
   for(i in 1:length(brs)){
     # returning only unique rank for plotting speed
     uniq <- !duplicated(brs[[i]]$rank)
