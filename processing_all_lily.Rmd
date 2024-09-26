@@ -213,28 +213,6 @@ First we'll look at the Count by rank plot for UMI counts within each droplet, j
 Each plot shows the total UMI count of each droplet against their rank. Droplets are ranked based on their total UMI count.
 
 ```{r produce Count by rank plot for UMI counts, fig.width=10 }
-plot_total_UMI_distribution <- function(sce_list)
-{
-   # Set the plotting area to 1 row and 3 columns
-# par(mfrow=c(1, 3))
-
-  lapply(sce_list, function(x){
-
-    hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per cell'), xlab='total UMI counts of a cell', ylab = 'number of droplets',
-         xlim = c(0,20000), breaks = seq(0,200000,by=1000))
-  abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000
-  abline(v=5000, col="blue", lwd=1)
-  # a droplet contain an intact cell always have total UMI counts 2000-5000
-  legend("topright", legend=c("2000", "5000"),
-         col=c("red", "blue"), lty=2, cex=1.2)
-
-})
-
-# Reset to default plotting layout
-par(mfrow=c(1, 1))
-}
-
-plot_total_UMI_distribution(sce_list)
 
 
 Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter_brs = FALSE, before_filter_brs = NULL)
