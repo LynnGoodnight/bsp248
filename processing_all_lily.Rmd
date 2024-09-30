@@ -617,6 +617,7 @@ sce_list_before_remove_ambient_rna <- sce_list
 
 for(i in 1:length(sce_list))
 {
+  # print(paste('sample', i))
   raw_counts <- counts(sce_list_before_filter_empty_droplets[[i]])
   filtered_counts <- counts(sce_list[[i]])
   # Create a SoupChannel object
@@ -628,16 +629,21 @@ for(i in 1:length(sce_list))
   # colLabels(sce_list[[i]])
 
   sc = setClusters(sc, setNames(colLabels(sce_list[[i]]), colnames(sce_list[[i]])))
+  print(paste('autoEstCont sample', i))
   # Estimate soup profile and contamination fraction
   # pdf(file = "SoupX_output.pdf")
-  print(paste('sample', i))
-  sc <- autoEstCont(sc)
-  # dev.off()
 
+  sc <- try(autoEstCont(sc, doPlot = FALSE), silent = FALSE)
+  if (inherits(sc, "try-error")) 
+  {
+    print(paste("Error, autoEstCont step fail", samps[i]))
+  }else{
   # Output the clean data which removed the predicted ambient reads
   out <- adjustCounts(sc)
-  counts(sce_list[[i]]) <- out
-
+  counts(sce_list[[i]]) <- out    
+  }
+  # dev.off()
+  # print(paste('test sample', i))
 }
 
 # Check the change of adjusted counts
@@ -645,7 +651,8 @@ print('the proportion of total read counts remained after remove ambient RNA')
 
 for(i in 1:length(sce_list))
 {
-  print(sum(assays(sce_list[[i]], withDimnames=FALSE)$counts) / sum(assays(sce_list_before_remove_ambient_rna[[i]], withDimnames=FALSE)$counts))
+  proportion <-  sum(assays(sce_list[[i]], withDimnames=FALSE)$counts) / sum(assays(sce_list_before_remove_ambient_rna[[i]], withDimnames=FALSE)$counts)
+  print(paste('proportion of sample', i, ':', proportion))
   # cell number doesn't change for each sample, the total UMI of each sample might change
 }
 
@@ -657,431 +664,431 @@ for(i in 1:length(sce_list))
 
 For comparison, we will also read in the cellranger filtered output to see how results compare in terms of number of droplets.
 
-```{r load cellranger filtered output and compare with our filtered output}
-library(SingleCellExperiment)
-library(DropletUtils)
-
-if(file.exists("preprocess5.RData"))
-{
-  load("preprocess5.RData")
-}else
-{
-  setwd(count_dir)
-  dirs <- paste0('muci_sample_', formatC(sampNums, width=2, flag="0"), '_count/outs/filtered_feature_bc_matrix')
-
-
-  sce_list_cr <- vector('list', length=sampNums)
-
-  for(i in 1:sampNums)
-  {
-    sce_result <- read10xCounts(samples=dirs[i], sample.names=samps[i], col.names=TRUE)
-    
-    try(read10xCounts(samples = dirs[i], sample.names = samps[i], col.names = TRUE), silent = TRUE)
-      
-      # Check if an error occurred
-      if (inherits(sce_result, "try-error")) {
-        
-          print(paste("Error, there is no filtered_feature_bc_matrix files for sample", samps[i], ": demultiplex or count step fail"))
-      } else 
-        {
-          # If no error, store the result in the list
-          sce_list_cr[[i]] <- sce_result
-          print(paste('load filtered data of sample', samps[i], 'successful'))
-        }    
-    
-    
-  }
-  sce_list_cr <- Filter(Negate(is.null), sce_list_cr)
-
-
-  save.image(file = paste0(work_dir,"preprocess5.RData"))
-}
-
-
-multi_list_bar_plot(sce_list,"after qc filtering", seperate_run = 9.5 )
-multi_list_bar_plot(sce_list_cr,"after cellranger filtering", seperate_run = 9.5 )
-
-# lapply(sce_list, dim)
-# lapply(sce_list_cr, dim)
-
-for(i in 1:length(sce_list))
-{
-  # print((dim(sce_list[[i]])[2] - dim(sce_list_cr[[i]])[2])/
-  #         ((dim(sce_list[[i]])[2] + dim(sce_list_cr[[i]])[2])/2)*100)
-  print(dim(sce_list[[i]])[2] / dim(sce_list_cr[[i]])[2])
-}
-
-rm(sce_list_cr)
-```
-
-
- compare remained number of droplets within each sample across cellranger filtered output and our filtered output
-
-
-
-## 6 Removing residual low quality droplets
-
-### 6.1 filter zero counts genes and annotate genes names
-Here we will look for outlying droplets in terms of detected gene number and proportion of mitochondrial reads.
-
-In order to look at specific types of genes, we need to annotate the dataset. To make this easier, we'll first remove genes with no counts in every sample
+<!-- ```{r load cellranger filtered output and compare with our filtered output} -->
+<!-- library(SingleCellExperiment) -->
+<!-- library(DropletUtils) -->
 
-```{r filter zero counts genes and map genes symbols original}
+<!-- if(file.exists("preprocess5.RData")) -->
+<!-- { -->
+<!--   load("preprocess5.RData") -->
+<!-- }else -->
+<!-- { -->
+<!--   setwd(count_dir) -->
+<!--   dirs <- paste0('muci_', names(sce_list), '_count/outs/filtered_feature_bc_matrix') -->
 
 
-# Remove genes with zero counts
-detected <- lapply(sce_list, function(x){rowSums(counts(x)) > 0})
-# detected is a list with 20 elements, each element contain all genes with true or false value
-names(detected) <- paste0('Sample', as.character(c(1:sampNums )))
-detected <- data.frame(detected)
-# 33028 row    20 columns
-undetected <- which(rowSums(detected) == 0)
-# undetected record such gene's id and position
-print(paste('number of genes with zero counts in every sample', length(undetected)))
+<!--   sce_list_cr <- vector('list', length=sampNums) -->
 
-# add gene annotation to ensemble id
-if(file.exists("preprocess6.1.RData"))
-{
-  load("preprocess6.1.RData")
-}else
-{
-  # only delete about 2000 genes out of 30000+ genes
-  sce_list <- lapply(sce_list, function(x) {return(x[-undetected,])})
-  rm(detected, undetected)
-  # lapply(sce_list, dim)
-  if(file.exists("references/ensembl_map.csv"))
-  {
-    map <- read.csv("references/ensembl_map.csv", row.names = 1)
-    # head(map)
-  }else
-  {
-
-  # retrieve hgnc_symbol for the remaining non-zero genes
-# unloadNamespace("tidyselect")
-    unloadNamespace("dplyr")
-    library(biomaRt)
+<!--   for(i in 1:sampNums) -->
+<!--   { -->
+<!--     sce_result <- read10xCounts(samples=dirs[i], sample.names=samps[i], col.names=TRUE) -->
 
-    success <- FALSE
-    while(!success )
-    {
-      try({
-        ensembl <- useEnsembl(biomart = "genes", dataset = "sscrofa_gene_ensembl", mirror = "www", verbose = TRUE)
-        # If the above line runs without error, set success to TRUE to exit the loop
-        success <- TRUE}, silent = TRUE)
-      # 'silent = TRUE' suppresses the error message in the console
+<!--     try(read10xCounts(samples = dirs[i], sample.names = samps[i], col.names = TRUE), silent = TRUE) -->
 
-      if(!success)
-      {
-        message(paste("Attempt failed. Retrying..."))
-        Sys.sleep(5) # Wait for 5 seconds before retrying to give some time for the internet issue to resolve
-      }
+<!--       # Check if an error occurred -->
+<!--       if (inherits(sce_result, "try-error")) { -->
 
-    }
+<!--           print(paste("Error, there is no filtered_feature_bc_matrix files for sample", samps[i], ": demultiplex or count step fail")) -->
+<!--       } else  -->
+<!--         { -->
+<!--           # If no error, store the result in the list -->
+<!--           sce_list_cr[[i]] <- sce_result -->
+<!--           print(paste('load filtered data of sample', samps[i], 'successful')) -->
+<!--         }     -->
 
-    map <- getBM(attributes=c('ensembl_gene_id',
-                              'hgnc_symbol', 'chromosome_name',
-                              'start_position', 'end_position'),
-                 filters='ensembl_gene_id',
-                 values=rownames(sce_list[[1]]),
-                 mart=ensembl)
-    rownames(map) <- as.character(map$ensembl_gene_id)
-    write.csv(map, "ensembl_map.csv")
-  }
 
+<!--   } -->
+<!--   sce_list_cr <- Filter(Negate(is.null), sce_list_cr) -->
 
 
-  sce_list <- lapply(sce_list, function(x){
-    rowData(x)$hgnc_symbol_old <- map[rownames(x), 'hgnc_symbol']
-    rowData(x)$chr <- map[rownames(x), 'chromosome_name']
-    rowData(x)$start <- map[rownames(x), 'start_position']
-    rowData(x)$end <- map[rownames(x), 'end_position']
-    return(x)})
+<!--   save.image(file = paste0(work_dir,"preprocess5.RData")) -->
+<!-- } -->
 
 
+<!-- multi_list_bar_plot(sce_list,"after qc filtering", seperate_run = 9.5 ) -->
+<!-- multi_list_bar_plot(sce_list_cr,"after cellranger filtering", seperate_run = 9.5 ) -->
 
-  head(rowData(sce_list[[1]]))
-  save.image(file = paste0(work_dir,"preprocess6.1.RData"))
+<!-- # lapply(sce_list, dim) -->
+<!-- # lapply(sce_list_cr, dim) -->
 
-}
-```
+<!-- for(i in 1:length(sce_list)) -->
+<!-- { -->
+<!--   # print((dim(sce_list[[i]])[2] - dim(sce_list_cr[[i]])[2])/ -->
+<!--   #         ((dim(sce_list[[i]])[2] + dim(sce_list_cr[[i]])[2])/2)*100) -->
+<!--   print(dim(sce_list[[i]])[2] / dim(sce_list_cr[[i]])[2]) -->
+<!-- } -->
 
+<!-- rm(sce_list_cr) -->
+<!-- ``` -->
 
-```{r examine map quality of original method}
-print(paste('number of unique hgnc_symbol_old', length(unique(rowData(sce_list[[1]])$hgnc_symbol_old))))
-print(paste('total number of hgnc_symbol_old', length(rowData(sce_list[[1]])$hgnc_symbol_old)))
-# check how much gene names are assigned successfully
 
-print(paste('number of unique ensembl_gene_id', length(unique(rownames(sce_list[[1]])))))
-print(paste('total number of ensembl_gene_id', length(rownames(sce_list[[1]]))))
-# check how much unique gene id exist
+<!--  compare remained number of droplets within each sample across cellranger filtered output and our filtered output -->
 
-# check if CD8B assigned successfully
-grep('CD8B',rowData(sce_list[[1]])$hgnc_symbol_old)
 
-rowData(sce_list[[1]])$hgnc_symbol_old[grep('CD8',rowData(sce_list[[1]])$hgnc_symbol_old)]
 
-# check if CD8B exist according its ensembl_gene_id
-grep('ENSSSCG00000008213',rownames(sce_list[[1]]))
+<!-- ## 6 Removing residual low quality droplets -->
 
+<!-- ### 6.1 filter zero counts genes and annotate genes names -->
+<!-- Here we will look for outlying droplets in terms of detected gene number and proportion of mitochondrial reads. -->
 
-map['ENSSSCG00000008213',]
+<!-- In order to look at specific types of genes, we need to annotate the dataset. To make this easier, we'll first remove genes with no counts in every sample -->
 
-map[map$ensembl_gene_id == 'ENSSSCG00000060380',]
-map[map$ensembl_gene_id == 'ENSSSCG00000008213',]
+<!-- ```{r filter zero counts genes and map genes symbols original} -->
 
 
-```
+<!-- # Remove genes with zero counts -->
+<!-- detected <- lapply(sce_list, function(x){rowSums(counts(x)) > 0}) -->
+<!-- # detected is a list with 20 elements, each element contain all genes with true or false value -->
+<!-- names(detected) <- paste0('Sample', as.character(c(1:sampNums ))) -->
+<!-- detected <- data.frame(detected) -->
+<!-- # 33028 row    20 columns -->
+<!-- undetected <- which(rowSums(detected) == 0) -->
+<!-- # undetected record such gene's id and position -->
+<!-- print(paste('number of genes with zero counts in every sample', length(undetected))) -->
 
-```{r second map genes symbols method and examine map quality of second method}}
+<!-- # add gene annotation to ensemble id -->
+<!-- if(file.exists("preprocess6.1.RData")) -->
+<!-- { -->
+<!--   load("preprocess6.1.RData") -->
+<!-- }else -->
+<!-- { -->
+<!--   # only delete about 2000 genes out of 30000+ genes -->
+<!--   sce_list <- lapply(sce_list, function(x) {return(x[-undetected,])}) -->
+<!--   rm(detected, undetected) -->
+<!--   # lapply(sce_list, dim) -->
+<!--   if(file.exists("references/ensembl_map.csv")) -->
+<!--   { -->
+<!--     map <- read.csv("references/ensembl_map.csv", row.names = 1) -->
+<!--     # head(map) -->
+<!--   }else -->
+<!--   { -->
 
-if(file.exists("references/ensembl_entrez_map.csv"))
-{
-  ensembl_entrez <- read.csv("references/ensembl_entrez_map.csv", row.names = 1)
-}else
-{
-  ################################## Get Entrez Gene IDs corresponding to each Ensembl ID
-  # library(biomaRt)
-  success <- FALSE
-  while(!success )
-  {
-    try({
-      ensembl <- useEnsembl(biomart = "genes", dataset = "sscrofa_gene_ensembl", mirror = "www", verbose = TRUE)
-      # If the above line runs without error, set success to TRUE to exit the loop
-      success <- TRUE}, silent = TRUE)
-    # 'silent = TRUE' suppresses the error message in the console
+<!--   # retrieve hgnc_symbol for the remaining non-zero genes -->
+<!-- # unloadNamespace("tidyselect") -->
+<!--     unloadNamespace("dplyr") -->
+<!--     library(biomaRt) -->
 
-    if(!success)
-    {
-      message(paste("Attempt failed. Retrying..."))
-      Sys.sleep(5) # Wait for 5 seconds before retrying to give some time for the internet issue to resolve
-    }
+<!--     success <- FALSE -->
+<!--     while(!success ) -->
+<!--     { -->
+<!--       try({ -->
+<!--         ensembl <- useEnsembl(biomart = "genes", dataset = "sscrofa_gene_ensembl", mirror = "www", verbose = TRUE) -->
+<!--         # If the above line runs without error, set success to TRUE to exit the loop -->
+<!--         success <- TRUE}, silent = TRUE) -->
+<!--       # 'silent = TRUE' suppresses the error message in the console -->
 
-  }
+<!--       if(!success) -->
+<!--       { -->
+<!--         message(paste("Attempt failed. Retrying...")) -->
+<!--         Sys.sleep(5) # Wait for 5 seconds before retrying to give some time for the internet issue to resolve -->
+<!--       } -->
 
-  entrez_ids <- getBM(attributes=c('ensembl_gene_id', 'entrezgene_id'),
-                      filters='ensembl_gene_id',
-                      values=rownames(sce_list[[1]]),
-                      mart=ensembl)
-  dim(entrez_ids)
-  # head(entrez_ids)
+<!--     } -->
 
-  entrez_ids[entrez_ids$ensembl_gene_id == 'ENSSSCG00000008213',]
+<!--     map <- getBM(attributes=c('ensembl_gene_id', -->
+<!--                               'hgnc_symbol', 'chromosome_name', -->
+<!--                               'start_position', 'end_position'), -->
+<!--                  filters='ensembl_gene_id', -->
+<!--                  values=rownames(sce_list[[1]]), -->
+<!--                  mart=ensembl) -->
+<!--     rownames(map) <- as.character(map$ensembl_gene_id) -->
+<!--     write.csv(map, "ensembl_map.csv") -->
+<!--   } -->
 
-  ################################## Get symbols corresponding to each Entrez Gene IDs
-  # BiocManager::install("org.Ss.eg.db")
-  library(org.Ss.eg.db)
-  vector <- as.character(entrez_ids$entrezgene_id)
 
-  Named_vector_of_HGNC_symbols <- mapIds(org.Ss.eg.db,
-                                         keys=vector,
-                                         column="SYMBOL",
-                                         keytype="ENTREZID",
-                                         multiVals = "first")
 
-  # the key of the output list are the ENTREZID IDs of the input
-  # vector. The values of the output vector are the HGNC symbols.
+<!--   sce_list <- lapply(sce_list, function(x){ -->
+<!--     rowData(x)$hgnc_symbol_old <- map[rownames(x), 'hgnc_symbol'] -->
+<!--     rowData(x)$chr <- map[rownames(x), 'chromosome_name'] -->
+<!--     rowData(x)$start <- map[rownames(x), 'start_position'] -->
+<!--     rowData(x)$end <- map[rownames(x), 'end_position'] -->
+<!--     return(x)}) -->
 
-  # see all the info and ID types stored in the annotation database using:
-  columns(org.Ss.eg.db)
-  # this database package can also been used for gene ontology enrichment
 
 
+<!--   head(rowData(sce_list[[1]])) -->
+<!--   save.image(file = paste0(work_dir,"preprocess6.1.RData")) -->
 
+<!-- } -->
+<!-- ``` -->
 
-  # Convert the map list to a data frame
-  df <- data.frame(entrezgene_id = names(Named_vector_of_HGNC_symbols),
-                   symbols = sapply(Named_vector_of_HGNC_symbols, function(x) paste(x, collapse = "; ")),
-                   stringsAsFactors = FALSE)
 
-  # Printing the resulting data frame
-  print(dim(df))
+<!-- ```{r examine map quality of original method} -->
+<!-- print(paste('number of unique hgnc_symbol_old', length(unique(rowData(sce_list[[1]])$hgnc_symbol_old)))) -->
+<!-- print(paste('total number of hgnc_symbol_old', length(rowData(sce_list[[1]])$hgnc_symbol_old))) -->
+<!-- # check how much gene names are assigned successfully -->
 
-  # check how much symbols mapped to Entrez Gene IDs
+<!-- print(paste('number of unique ensembl_gene_id', length(unique(rownames(sce_list[[1]]))))) -->
+<!-- print(paste('total number of ensembl_gene_id', length(rownames(sce_list[[1]])))) -->
+<!-- # check how much unique gene id exist -->
 
-  # keytypes(org.Ss.eg.db)
-  length(Named_vector_of_HGNC_symbols)
-  head(Named_vector_of_HGNC_symbols)
-  # ensembl_gene_id entrezgene_id
-  #  ENSSSCG00000008213        396636
-  Named_vector_of_HGNC_symbols[['396636']]
+<!-- # check if CD8B assigned successfully -->
+<!-- grep('CD8B',rowData(sce_list[[1]])$hgnc_symbol_old) -->
 
-  # check how much entrez_id map symbols successfully
-  print(sum(!is.na(df$symbols) & df$symbols != ""))
-  print(length(unique(df$symbols) ))
-  # a few entrez_id map same symbols
+<!-- rowData(sce_list[[1]])$hgnc_symbol_old[grep('CD8',rowData(sce_list[[1]])$hgnc_symbol_old)] -->
 
-  # df$entrez_ids == entrez_ids$entrezgene_id
-  ensembl_entrez <- cbind(df,entrez_ids)
-  # rownames(ensembl_entrez) <- ensembl_entrez$ensembl_gene_id
-  ensembl_entrez$entrezgene_id = NULL
+<!-- # check if CD8B exist according its ensembl_gene_id -->
+<!-- grep('ENSSSCG00000008213',rownames(sce_list[[1]])) -->
 
-  # ensembl_entrez[ensembl_entrez$entrezgene_id == 'ENSSSCG00000008213',]
 
-  write.csv(ensembl_entrez, "ensembl_entrez_map.csv")
+<!-- map['ENSSSCG00000008213',] -->
 
-}
+<!-- map[map$ensembl_gene_id == 'ENSSSCG00000060380',] -->
+<!-- map[map$ensembl_gene_id == 'ENSSSCG00000008213',] -->
 
 
-################################## merge symbols which have same ensembl id
-if(file.exists("references/ensembl_hgnc_symbol_new_map.csv"))
-{
-  hgnc_symbol_new <- read.csv("references/ensembl_hgnc_symbol_new_map.csv", row.names = 1)
-}else
-{
-  library(dplyr)
-  hgnc_symbol_new <- ensembl_entrez %>%
-    group_by(ensembl_gene_id) %>%
-    summarise(symbols = paste(unique(symbols), collapse = ", ")) %>%
-    ungroup()
-  hgnc_symbol_new <- as.data.frame(hgnc_symbol_new)
-  rownames(hgnc_symbol_new) <- hgnc_symbol_new$ensembl_gene_id
-  write.csv(hgnc_symbol_new, "ensembl_hgnc_symbol_new_map.csv")
+<!-- ``` -->
 
-}
+<!-- ```{r second map genes symbols method and examine map quality of second method}} -->
 
+<!-- if(file.exists("references/ensembl_entrez_map.csv")) -->
+<!-- { -->
+<!--   ensembl_entrez <- read.csv("references/ensembl_entrez_map.csv", row.names = 1) -->
+<!-- }else -->
+<!-- { -->
+<!--   ################################## Get Entrez Gene IDs corresponding to each Ensembl ID -->
+<!--   # library(biomaRt) -->
+<!--   success <- FALSE -->
+<!--   while(!success ) -->
+<!--   { -->
+<!--     try({ -->
+<!--       ensembl <- useEnsembl(biomart = "genes", dataset = "sscrofa_gene_ensembl", mirror = "www", verbose = TRUE) -->
+<!--       # If the above line runs without error, set success to TRUE to exit the loop -->
+<!--       success <- TRUE}, silent = TRUE) -->
+<!--     # 'silent = TRUE' suppresses the error message in the console -->
 
+<!--     if(!success) -->
+<!--     { -->
+<!--       message(paste("Attempt failed. Retrying...")) -->
+<!--       Sys.sleep(5) # Wait for 5 seconds before retrying to give some time for the internet issue to resolve -->
+<!--     } -->
 
+<!--   } -->
 
-# print(sum(!is.na(hgnc_symbol_new$symbols) & hgnc_symbol_new$symbols != ""))
-# entrez_ids[entrez_ids$ensembl_gene_id == 'ENSSSCG00000008213',]
-ensembl_entrez[ensembl_entrez$ensembl_gene_id == 'ENSSSCG00000008213',]
-hgnc_symbol_new['ENSSSCG00000008213',]
-head(rowData(sce_list[[1]])$hgnc_symbol)
+<!--   entrez_ids <- getBM(attributes=c('ensembl_gene_id', 'entrezgene_id'), -->
+<!--                       filters='ensembl_gene_id', -->
+<!--                       values=rownames(sce_list[[1]]), -->
+<!--                       mart=ensembl) -->
+<!--   dim(entrez_ids) -->
+<!--   # head(entrez_ids) -->
 
+<!--   entrez_ids[entrez_ids$ensembl_gene_id == 'ENSSSCG00000008213',] -->
 
-################################## add new map symbols in sce_list
-sce_list <- lapply(sce_list, function(x){
-  rowData(x)$hgnc_symbol <- hgnc_symbol_new[rownames(x), 'symbols']
-  return(x)})
+<!--   ################################## Get symbols corresponding to each Entrez Gene IDs -->
+<!--   # BiocManager::install("org.Ss.eg.db") -->
+<!--   library(org.Ss.eg.db) -->
+<!--   vector <- as.character(entrez_ids$entrezgene_id) -->
 
-################################# compare the mapping results of two methods
-# show rows which have same ensembl_gene_id, check if they have same symbol annotation
-df <- ensembl_entrez
+<!--   Named_vector_of_HGNC_symbols <- mapIds(org.Ss.eg.db, -->
+<!--                                          keys=vector, -->
+<!--                                          column="SYMBOL", -->
+<!--                                          keytype="ENTREZID", -->
+<!--                                          multiVals = "first") -->
 
-# Find rows with duplicate 'ensembl_gene_id' values
-duplicates <- df[duplicated(df$ensembl_gene_id) | duplicated(df$ensembl_gene_id, fromLast = TRUE), ]
+<!--   # the key of the output list are the ENTREZID IDs of the input -->
+<!--   # vector. The values of the output vector are the HGNC symbols. -->
 
-# Output the rows with duplicate 'ensembl_gene_id'
-# print(duplicates)
+<!--   # see all the info and ID types stored in the annotation database using: -->
+<!--   columns(org.Ss.eg.db) -->
+<!--   # this database package can also been used for gene ontology enrichment -->
 
 
-# grep('TNFRSF13B',rowData(sce_list[[1]])$hgnc_symbol_new)
-#
-# test = rowData(sce_list[[1]])$hgnc_symbol
-# test_new = rowData(sce_list[[1]])$hgnc_symbol_new
-# flag = (test==test_new)
-# sum(!flag)
-#
-# df1 <- data.frame(hgnc_symbol = test[!flag],
-#                   hgnc_symbol_new = test_new[!flag])
-#
-#
-# install.packages('rapport')
-# library(rapport)
-# library(rapportools)
-# sum(is.empty(df1$hgnc_symbol))
-# sum(is.empty(df1$hgnc_symbol_new))
 
-```
 
+<!--   # Convert the map list to a data frame -->
+<!--   df <- data.frame(entrezgene_id = names(Named_vector_of_HGNC_symbols), -->
+<!--                    symbols = sapply(Named_vector_of_HGNC_symbols, function(x) paste(x, collapse = "; ")), -->
+<!--                    stringsAsFactors = FALSE) -->
 
-### 6.2 Identify and plot mitochondrial genes UMI counts
-```{r  Identify and plot mitochondrial genes counts}
-# Identify and plot mitochondrial genes counts
+<!--   # Printing the resulting data frame -->
+<!--   print(dim(df)) -->
 
-for (i in 1:length(sce_list))
-{
+<!--   # check how much symbols mapped to Entrez Gene IDs -->
 
-  print(length(which(rowData(sce_list[[i]])$chr == 'MT')))
-  # obtain how many mitochondrial genes exist in sample 1
+<!--   # keytypes(org.Ss.eg.db) -->
+<!--   length(Named_vector_of_HGNC_symbols) -->
+<!--   head(Named_vector_of_HGNC_symbols) -->
+<!--   # ensembl_gene_id entrezgene_id -->
+<!--   #  ENSSSCG00000008213        396636 -->
+<!--   Named_vector_of_HGNC_symbols[['396636']] -->
 
-  print(rowSums(counts(sce_list[[i]])[which(rowData(sce_list[[i]])$chr == 'MT'),]))
-  # obtain the count of each mitochondrial genes across all droplets
-  hist(colSums(counts(sce_list[[i]])[which(rowData(sce_list[[i]])$chr == 'MT'),]),
-       main= paste0('Mitochondrial UMI counts sample',i),
-       xlab='UMI counts of mitochondrial transcripts per cell',
-       ylab= 'Number of droplets', breaks=40)
-  # obtain the total count of all mitochondrial genes contained in a droplets
+<!--   # check how much entrez_id map symbols successfully -->
+<!--   print(sum(!is.na(df$symbols) & df$symbols != "")) -->
+<!--   print(length(unique(df$symbols) )) -->
+<!--   # a few entrez_id map same symbols -->
 
+<!--   # df$entrez_ids == entrez_ids$entrezgene_id -->
+<!--   ensembl_entrez <- cbind(df,entrez_ids) -->
+<!--   # rownames(ensembl_entrez) <- ensembl_entrez$ensembl_gene_id -->
+<!--   ensembl_entrez$entrezgene_id = NULL -->
 
-}
+<!--   # ensembl_entrez[ensembl_entrez$entrezgene_id == 'ENSSSCG00000008213',] -->
 
-```
+<!--   write.csv(ensembl_entrez, "ensembl_entrez_map.csv") -->
 
+<!-- } -->
 
 
-all samples have 13 annotated mitochondrial genes detected here, but the UMI count for some of mitochondrial genes are much higher than other mitochondrial genes
+<!-- ################################## merge symbols which have same ensembl id -->
+<!-- if(file.exists("references/ensembl_hgnc_symbol_new_map.csv")) -->
+<!-- { -->
+<!--   hgnc_symbol_new <- read.csv("references/ensembl_hgnc_symbol_new_map.csv", row.names = 1) -->
+<!-- }else -->
+<!-- { -->
+<!--   library(dplyr) -->
+<!--   hgnc_symbol_new <- ensembl_entrez %>% -->
+<!--     group_by(ensembl_gene_id) %>% -->
+<!--     summarise(symbols = paste(unique(symbols), collapse = ", ")) %>% -->
+<!--     ungroup() -->
+<!--   hgnc_symbol_new <- as.data.frame(hgnc_symbol_new) -->
+<!--   rownames(hgnc_symbol_new) <- hgnc_symbol_new$ensembl_gene_id -->
+<!--   write.csv(hgnc_symbol_new, "ensembl_hgnc_symbol_new_map.csv") -->
 
-most samples have most of their droplets contain low UMI count for mitochondrial genes, so most samples could be fine.
+<!-- } -->
 
-after tuning the parameter in empty droplets filtering step, the new parameter result in reasonable droplets numbers. and the mitochondrial genes counts distribution of sample 2,7 also become reasonable and similar to other samples, which is a great improvement.
 
 
 
-future work: can check function or metabolic pathway of those highly expressed mitochondrial genes, maybe indicate droplets undergoing stress or in the process of dying
+<!-- # print(sum(!is.na(hgnc_symbol_new$symbols) & hgnc_symbol_new$symbols != "")) -->
+<!-- # entrez_ids[entrez_ids$ensembl_gene_id == 'ENSSSCG00000008213',] -->
+<!-- ensembl_entrez[ensembl_entrez$ensembl_gene_id == 'ENSSSCG00000008213',] -->
+<!-- hgnc_symbol_new['ENSSSCG00000008213',] -->
+<!-- head(rowData(sce_list[[1]])$hgnc_symbol) -->
 
 
-Now we can check various QC plots and metrics (total UMI per droplet, total genes detected per droplet, proportion of UMI counts of mito genes per droplet) of every sample.
-### 6.3 check and plot various QC paramters
-```{r check and plot various QC paramters lily, fig.width=10}
-library("scuttle")
-sce_list <- lapply(sce_list, function(x){
-  stats <- perCellQCMetrics(x, subsets=list(Mito=which(rowData(x)$chr=="MT")))
-  colData(x)$sum_counts <- stats$sum
-  colData(x)$genes_detected <- stats$detected
-  colData(x)$sum_mito <- stats$subsets_Mito_sum
-  colData(x)$mito_proportion <- stats$subsets_Mito_sum/(stats$sum)
-  return(x)
-})
+<!-- ################################## add new map symbols in sce_list -->
+<!-- sce_list <- lapply(sce_list, function(x){ -->
+<!--   rowData(x)$hgnc_symbol <- hgnc_symbol_new[rownames(x), 'symbols'] -->
+<!--   return(x)}) -->
 
- lapply(sce_list, function(x){
+<!-- ################################# compare the mapping results of two methods -->
+<!-- # show rows which have same ensembl_gene_id, check if they have same symbol annotation -->
+<!-- df <- ensembl_entrez -->
 
+<!-- # Find rows with duplicate 'ensembl_gene_id' values -->
+<!-- duplicates <- df[duplicated(df$ensembl_gene_id) | duplicated(df$ensembl_gene_id, fromLast = TRUE), ] -->
 
-   # Set the plotting area to 1 row and 3 columns
-par(mfrow=c(1, 3))
+<!-- # Output the rows with duplicate 'ensembl_gene_id' -->
+<!-- # print(duplicates) -->
 
-  hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'), xlab='total UMI counts of a droplet', ylab = 'number of droplet')
-abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000
-abline(v=5000, col="blue", lwd=1)
-# a droplet contain an intact cell always have total UMI counts 2000-5000
-legend("topright", legend=c("2000", "5000"),
-       col=c("red", "blue"), lty=2, cex=1.2)
 
-  hist(x$genes_detected, main='total genes detected per droplet', xlab='genes detected of a droplet', ylab = 'number of droplet')
-abline(v=1000, col="red", lwd=1)
-abline(v=3000, col="blue", lwd=1)
-legend("topright", legend=c("1000", "3000"),
-       col=c("red", "blue"), lty=2, cex=1.2)
+<!-- # grep('TNFRSF13B',rowData(sce_list[[1]])$hgnc_symbol_new) -->
+<!-- # -->
+<!-- # test = rowData(sce_list[[1]])$hgnc_symbol -->
+<!-- # test_new = rowData(sce_list[[1]])$hgnc_symbol_new -->
+<!-- # flag = (test==test_new) -->
+<!-- # sum(!flag) -->
+<!-- # -->
+<!-- # df1 <- data.frame(hgnc_symbol = test[!flag], -->
+<!-- #                   hgnc_symbol_new = test_new[!flag]) -->
+<!-- # -->
+<!-- # -->
+<!-- # install.packages('rapport') -->
+<!-- # library(rapport) -->
+<!-- # library(rapportools) -->
+<!-- # sum(is.empty(df1$hgnc_symbol)) -->
+<!-- # sum(is.empty(df1$hgnc_symbol_new)) -->
 
-  hist(x$mito_proportion, main='proportion of UMI counts of mito genes per droplet', xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet')
-abline(v=0.2, col="red", lwd=1)
-legend("topright", legend="0.2",
-       col="red", lty=2, cex=1.2)
+<!-- ``` -->
 
-# Reset to default plotting layout
-par(mfrow=c(1, 1))
 
-  plot(x$mito_proportion, x$sum_counts, main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'), xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
-})
+<!-- ### 6.2 Identify and plot mitochondrial genes UMI counts -->
+<!-- ```{r  Identify and plot mitochondrial genes counts} -->
+<!-- # Identify and plot mitochondrial genes counts -->
 
-```
-figure 7. histogram of droplet based on total UMI counts, histogram of droplet based on genes detected, histogram of droplet based on proportion of UMI counts of mito genes, mitochondrial proportion versus total UMI count
+<!-- for (i in 1:length(sce_list)) -->
+<!-- { -->
 
-While some level of mitochondrial expression is expected, excessively high levels (commonly around 10-20% of total UMI count) can flag a sample or cell for exclusion from downstream analysis
+<!--   print(length(which(rowData(sce_list[[i]])$chr == 'MT'))) -->
+<!--   # obtain how many mitochondrial genes exist in sample 1 -->
 
-most samples have most droplets whose UMI count around 2000-5000, detected genes around 1000-3000, mitochondrial UMI proportion around or below 0.05
+<!--   print(rowSums(counts(sce_list[[i]])[which(rowData(sce_list[[i]])$chr == 'MT'),])) -->
+<!--   # obtain the count of each mitochondrial genes across all droplets -->
+<!--   hist(colSums(counts(sce_list[[i]])[which(rowData(sce_list[[i]])$chr == 'MT'),]), -->
+<!--        main= paste0('Mitochondrial UMI counts sample',i), -->
+<!--        xlab='UMI counts of mitochondrial transcripts per cell', -->
+<!--        ylab= 'Number of droplets', breaks=40) -->
+<!--   # obtain the total count of all mitochondrial genes contained in a droplets -->
 
-samples from run 1 often have a little higher total UMI count than samples from run 2, since we exclude high total UMI count outliers, the distribution of droplets are clearer to visualize and compared.
 
-droplets that have high proportion of mitochondrial UMI counts and low total UMI counts are usually poor quality droplets containing lysed cell fragments, and will be filtered.
+<!-- } -->
 
-most samples 1-18 only have a small number these droplets, but samples 19-20 contain a lot of these droplets, we will filter droplets with outlier mitochondrial UMI proportions later.
+<!-- ``` -->
 
-need to check:
-still most droplets in Sample 18 have low number of detected genes and low total UMI counts but with low mitochondrial proportion, seem are not lysed cells might be low sequencing depth droplets. droplets in Sample 17 are better than 18.
 
 
-we will check more qc metrics of sample 17-18 to decide if discard these low total UMI counts droplets from downstream analysis.
+<!-- all samples have 13 annotated mitochondrial genes detected here, but the UMI count for some of mitochondrial genes are much higher than other mitochondrial genes -->
+
+<!-- most samples have most of their droplets contain low UMI count for mitochondrial genes, so most samples could be fine. -->
+
+<!-- after tuning the parameter in empty droplets filtering step, the new parameter result in reasonable droplets numbers. and the mitochondrial genes counts distribution of sample 2,7 also become reasonable and similar to other samples, which is a great improvement. -->
+
+
+
+<!-- future work: can check function or metabolic pathway of those highly expressed mitochondrial genes, maybe indicate droplets undergoing stress or in the process of dying -->
+
+
+<!-- Now we can check various QC plots and metrics (total UMI per droplet, total genes detected per droplet, proportion of UMI counts of mito genes per droplet) of every sample. -->
+<!-- ### 6.3 check and plot various QC paramters -->
+<!-- ```{r check and plot various QC paramters lily, fig.width=10} -->
+<!-- library("scuttle") -->
+<!-- sce_list <- lapply(sce_list, function(x){ -->
+<!--   stats <- perCellQCMetrics(x, subsets=list(Mito=which(rowData(x)$chr=="MT"))) -->
+<!--   colData(x)$sum_counts <- stats$sum -->
+<!--   colData(x)$genes_detected <- stats$detected -->
+<!--   colData(x)$sum_mito <- stats$subsets_Mito_sum -->
+<!--   colData(x)$mito_proportion <- stats$subsets_Mito_sum/(stats$sum) -->
+<!--   return(x) -->
+<!-- }) -->
+
+<!--  lapply(sce_list, function(x){ -->
+
+
+<!--    # Set the plotting area to 1 row and 3 columns -->
+<!-- par(mfrow=c(1, 3)) -->
+
+<!--   hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'), xlab='total UMI counts of a droplet', ylab = 'number of droplet') -->
+<!-- abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000 -->
+<!-- abline(v=5000, col="blue", lwd=1) -->
+<!-- # a droplet contain an intact cell always have total UMI counts 2000-5000 -->
+<!-- legend("topright", legend=c("2000", "5000"), -->
+<!--        col=c("red", "blue"), lty=2, cex=1.2) -->
+
+<!--   hist(x$genes_detected, main='total genes detected per droplet', xlab='genes detected of a droplet', ylab = 'number of droplet') -->
+<!-- abline(v=1000, col="red", lwd=1) -->
+<!-- abline(v=3000, col="blue", lwd=1) -->
+<!-- legend("topright", legend=c("1000", "3000"), -->
+<!--        col=c("red", "blue"), lty=2, cex=1.2) -->
+
+<!--   hist(x$mito_proportion, main='proportion of UMI counts of mito genes per droplet', xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet') -->
+<!-- abline(v=0.2, col="red", lwd=1) -->
+<!-- legend("topright", legend="0.2", -->
+<!--        col="red", lty=2, cex=1.2) -->
+
+<!-- # Reset to default plotting layout -->
+<!-- par(mfrow=c(1, 1)) -->
+
+<!--   plot(x$mito_proportion, x$sum_counts, main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'), xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet') -->
+<!-- }) -->
+
+<!-- ``` -->
+<!-- figure 7. histogram of droplet based on total UMI counts, histogram of droplet based on genes detected, histogram of droplet based on proportion of UMI counts of mito genes, mitochondrial proportion versus total UMI count -->
+
+<!-- While some level of mitochondrial expression is expected, excessively high levels (commonly around 10-20% of total UMI count) can flag a sample or cell for exclusion from downstream analysis -->
+
+<!-- most samples have most droplets whose UMI count around 2000-5000, detected genes around 1000-3000, mitochondrial UMI proportion around or below 0.05 -->
+
+<!-- samples from run 1 often have a little higher total UMI count than samples from run 2, since we exclude high total UMI count outliers, the distribution of droplets are clearer to visualize and compared. -->
+
+<!-- droplets that have high proportion of mitochondrial UMI counts and low total UMI counts are usually poor quality droplets containing lysed cell fragments, and will be filtered. -->
+
+<!-- most samples 1-18 only have a small number these droplets, but samples 19-20 contain a lot of these droplets, we will filter droplets with outlier mitochondrial UMI proportions later. -->
+
+<!-- need to check: -->
+<!-- still most droplets in Sample 18 have low number of detected genes and low total UMI counts but with low mitochondrial proportion, seem are not lysed cells might be low sequencing depth droplets. droplets in Sample 17 are better than 18. -->
+
+
+<!-- we will check more qc metrics of sample 17-18 to decide if discard these low total UMI counts droplets from downstream analysis. -->
 
 
 <!-- ### 6.4 quickCluster and visualize the droplets in UMAP and color the plots based on QC metrics -->
