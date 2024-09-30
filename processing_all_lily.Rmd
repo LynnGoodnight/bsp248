@@ -664,356 +664,357 @@ for(i in 1:length(sce_list))
 
 For comparison, we will also read in the cellranger filtered output to see how results compare in terms of number of droplets.
 
-<!-- ```{r load cellranger filtered output and compare with our filtered output} -->
-<!-- library(SingleCellExperiment) -->
-<!-- library(DropletUtils) -->
+```{r load cellranger filtered output and compare with our filtered output}
+library(SingleCellExperiment)
+library(DropletUtils)
+
+if(file.exists("preprocess5.RData"))
+{
+  load("preprocess5.RData")
+}else
+{
+  setwd(count_dir)
+  dirs <- paste0('muci_', names(sce_list), '_count/outs/filtered_feature_bc_matrix')
+  sce_list_cr <- vector('list', length=sampNums)
+
+  for(i in 1:sampNums)
+  {
+    sce_result <- read10xCounts(samples=dirs[i], sample.names=samps[i], col.names=TRUE)
+
+    try(read10xCounts(samples = dirs[i], sample.names = samps[i], col.names = TRUE), silent = TRUE)
+
+      # Check if an error occurred
+      if (inherits(sce_result, "try-error")) {
+
+          print(paste("Error, there is no filtered_feature_bc_matrix files for sample", samps[i], ": demultiplex or count step fail"))
+      } else
+        {
+          # If no error, store the result in the list
+          sce_list_cr[[i]] <- sce_result
+          print(paste('load filtered data of sample', samps[i], 'successful'))
+        }
+
+
+  }
+  sce_list_cr <- Filter(Negate(is.null), sce_list_cr)
+
+
+  save.image(file = paste0(work_dir,"preprocess5.RData"))
+}
+
+
+multi_list_bar_plot(sce_list,"after qc filtering", seperate_run = 9.5 )
+multi_list_bar_plot(sce_list_cr,"after cellranger filtering", seperate_run = 9.5 )
+
+# lapply(sce_list, dim)
+# lapply(sce_list_cr, dim)
+
+for(i in 1:length(sce_list))
+{
+  # print((dim(sce_list[[i]])[2] - dim(sce_list_cr[[i]])[2])/
+  #         ((dim(sce_list[[i]])[2] + dim(sce_list_cr[[i]])[2])/2)*100)
+  
+  print(paste(names(sce_list)[[i]], dim(sce_list[[i]])[2] / dim(sce_list_cr[[i]])[2]))
+}
 
-<!-- if(file.exists("preprocess5.RData")) -->
-<!-- { -->
-<!--   load("preprocess5.RData") -->
-<!-- }else -->
-<!-- { -->
-<!--   setwd(count_dir) -->
-<!--   dirs <- paste0('muci_', names(sce_list), '_count/outs/filtered_feature_bc_matrix') -->
+rm(sce_list_cr)
+```
+compare remained number of droplets within each sample across cellranger filtered output and our filtered output
+sample_05, sample_07, sample_10, sample_14
+has quiet big difference between cellranger filtered output and our filtered output
 
 
-<!--   sce_list_cr <- vector('list', length=sampNums) -->
 
-<!--   for(i in 1:sampNums) -->
-<!--   { -->
-<!--     sce_result <- read10xCounts(samples=dirs[i], sample.names=samps[i], col.names=TRUE) -->
 
-<!--     try(read10xCounts(samples = dirs[i], sample.names = samps[i], col.names = TRUE), silent = TRUE) -->
+## 6 Removing residual low quality droplets
 
-<!--       # Check if an error occurred -->
-<!--       if (inherits(sce_result, "try-error")) { -->
+### 6.1 filter zero counts genes and annotate genes names
+Here we will look for outlying droplets in terms of detected gene number and proportion of mitochondrial reads.
 
-<!--           print(paste("Error, there is no filtered_feature_bc_matrix files for sample", samps[i], ": demultiplex or count step fail")) -->
-<!--       } else  -->
-<!--         { -->
-<!--           # If no error, store the result in the list -->
-<!--           sce_list_cr[[i]] <- sce_result -->
-<!--           print(paste('load filtered data of sample', samps[i], 'successful')) -->
-<!--         }     -->
+In order to look at specific types of genes, we need to annotate the dataset. To make this easier, we'll first remove genes with no counts in every sample
 
+```{r filter zero counts genes and map genes symbols original}
 
-<!--   } -->
-<!--   sce_list_cr <- Filter(Negate(is.null), sce_list_cr) -->
 
+# Remove genes with zero counts
+detected <- lapply(sce_list, function(x){rowSums(counts(x)) > 0})
+# detected is a list with 20 elements, each element contain all genes with true or false value
+names(detected) <- paste0('Sample', as.character(c(1:sampNums )))
+detected <- data.frame(detected)
+# 33028 row    20 columns
+undetected <- which(rowSums(detected) == 0)
+# undetected record such gene's id and position
+print(paste('number of genes with zero counts in all sample', length(undetected)))
 
-<!--   save.image(file = paste0(work_dir,"preprocess5.RData")) -->
-<!-- } -->
+# add gene annotation to ensemble id
+if(file.exists("preprocess6.1.RData"))
+{
+  load("preprocess6.1.RData")
+}else
+{
+  # only delete about 2000 genes out of 30000+ genes
+  sce_list <- lapply(sce_list, function(x) {return(x[-undetected,])})
+  rm(detected, undetected)
+  # lapply(sce_list, dim)
+  if(file.exists("references/ensembl_map.csv"))
+  {
+    map <- read.csv("references/ensembl_map.csv", row.names = 1)
+    # head(map)
+  }else
+  {
 
+  # retrieve hgnc_symbol for the remaining non-zero genes
+# unloadNamespace("tidyselect")
+    unloadNamespace("dplyr")
+    library(biomaRt)
 
-<!-- multi_list_bar_plot(sce_list,"after qc filtering", seperate_run = 9.5 ) -->
-<!-- multi_list_bar_plot(sce_list_cr,"after cellranger filtering", seperate_run = 9.5 ) -->
+    success <- FALSE
+    while(!success )
+    {
+      try({
+        ensembl <- useEnsembl(biomart = "genes", dataset = "sscrofa_gene_ensembl", mirror = "www", verbose = TRUE)
+        # If the above line runs without error, set success to TRUE to exit the loop
+        success <- TRUE}, silent = TRUE)
+      # 'silent = TRUE' suppresses the error message in the console
 
-<!-- # lapply(sce_list, dim) -->
-<!-- # lapply(sce_list_cr, dim) -->
+      if(!success)
+      {
+        message(paste("Attempt failed. Retrying..."))
+        Sys.sleep(5) # Wait for 5 seconds before retrying to give some time for the internet issue to resolve
+      }
 
-<!-- for(i in 1:length(sce_list)) -->
-<!-- { -->
-<!--   # print((dim(sce_list[[i]])[2] - dim(sce_list_cr[[i]])[2])/ -->
-<!--   #         ((dim(sce_list[[i]])[2] + dim(sce_list_cr[[i]])[2])/2)*100) -->
-<!--   print(dim(sce_list[[i]])[2] / dim(sce_list_cr[[i]])[2]) -->
-<!-- } -->
+    }
 
-<!-- rm(sce_list_cr) -->
-<!-- ``` -->
+    map <- getBM(attributes=c('ensembl_gene_id',
+                              'hgnc_symbol', 'chromosome_name',
+                              'start_position', 'end_position'),
+                 filters='ensembl_gene_id',
+                 values=rownames(sce_list[[1]]),
+                 mart=ensembl)
+    rownames(map) <- as.character(map$ensembl_gene_id)
+    write.csv(map, "ensembl_map.csv")
+  }
 
 
-<!--  compare remained number of droplets within each sample across cellranger filtered output and our filtered output -->
 
+  sce_list <- lapply(sce_list, function(x){
+    rowData(x)$hgnc_symbol_old <- map[rownames(x), 'hgnc_symbol']
+    rowData(x)$chr <- map[rownames(x), 'chromosome_name']
+    rowData(x)$start <- map[rownames(x), 'start_position']
+    rowData(x)$end <- map[rownames(x), 'end_position']
+    return(x)})
 
 
-<!-- ## 6 Removing residual low quality droplets -->
 
-<!-- ### 6.1 filter zero counts genes and annotate genes names -->
-<!-- Here we will look for outlying droplets in terms of detected gene number and proportion of mitochondrial reads. -->
+  head(rowData(sce_list[[1]]))
+  save.image(file = paste0(work_dir,"preprocess6.1.RData"))
 
-<!-- In order to look at specific types of genes, we need to annotate the dataset. To make this easier, we'll first remove genes with no counts in every sample -->
+}
+```
 
-<!-- ```{r filter zero counts genes and map genes symbols original} -->
 
+```{r examine map quality of original method}
+print(paste('number of unique hgnc_symbol_old', length(unique(rowData(sce_list[[1]])$hgnc_symbol_old))))
+print(paste('total number of hgnc_symbol_old', length(rowData(sce_list[[1]])$hgnc_symbol_old)))
+# check how much gene names are assigned successfully
 
-<!-- # Remove genes with zero counts -->
-<!-- detected <- lapply(sce_list, function(x){rowSums(counts(x)) > 0}) -->
-<!-- # detected is a list with 20 elements, each element contain all genes with true or false value -->
-<!-- names(detected) <- paste0('Sample', as.character(c(1:sampNums ))) -->
-<!-- detected <- data.frame(detected) -->
-<!-- # 33028 row    20 columns -->
-<!-- undetected <- which(rowSums(detected) == 0) -->
-<!-- # undetected record such gene's id and position -->
-<!-- print(paste('number of genes with zero counts in every sample', length(undetected))) -->
+print(paste('number of unique ensembl_gene_id', length(unique(rownames(sce_list[[1]])))))
+print(paste('total number of ensembl_gene_id', length(rownames(sce_list[[1]]))))
+# check how much unique gene id exist
 
-<!-- # add gene annotation to ensemble id -->
-<!-- if(file.exists("preprocess6.1.RData")) -->
-<!-- { -->
-<!--   load("preprocess6.1.RData") -->
-<!-- }else -->
-<!-- { -->
-<!--   # only delete about 2000 genes out of 30000+ genes -->
-<!--   sce_list <- lapply(sce_list, function(x) {return(x[-undetected,])}) -->
-<!--   rm(detected, undetected) -->
-<!--   # lapply(sce_list, dim) -->
-<!--   if(file.exists("references/ensembl_map.csv")) -->
-<!--   { -->
-<!--     map <- read.csv("references/ensembl_map.csv", row.names = 1) -->
-<!--     # head(map) -->
-<!--   }else -->
-<!--   { -->
+# check if CD8B assigned successfully
+grep('CD8B',rowData(sce_list[[1]])$hgnc_symbol_old)
 
-<!--   # retrieve hgnc_symbol for the remaining non-zero genes -->
-<!-- # unloadNamespace("tidyselect") -->
-<!--     unloadNamespace("dplyr") -->
-<!--     library(biomaRt) -->
+rowData(sce_list[[1]])$hgnc_symbol_old[grep('CD8',rowData(sce_list[[1]])$hgnc_symbol_old)]
 
-<!--     success <- FALSE -->
-<!--     while(!success ) -->
-<!--     { -->
-<!--       try({ -->
-<!--         ensembl <- useEnsembl(biomart = "genes", dataset = "sscrofa_gene_ensembl", mirror = "www", verbose = TRUE) -->
-<!--         # If the above line runs without error, set success to TRUE to exit the loop -->
-<!--         success <- TRUE}, silent = TRUE) -->
-<!--       # 'silent = TRUE' suppresses the error message in the console -->
+# check if CD8B exist according its ensembl_gene_id
+grep('ENSSSCG00000008213',rownames(sce_list[[1]]))
 
-<!--       if(!success) -->
-<!--       { -->
-<!--         message(paste("Attempt failed. Retrying...")) -->
-<!--         Sys.sleep(5) # Wait for 5 seconds before retrying to give some time for the internet issue to resolve -->
-<!--       } -->
 
-<!--     } -->
+map['ENSSSCG00000008213',]
 
-<!--     map <- getBM(attributes=c('ensembl_gene_id', -->
-<!--                               'hgnc_symbol', 'chromosome_name', -->
-<!--                               'start_position', 'end_position'), -->
-<!--                  filters='ensembl_gene_id', -->
-<!--                  values=rownames(sce_list[[1]]), -->
-<!--                  mart=ensembl) -->
-<!--     rownames(map) <- as.character(map$ensembl_gene_id) -->
-<!--     write.csv(map, "ensembl_map.csv") -->
-<!--   } -->
+map[map$ensembl_gene_id == 'ENSSSCG00000060380',]
+map[map$ensembl_gene_id == 'ENSSSCG00000008213',]
 
 
+```
 
-<!--   sce_list <- lapply(sce_list, function(x){ -->
-<!--     rowData(x)$hgnc_symbol_old <- map[rownames(x), 'hgnc_symbol'] -->
-<!--     rowData(x)$chr <- map[rownames(x), 'chromosome_name'] -->
-<!--     rowData(x)$start <- map[rownames(x), 'start_position'] -->
-<!--     rowData(x)$end <- map[rownames(x), 'end_position'] -->
-<!--     return(x)}) -->
+```{r second map genes symbols method and examine map quality of second method}}
 
+if(file.exists("references/ensembl_entrez_map.csv"))
+{
+  ensembl_entrez <- read.csv("references/ensembl_entrez_map.csv", row.names = 1)
+}else
+{
+  ################################## Get Entrez Gene IDs corresponding to each Ensembl ID
+  # library(biomaRt)
+  success <- FALSE
+  while(!success )
+  {
+    try({
+      ensembl <- useEnsembl(biomart = "genes", dataset = "sscrofa_gene_ensembl", mirror = "www", verbose = TRUE)
+      # If the above line runs without error, set success to TRUE to exit the loop
+      success <- TRUE}, silent = TRUE)
+    # 'silent = TRUE' suppresses the error message in the console
 
+    if(!success)
+    {
+      message(paste("Attempt failed. Retrying..."))
+      Sys.sleep(5) # Wait for 5 seconds before retrying to give some time for the internet issue to resolve
+    }
 
-<!--   head(rowData(sce_list[[1]])) -->
-<!--   save.image(file = paste0(work_dir,"preprocess6.1.RData")) -->
+  }
 
-<!-- } -->
-<!-- ``` -->
+  entrez_ids <- getBM(attributes=c('ensembl_gene_id', 'entrezgene_id'),
+                      filters='ensembl_gene_id',
+                      values=rownames(sce_list[[1]]),
+                      mart=ensembl)
+  dim(entrez_ids)
+  # head(entrez_ids)
 
+  entrez_ids[entrez_ids$ensembl_gene_id == 'ENSSSCG00000008213',]
 
-<!-- ```{r examine map quality of original method} -->
-<!-- print(paste('number of unique hgnc_symbol_old', length(unique(rowData(sce_list[[1]])$hgnc_symbol_old)))) -->
-<!-- print(paste('total number of hgnc_symbol_old', length(rowData(sce_list[[1]])$hgnc_symbol_old))) -->
-<!-- # check how much gene names are assigned successfully -->
+  ################################## Get symbols corresponding to each Entrez Gene IDs
+  # BiocManager::install("org.Ss.eg.db")
+  library(org.Ss.eg.db)
+  vector <- as.character(entrez_ids$entrezgene_id)
 
-<!-- print(paste('number of unique ensembl_gene_id', length(unique(rownames(sce_list[[1]]))))) -->
-<!-- print(paste('total number of ensembl_gene_id', length(rownames(sce_list[[1]])))) -->
-<!-- # check how much unique gene id exist -->
+  Named_vector_of_HGNC_symbols <- mapIds(org.Ss.eg.db,
+                                         keys=vector,
+                                         column="SYMBOL",
+                                         keytype="ENTREZID",
+                                         multiVals = "first")
 
-<!-- # check if CD8B assigned successfully -->
-<!-- grep('CD8B',rowData(sce_list[[1]])$hgnc_symbol_old) -->
+  # the key of the output list are the ENTREZID IDs of the input
+  # vector. The values of the output vector are the HGNC symbols.
 
-<!-- rowData(sce_list[[1]])$hgnc_symbol_old[grep('CD8',rowData(sce_list[[1]])$hgnc_symbol_old)] -->
+  # see all the info and ID types stored in the annotation database using:
+  columns(org.Ss.eg.db)
+  # this database package can also been used for gene ontology enrichment
 
-<!-- # check if CD8B exist according its ensembl_gene_id -->
-<!-- grep('ENSSSCG00000008213',rownames(sce_list[[1]])) -->
 
 
-<!-- map['ENSSSCG00000008213',] -->
 
-<!-- map[map$ensembl_gene_id == 'ENSSSCG00000060380',] -->
-<!-- map[map$ensembl_gene_id == 'ENSSSCG00000008213',] -->
+  # Convert the map list to a data frame
+  df <- data.frame(entrezgene_id = names(Named_vector_of_HGNC_symbols),
+                   symbols = sapply(Named_vector_of_HGNC_symbols, function(x) paste(x, collapse = "; ")),
+                   stringsAsFactors = FALSE)
 
+  # Printing the resulting data frame
+  print(dim(df))
 
-<!-- ``` -->
+  # check how much symbols mapped to Entrez Gene IDs
 
-<!-- ```{r second map genes symbols method and examine map quality of second method}} -->
+  # keytypes(org.Ss.eg.db)
+  length(Named_vector_of_HGNC_symbols)
+  head(Named_vector_of_HGNC_symbols)
+  # ensembl_gene_id entrezgene_id
+  #  ENSSSCG00000008213        396636
+  Named_vector_of_HGNC_symbols[['396636']]
 
-<!-- if(file.exists("references/ensembl_entrez_map.csv")) -->
-<!-- { -->
-<!--   ensembl_entrez <- read.csv("references/ensembl_entrez_map.csv", row.names = 1) -->
-<!-- }else -->
-<!-- { -->
-<!--   ################################## Get Entrez Gene IDs corresponding to each Ensembl ID -->
-<!--   # library(biomaRt) -->
-<!--   success <- FALSE -->
-<!--   while(!success ) -->
-<!--   { -->
-<!--     try({ -->
-<!--       ensembl <- useEnsembl(biomart = "genes", dataset = "sscrofa_gene_ensembl", mirror = "www", verbose = TRUE) -->
-<!--       # If the above line runs without error, set success to TRUE to exit the loop -->
-<!--       success <- TRUE}, silent = TRUE) -->
-<!--     # 'silent = TRUE' suppresses the error message in the console -->
+  # check how much entrez_id map symbols successfully
+  print(sum(!is.na(df$symbols) & df$symbols != ""))
+  print(length(unique(df$symbols) ))
+  # a few entrez_id map same symbols
 
-<!--     if(!success) -->
-<!--     { -->
-<!--       message(paste("Attempt failed. Retrying...")) -->
-<!--       Sys.sleep(5) # Wait for 5 seconds before retrying to give some time for the internet issue to resolve -->
-<!--     } -->
+  # df$entrez_ids == entrez_ids$entrezgene_id
+  ensembl_entrez <- cbind(df,entrez_ids)
+  # rownames(ensembl_entrez) <- ensembl_entrez$ensembl_gene_id
+  ensembl_entrez$entrezgene_id = NULL
 
-<!--   } -->
+  # ensembl_entrez[ensembl_entrez$entrezgene_id == 'ENSSSCG00000008213',]
 
-<!--   entrez_ids <- getBM(attributes=c('ensembl_gene_id', 'entrezgene_id'), -->
-<!--                       filters='ensembl_gene_id', -->
-<!--                       values=rownames(sce_list[[1]]), -->
-<!--                       mart=ensembl) -->
-<!--   dim(entrez_ids) -->
-<!--   # head(entrez_ids) -->
+  write.csv(ensembl_entrez, "ensembl_entrez_map.csv")
 
-<!--   entrez_ids[entrez_ids$ensembl_gene_id == 'ENSSSCG00000008213',] -->
+}
 
-<!--   ################################## Get symbols corresponding to each Entrez Gene IDs -->
-<!--   # BiocManager::install("org.Ss.eg.db") -->
-<!--   library(org.Ss.eg.db) -->
-<!--   vector <- as.character(entrez_ids$entrezgene_id) -->
 
-<!--   Named_vector_of_HGNC_symbols <- mapIds(org.Ss.eg.db, -->
-<!--                                          keys=vector, -->
-<!--                                          column="SYMBOL", -->
-<!--                                          keytype="ENTREZID", -->
-<!--                                          multiVals = "first") -->
+################################## merge symbols which have same ensembl id
+if(file.exists("references/ensembl_hgnc_symbol_new_map.csv"))
+{
+  hgnc_symbol_new <- read.csv("references/ensembl_hgnc_symbol_new_map.csv", row.names = 1)
+}else
+{
+  library(dplyr)
+  hgnc_symbol_new <- ensembl_entrez %>%
+    group_by(ensembl_gene_id) %>%
+    summarise(symbols = paste(unique(symbols), collapse = ", ")) %>%
+    ungroup()
+  hgnc_symbol_new <- as.data.frame(hgnc_symbol_new)
+  rownames(hgnc_symbol_new) <- hgnc_symbol_new$ensembl_gene_id
+  write.csv(hgnc_symbol_new, "ensembl_hgnc_symbol_new_map.csv")
 
-<!--   # the key of the output list are the ENTREZID IDs of the input -->
-<!--   # vector. The values of the output vector are the HGNC symbols. -->
+}
 
-<!--   # see all the info and ID types stored in the annotation database using: -->
-<!--   columns(org.Ss.eg.db) -->
-<!--   # this database package can also been used for gene ontology enrichment -->
 
 
 
+# print(sum(!is.na(hgnc_symbol_new$symbols) & hgnc_symbol_new$symbols != ""))
+# entrez_ids[entrez_ids$ensembl_gene_id == 'ENSSSCG00000008213',]
+ensembl_entrez[ensembl_entrez$ensembl_gene_id == 'ENSSSCG00000008213',]
+hgnc_symbol_new['ENSSSCG00000008213',]
+head(rowData(sce_list[[1]])$hgnc_symbol)
 
-<!--   # Convert the map list to a data frame -->
-<!--   df <- data.frame(entrezgene_id = names(Named_vector_of_HGNC_symbols), -->
-<!--                    symbols = sapply(Named_vector_of_HGNC_symbols, function(x) paste(x, collapse = "; ")), -->
-<!--                    stringsAsFactors = FALSE) -->
 
-<!--   # Printing the resulting data frame -->
-<!--   print(dim(df)) -->
+################################## add new map symbols in sce_list
+sce_list <- lapply(sce_list, function(x){
+  rowData(x)$hgnc_symbol <- hgnc_symbol_new[rownames(x), 'symbols']
+  return(x)})
 
-<!--   # check how much symbols mapped to Entrez Gene IDs -->
+################################# compare the mapping results of two methods
+# show rows which have same ensembl_gene_id, check if they have same symbol annotation
+df <- ensembl_entrez
 
-<!--   # keytypes(org.Ss.eg.db) -->
-<!--   length(Named_vector_of_HGNC_symbols) -->
-<!--   head(Named_vector_of_HGNC_symbols) -->
-<!--   # ensembl_gene_id entrezgene_id -->
-<!--   #  ENSSSCG00000008213        396636 -->
-<!--   Named_vector_of_HGNC_symbols[['396636']] -->
+# Find rows with duplicate 'ensembl_gene_id' values
+duplicates <- df[duplicated(df$ensembl_gene_id) | duplicated(df$ensembl_gene_id, fromLast = TRUE), ]
 
-<!--   # check how much entrez_id map symbols successfully -->
-<!--   print(sum(!is.na(df$symbols) & df$symbols != "")) -->
-<!--   print(length(unique(df$symbols) )) -->
-<!--   # a few entrez_id map same symbols -->
+# Output the rows with duplicate 'ensembl_gene_id'
+# print(duplicates)
 
-<!--   # df$entrez_ids == entrez_ids$entrezgene_id -->
-<!--   ensembl_entrez <- cbind(df,entrez_ids) -->
-<!--   # rownames(ensembl_entrez) <- ensembl_entrez$ensembl_gene_id -->
-<!--   ensembl_entrez$entrezgene_id = NULL -->
 
-<!--   # ensembl_entrez[ensembl_entrez$entrezgene_id == 'ENSSSCG00000008213',] -->
+# grep('TNFRSF13B',rowData(sce_list[[1]])$hgnc_symbol_new)
+#
+# test = rowData(sce_list[[1]])$hgnc_symbol
+# test_new = rowData(sce_list[[1]])$hgnc_symbol_new
+# flag = (test==test_new)
+# sum(!flag)
+#
+# df1 <- data.frame(hgnc_symbol = test[!flag],
+#                   hgnc_symbol_new = test_new[!flag])
+#
+#
+# install.packages('rapport')
+# library(rapport)
+# library(rapportools)
+# sum(is.empty(df1$hgnc_symbol))
+# sum(is.empty(df1$hgnc_symbol_new))
 
-<!--   write.csv(ensembl_entrez, "ensembl_entrez_map.csv") -->
+```
 
-<!-- } -->
 
+### 6.2 Identify and plot mitochondrial genes UMI counts
+```{r  Identify and plot mitochondrial genes counts}
+# Identify and plot mitochondrial genes counts
 
-<!-- ################################## merge symbols which have same ensembl id -->
-<!-- if(file.exists("references/ensembl_hgnc_symbol_new_map.csv")) -->
-<!-- { -->
-<!--   hgnc_symbol_new <- read.csv("references/ensembl_hgnc_symbol_new_map.csv", row.names = 1) -->
-<!-- }else -->
-<!-- { -->
-<!--   library(dplyr) -->
-<!--   hgnc_symbol_new <- ensembl_entrez %>% -->
-<!--     group_by(ensembl_gene_id) %>% -->
-<!--     summarise(symbols = paste(unique(symbols), collapse = ", ")) %>% -->
-<!--     ungroup() -->
-<!--   hgnc_symbol_new <- as.data.frame(hgnc_symbol_new) -->
-<!--   rownames(hgnc_symbol_new) <- hgnc_symbol_new$ensembl_gene_id -->
-<!--   write.csv(hgnc_symbol_new, "ensembl_hgnc_symbol_new_map.csv") -->
+for (i in 1:length(sce_list))
+{
 
-<!-- } -->
+  print(paste(length(which(rowData(sce_list[[i]])$chr == 'MT')), 'mitochondrial genes exist in ', names(sce_list)[i]  ))
+  # obtain how many mitochondrial genes exist in sample 1
 
+  print(paste('the total count of each mitochondrial genes across all droplets of', names(sce_list)[i]))
+  print(rowSums(counts(sce_list[[i]])[which(rowData(sce_list[[i]])$chr == 'MT'),]))
+  # obtain the total count of each mitochondrial genes across all droplets
+  hist(colSums(counts(sce_list[[i]])[which(rowData(sce_list[[i]])$chr == 'MT'),]),
+       main= paste0('Mitochondrial UMI counts sample',i),
+       xlab='UMI counts of mitochondrial transcripts per cell',
+       ylab= 'Number of droplets', breaks=40)
+  # obtain the total count of all mitochondrial genes contained in a droplets
 
 
+}
 
-<!-- # print(sum(!is.na(hgnc_symbol_new$symbols) & hgnc_symbol_new$symbols != "")) -->
-<!-- # entrez_ids[entrez_ids$ensembl_gene_id == 'ENSSSCG00000008213',] -->
-<!-- ensembl_entrez[ensembl_entrez$ensembl_gene_id == 'ENSSSCG00000008213',] -->
-<!-- hgnc_symbol_new['ENSSSCG00000008213',] -->
-<!-- head(rowData(sce_list[[1]])$hgnc_symbol) -->
-
-
-<!-- ################################## add new map symbols in sce_list -->
-<!-- sce_list <- lapply(sce_list, function(x){ -->
-<!--   rowData(x)$hgnc_symbol <- hgnc_symbol_new[rownames(x), 'symbols'] -->
-<!--   return(x)}) -->
-
-<!-- ################################# compare the mapping results of two methods -->
-<!-- # show rows which have same ensembl_gene_id, check if they have same symbol annotation -->
-<!-- df <- ensembl_entrez -->
-
-<!-- # Find rows with duplicate 'ensembl_gene_id' values -->
-<!-- duplicates <- df[duplicated(df$ensembl_gene_id) | duplicated(df$ensembl_gene_id, fromLast = TRUE), ] -->
-
-<!-- # Output the rows with duplicate 'ensembl_gene_id' -->
-<!-- # print(duplicates) -->
-
-
-<!-- # grep('TNFRSF13B',rowData(sce_list[[1]])$hgnc_symbol_new) -->
-<!-- # -->
-<!-- # test = rowData(sce_list[[1]])$hgnc_symbol -->
-<!-- # test_new = rowData(sce_list[[1]])$hgnc_symbol_new -->
-<!-- # flag = (test==test_new) -->
-<!-- # sum(!flag) -->
-<!-- # -->
-<!-- # df1 <- data.frame(hgnc_symbol = test[!flag], -->
-<!-- #                   hgnc_symbol_new = test_new[!flag]) -->
-<!-- # -->
-<!-- # -->
-<!-- # install.packages('rapport') -->
-<!-- # library(rapport) -->
-<!-- # library(rapportools) -->
-<!-- # sum(is.empty(df1$hgnc_symbol)) -->
-<!-- # sum(is.empty(df1$hgnc_symbol_new)) -->
-
-<!-- ``` -->
-
-
-<!-- ### 6.2 Identify and plot mitochondrial genes UMI counts -->
-<!-- ```{r  Identify and plot mitochondrial genes counts} -->
-<!-- # Identify and plot mitochondrial genes counts -->
-
-<!-- for (i in 1:length(sce_list)) -->
-<!-- { -->
-
-<!--   print(length(which(rowData(sce_list[[i]])$chr == 'MT'))) -->
-<!--   # obtain how many mitochondrial genes exist in sample 1 -->
-
-<!--   print(rowSums(counts(sce_list[[i]])[which(rowData(sce_list[[i]])$chr == 'MT'),])) -->
-<!--   # obtain the count of each mitochondrial genes across all droplets -->
-<!--   hist(colSums(counts(sce_list[[i]])[which(rowData(sce_list[[i]])$chr == 'MT'),]), -->
-<!--        main= paste0('Mitochondrial UMI counts sample',i), -->
-<!--        xlab='UMI counts of mitochondrial transcripts per cell', -->
-<!--        ylab= 'Number of droplets', breaks=40) -->
-<!--   # obtain the total count of all mitochondrial genes contained in a droplets -->
-
-
-<!-- } -->
-
-<!-- ``` -->
+```
 
 
 
