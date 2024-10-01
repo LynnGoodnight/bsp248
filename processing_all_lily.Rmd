@@ -1040,33 +1040,67 @@ sce_list <- lapply(sce_list, function(x){
   return(x)
 })
 
-lapply(sce_list, function(x){
-   # Set the plotting area to 1 row and 3 columns
-par(mfrow=c(1, 3))
+invisible(lapply(sce_list, function(x){
+  # Set the plotting area to 1 row and 3 columns
+  par(mfrow=c(1, 3))
+  
+  hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'), 
+       xlab='total UMI counts of a droplet', ylab = 'number of droplet')
+  abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000
+  abline(v=5000, col="blue", lwd=1)
+  legend("topright", legend=c("2000", "5000"),
+         col=c("red", "blue"), lty=2, cex=1.2)
+  
+  hist(x$genes_detected, main='total genes detected per droplet', 
+       xlab='genes detected of a droplet', ylab = 'number of droplet')
+  abline(v=1000, col="red", lwd=1)
+  abline(v=3000, col="blue", lwd=1)
+  legend("topright", legend=c("1000", "3000"),
+         col=c("red", "blue"), lty=2, cex=1.2)
+  
+  hist(x$mito_proportion, main='proportion of UMI counts of mito genes per droplet', 
+       xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet')
+  abline(v=0.2, col="red", lwd=1)
+  legend("topright", legend="0.2",
+         col="red", lty=2, cex=1.2)
+  
+  # Reset to default plotting layout
+  par(mfrow=c(1, 1))
+  
+  plot(x$mito_proportion, x$sum_counts, 
+       main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'), 
+       xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
 
-hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'), xlab='total UMI counts of a droplet', ylab = 'number of droplet')
-abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000
-abline(v=5000, col="blue", lwd=1)
-# a droplet contain an intact cell always have total UMI counts 2000-5000
-legend("topright", legend=c("2000", "5000"),
-     col=c("red", "blue"), lty=2, cex=1.2)
+}))
 
-hist(x$genes_detected, main='total genes detected per droplet', xlab='genes detected of a droplet', ylab = 'number of droplet')
-abline(v=1000, col="red", lwd=1)
-abline(v=3000, col="blue", lwd=1)
-legend("topright", legend=c("1000", "3000"),
-     col=c("red", "blue"), lty=2, cex=1.2)
 
-hist(x$mito_proportion, main='proportion of UMI counts of mito genes per droplet', xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet')
-abline(v=0.2, col="red", lwd=1)
-legend("topright", legend="0.2",
-       col="red", lty=2, cex=1.2)
-
-# Reset to default plotting layout
-par(mfrow=c(1, 1))
-
-plot(x$mito_proportion, x$sum_counts, main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'), xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
-})
+# lapply(sce_list, function(x){
+#    # Set the plotting area to 1 row and 3 columns
+# par(mfrow=c(1, 3))
+# 
+# hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'), xlab='total UMI counts of a droplet', ylab = 'number of droplet')
+# abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000
+# abline(v=5000, col="blue", lwd=1)
+# # a droplet contain an intact cell always have total UMI counts 2000-5000
+# legend("topright", legend=c("2000", "5000"),
+#      col=c("red", "blue"), lty=2, cex=1.2)
+# 
+# hist(x$genes_detected, main='total genes detected per droplet', xlab='genes detected of a droplet', ylab = 'number of droplet')
+# abline(v=1000, col="red", lwd=1)
+# abline(v=3000, col="blue", lwd=1)
+# legend("topright", legend=c("1000", "3000"),
+#      col=c("red", "blue"), lty=2, cex=1.2)
+# 
+# hist(x$mito_proportion, main='proportion of UMI counts of mito genes per droplet', xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet')
+# abline(v=0.2, col="red", lwd=1)
+# legend("topright", legend="0.2",
+#        col="red", lty=2, cex=1.2)
+# 
+# # Reset to default plotting layout
+# par(mfrow=c(1, 1))
+# 
+# plot(x$mito_proportion, x$sum_counts, main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'), xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
+# })
 
 ```
 figure 7. histogram of droplet based on total UMI counts, histogram of droplet based on genes detected, histogram of droplet based on proportion of UMI counts of mito genes, mitochondrial proportion versus total UMI count
@@ -1217,106 +1251,108 @@ would that be reasonable to filter out droplets with outlier high mitochondrial 
 
 here still filter out droplets with outlier high mitochondrial proportion within each sample and show filtered droplets in UMAP plots
 
-<!-- ### 6.5 filter out droplets with outlying mitochondrial proportion within each sample and show these filtered droplets in UMAP -->
-<!-- ```{r filter out droplets with outlying mitochondrial proportion within each sample and show these filtered droplets in UMAP, fig.width=5, fig.height=5} -->
-<!-- # if(file.exists("preprocess6.5.RData")) -->
-<!-- # { -->
-<!-- #   load("preprocess6.5.RData") -->
-<!-- # }else -->
-<!-- # { -->
-<!-- # } -->
+### 6.5 filter out droplets with outlying mitochondrial proportion within each sample and show these filtered droplets in UMAP
+```{r filter out droplets with outlying mitochondrial proportion within each sample and show these filtered droplets in UMAP, fig.width=5, fig.height=5}
+# if(file.exists("preprocess6.5.RData"))
+# {
+#   load("preprocess6.5.RData")
+# }else
+# {
+# }
 
-<!--   for(i in 1:length(sce_list)){ -->
-<!--    # sce_list[[i]]$mito_outlier <- (sce_list[[i]]$mito_proportion >= 0.2) -->
-<!--    # print(i) -->
-<!--    # print(table(sce_list[[i]]$mito_outlier)) -->
-<!--    #  cols <- rep('black', length(sce_list[[i]]$mito_outlier)) -->
-<!--    #  cols[sce_list[[i]]$mito_outlier] <- 'red' -->
-<!--    # -->
-<!--    #  plot(sce_list[[i]]$mito_proportion, sce_list[[i]]$sum_counts, main=paste0(i,', mitochondrial proportion versus total UMI count'), col=cols, xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet') -->
-
-
-<!--     sce_list[[i]]$mito_outlier <- isOutlier(sce_list[[i]]$mito_proportion, type='higher',nmads = 5) -->
-<!--     print(table(sce_list[[i]]$mito_outlier)) -->
-<!--     cols <- rep('black', length(sce_list[[i]]$mito_outlier)) -->
-<!--     cols[sce_list[[i]]$mito_outlier] <- 'red' -->
+  for(i in 1:length(sce_list)){
+   # filter the droplets with mito_proportion larger than 0.2
+   # sce_list[[i]]$mito_outlier <- (sce_list[[i]]$mito_proportion >= 0.2)
+   # print(i)
+   # print(table(sce_list[[i]]$mito_outlier))
+   #  cols <- rep('black', length(sce_list[[i]]$mito_outlier))
+   #  cols[sce_list[[i]]$mito_outlier] <- 'red'
+   #
+   #  plot(sce_list[[i]]$mito_proportion, sce_list[[i]]$sum_counts, main=paste0(i,', mitochondrial proportion versus total UMI count'), col=cols, xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
 
 
-<!--     p1 <- plot(sce_list[[i]]$mito_proportion, sce_list[[i]]$sum_counts, main=paste0('sample', i,', mitochondrial proportion versus total UMI count'), col=cols, xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet') -->
-
-<!--     print(p1) -->
-<!--     p2 <- plotReducedDim(sce_list[[i]], 'UMAP', colour_by='mito_outlier') -->
-<!--     print(p2) -->
-
-
+    # filter the droplets with outlier mito_proportion value 
+    sce_list[[i]]$mito_outlier <- isOutlier(sce_list[[i]]$mito_proportion, type='higher',nmads = 5)
+    print(table(sce_list[[i]]$mito_outlier))
+    cols <- rep('black', length(sce_list[[i]]$mito_outlier))
+    cols[sce_list[[i]]$mito_outlier] <- 'red'
 
 
-<!--     sce_list[[i]] <- sce_list[[i]][,!sce_list[[i]]$mito_outlier] -->
-<!--   } -->
+    p1 <- plot(sce_list[[i]]$mito_proportion, sce_list[[i]]$sum_counts, main=paste0('sample', i,', mitochondrial proportion versus total UMI count'), col=cols, xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
 
-<!-- # save.image(file = paste0(work_dir,"preprocess6.5.RData")) -->
+    print(p1)
+    p2 <- plotReducedDim(sce_list[[i]], 'UMAP', colour_by='mito_outlier')
+    print(p2)
 
 
 
-<!-- ``` -->
 
-<!-- figure 9. visualize filtered droplets in UMAP and mitochondrial proportion versus total UMI count plot -->
+    sce_list[[i]] <- sce_list[[i]][,!sce_list[[i]]$mito_outlier]
+  }
 
-<!-- ```{r  overview number of droplets per sample } -->
-<!-- multi_list_bar_plot(sce_list,"after qc filtering") -->
-
-<!-- ``` -->
-
-<!-- figure 10. overview number of droplets per sample -->
-
-<!-- ## 7 Checking for doublets -->
-
-<!-- Here we annotate suspected doublets within individual samples. We will wait to remove these droplets until after we have merged and clustered everything because it can be the case that a whole cluster is primarily doublets and we want to be sure we detect that. -->
-
-<!-- ```{r calculate cxds scores to Check doublets and show cxds scores on UMAP, fig.width=5, fig.height=5 } -->
+# save.image(file = paste0(work_dir,"preprocess6.5.RData"))
 
 
 
-<!-- # BiocManager::install("scds") -->
-<!-- library(scds) -->
-<!-- for(i in 1:length(sce_list)){ -->
-<!--   sce_list[[i]] <- cxds(sce_list[[i]]) -->
-<!--   sce_list[[i]]$query_doublet <- isOutlier(sce_list[[i]]$cxds_score, nmads=5, type='higher') -->
-<!--   p <- plotReducedDim(sce_list[[i]], 'UMAP', colour_by='cxds_score') + ggtitle(paste('sample',i)) -->
+```
 
-<!--   print(p) -->
+figure 9. visualize filtered droplets in UMAP and mitochondrial proportion versus total UMI count plot
 
-<!--   print(i) -->
-<!--   print(table(sce_list[[i]]$query_doublet)) -->
-<!--   cols <- rep('black', length(sce_list[[i]]$query_doublet)) -->
-<!--   cols[sce_list[[i]]$query_doublet] <- 'red' -->
+```{r  overview number of droplets per sample }
+multi_list_bar_plot(sce_list,"after qc filtering")
 
+```
 
-<!--     p1 <- plot(sce_list[[i]]$cxds_score, sce_list[[i]]$sum_counts, main=paste0('sample', i,', cxds_score versus total UMI count'), col=cols, xlab='cxds_score per droplet', ylab='total UMI counts of a droplet') -->
+figure 10. overview number of droplets per sample
 
-<!--     print(p1)   -->
-<!-- } -->
+## 7 Checking for doublets
 
-<!-- ``` -->
+Here we annotate suspected doublets within individual samples. We will wait to remove these droplets until after we have merged and clustered everything because it can be the case that a whole cluster is primarily doublets and we want to be sure we detect that.
 
-<!-- figure 11. visualize the droplets in UMAP and color the droplets based on cxds scores, visualize droplets with outlying cxds scores in mitochondrial  -->
-<!-- proportion versus total UMI count plot -->
-
-<!-- need to check: -->
-<!-- sample 18 have quiet compact cluster distribution in UMAP compared with remaining samples. -->
-
-
-<!-- cxds_score can be affected by sequencing run, cell type constitution, so this varies vastly across samples  -->
-
-<!-- there are some high cxds_score droplets in most samples, but the scores are fairly incomparable across samples.  -->
-<!-- For this reason we've marked those droplets within each sample that are more than 3 MAD above the median. We will revisit whether these are doublets after merging, normalizing and clustering. -->
+```{r calculate cxds scores to Check doublets and show cxds scores on UMAP, fig.width=5, fig.height=5 }
 
 
 
-<!-- # Normalization and merging -->
+# BiocManager::install("scds")
+library(scds)
+for(i in 1:length(sce_list)){
+  sce_list[[i]] <- cxds(sce_list[[i]])
+  sce_list[[i]]$query_doublet <- isOutlier(sce_list[[i]]$cxds_score, nmads=5, type='higher')
+  p <- plotReducedDim(sce_list[[i]], 'UMAP', colour_by='cxds_score') + ggtitle(paste('sample',i))
 
-<!-- need to check: -->
-<!-- Now we will properly normalize the data and merge all of the samples together. We will keep Sample 17-18 tentatively even though they have lots of low total UMIs droplets. will check whether low total UMIs droplets cluster together.  -->
+  print(p)
+
+  print(i)
+  print(table(sce_list[[i]]$query_doublet))
+  cols <- rep('black', length(sce_list[[i]]$query_doublet))
+  cols[sce_list[[i]]$query_doublet] <- 'red'
+
+
+    p1 <- plot(sce_list[[i]]$cxds_score, sce_list[[i]]$sum_counts, main=paste0('sample', i,', cxds_score versus total UMI count'), col=cols, xlab='cxds_score per droplet', ylab='total UMI counts of a droplet')
+
+    print(p1)
+}
+
+```
+
+figure 11. visualize the droplets in UMAP and color the droplets based on cxds scores, visualize droplets with outlying cxds scores in mitochondrial
+proportion versus total UMI count plot
+
+need to check:
+sample 18 have quiet compact cluster distribution in UMAP compared with remaining samples.
+
+
+cxds_score can be affected by sequencing run, cell type constitution, so this varies vastly across samples
+
+there are some high cxds_score droplets in most samples, but the scores are fairly incomparable across samples.
+For this reason we've marked those droplets within each sample that are more than 3 MAD above the median. We will revisit whether these are doublets after merging, normalizing and clustering.
+
+
+
+# Normalization and merging
+
+need to check:
+Now we will properly normalize the data and merge all of the samples together. We will keep Sample 17-18 tentatively even though they have lots of low total UMIs droplets. will check whether low total UMIs droplets cluster together.
 
 
 <!-- ## 8.1 merge samples from same run, exclude catastrophic samples if any -->
