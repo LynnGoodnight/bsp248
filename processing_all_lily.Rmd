@@ -212,7 +212,7 @@ Now we filter empty droplets in each sample separately.
 First we'll look at the Count by rank plot for UMI counts within each droplet, just to get a visual overview of whether anything is odd.
 Each plot shows the total UMI count of each droplet against their rank. Droplets are ranked based on their total UMI count.
 
-```{r produce Count by rank plot for UMI counts, fig.width=10 }
+```{r produce Count by rank plot for UMI counts }
 
 
 Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter_brs = FALSE, before_filter_brs = NULL)
@@ -231,7 +231,7 @@ Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter
       } else {
           # If no error, store the result in the list
           brs[[i]] <- brs_result
-          print(paste('Success sample', names(sce_list)[i], i))
+          print(paste('Success sample', names(sce_list)[i]))
       }
       # brs[[i]] <- barcodeRanks(counts(sce_list[[i]]), lower = 200, fit.bounds = c(300,35000))
     }
@@ -404,7 +404,7 @@ therefore, samples have ideal quality plots there are:  5, 7, 8
 ### 3.4 filter the estimated empty droplets and plot total UMI histogram
 Thus we can filter the droplets
 
-```{r filter the empty droplets based on FDR value and check Count by rank plot after filter the empty droplets, fig.width=10 }
+```{r filter the empty droplets based on FDR value and check Count by rank plot after filter the empty droplets }
 
 sce_list_before_filter_empty_droplets <- sce_list
 if(file.exists("preprocess3.4.RData"))
@@ -1018,78 +1018,76 @@ for (i in 1:length(sce_list))
 
 
 
-<!-- all samples have 13 annotated mitochondrial genes detected here, but the UMI count for some of mitochondrial genes are much higher than other mitochondrial genes -->
+all samples have 13 annotated mitochondrial genes detected here, but the UMI count for some of mitochondrial genes are much higher than other mitochondrial genes
 
-<!-- most samples have most of their droplets contain low UMI count for mitochondrial genes, so most samples could be fine. -->
-
-<!-- after tuning the parameter in empty droplets filtering step, the new parameter result in reasonable droplets numbers. and the mitochondrial genes counts distribution of sample 2,7 also become reasonable and similar to other samples, which is a great improvement. -->
+most samples have most of their droplets contain low UMI count for mitochondrial genes, so most samples in this aspect should be fine.
 
 
-
-<!-- future work: can check function or metabolic pathway of those highly expressed mitochondrial genes, maybe indicate droplets undergoing stress or in the process of dying -->
-
-
-<!-- Now we can check various QC plots and metrics (total UMI per droplet, total genes detected per droplet, proportion of UMI counts of mito genes per droplet) of every sample. -->
-<!-- ### 6.3 check and plot various QC paramters -->
-<!-- ```{r check and plot various QC paramters lily, fig.width=10} -->
-<!-- library("scuttle") -->
-<!-- sce_list <- lapply(sce_list, function(x){ -->
-<!--   stats <- perCellQCMetrics(x, subsets=list(Mito=which(rowData(x)$chr=="MT"))) -->
-<!--   colData(x)$sum_counts <- stats$sum -->
-<!--   colData(x)$genes_detected <- stats$detected -->
-<!--   colData(x)$sum_mito <- stats$subsets_Mito_sum -->
-<!--   colData(x)$mito_proportion <- stats$subsets_Mito_sum/(stats$sum) -->
-<!--   return(x) -->
-<!-- }) -->
-
-<!--  lapply(sce_list, function(x){ -->
+future work: can check function or metabolic pathway of those highly expressed mitochondrial genes, maybe indicate droplets undergoing stress or in the process of dying
 
 
-<!--    # Set the plotting area to 1 row and 3 columns -->
-<!-- par(mfrow=c(1, 3)) -->
+Now we can check various QC plots and metrics (total UMI per droplet, total genes detected per droplet, proportion of UMI counts of mito genes per droplet) of every sample.
 
-<!--   hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'), xlab='total UMI counts of a droplet', ylab = 'number of droplet') -->
-<!-- abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000 -->
-<!-- abline(v=5000, col="blue", lwd=1) -->
-<!-- # a droplet contain an intact cell always have total UMI counts 2000-5000 -->
-<!-- legend("topright", legend=c("2000", "5000"), -->
-<!--        col=c("red", "blue"), lty=2, cex=1.2) -->
+### 6.3 check and plot various QC paramters
+```{r check and plot various QC paramters lily, fig.width=10}
+library("scuttle")
+sce_list <- lapply(sce_list, function(x){
+  stats <- perCellQCMetrics(x, subsets=list(Mito=which(rowData(x)$chr=="MT")))
+  colData(x)$sum_counts <- stats$sum
+  colData(x)$genes_detected <- stats$detected
+  colData(x)$sum_mito <- stats$subsets_Mito_sum
+  colData(x)$mito_proportion <- stats$subsets_Mito_sum/(stats$sum)
+  return(x)
+})
 
-<!--   hist(x$genes_detected, main='total genes detected per droplet', xlab='genes detected of a droplet', ylab = 'number of droplet') -->
-<!-- abline(v=1000, col="red", lwd=1) -->
-<!-- abline(v=3000, col="blue", lwd=1) -->
-<!-- legend("topright", legend=c("1000", "3000"), -->
-<!--        col=c("red", "blue"), lty=2, cex=1.2) -->
-
-<!--   hist(x$mito_proportion, main='proportion of UMI counts of mito genes per droplet', xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet') -->
-<!-- abline(v=0.2, col="red", lwd=1) -->
-<!-- legend("topright", legend="0.2", -->
-<!--        col="red", lty=2, cex=1.2) -->
-
-<!-- # Reset to default plotting layout -->
-<!-- par(mfrow=c(1, 1)) -->
-
-<!--   plot(x$mito_proportion, x$sum_counts, main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'), xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet') -->
-<!-- }) -->
-
-<!-- ``` -->
-<!-- figure 7. histogram of droplet based on total UMI counts, histogram of droplet based on genes detected, histogram of droplet based on proportion of UMI counts of mito genes, mitochondrial proportion versus total UMI count -->
-
-<!-- While some level of mitochondrial expression is expected, excessively high levels (commonly around 10-20% of total UMI count) can flag a sample or cell for exclusion from downstream analysis -->
-
-<!-- most samples have most droplets whose UMI count around 2000-5000, detected genes around 1000-3000, mitochondrial UMI proportion around or below 0.05 -->
-
-<!-- samples from run 1 often have a little higher total UMI count than samples from run 2, since we exclude high total UMI count outliers, the distribution of droplets are clearer to visualize and compared. -->
-
-<!-- droplets that have high proportion of mitochondrial UMI counts and low total UMI counts are usually poor quality droplets containing lysed cell fragments, and will be filtered. -->
-
-<!-- most samples 1-18 only have a small number these droplets, but samples 19-20 contain a lot of these droplets, we will filter droplets with outlier mitochondrial UMI proportions later. -->
-
-<!-- need to check: -->
-<!-- still most droplets in Sample 18 have low number of detected genes and low total UMI counts but with low mitochondrial proportion, seem are not lysed cells might be low sequencing depth droplets. droplets in Sample 17 are better than 18. -->
+ lapply(sce_list, function(x){
 
 
-<!-- we will check more qc metrics of sample 17-18 to decide if discard these low total UMI counts droplets from downstream analysis. -->
+   # Set the plotting area to 1 row and 3 columns
+par(mfrow=c(1, 3))
+
+  hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'), xlab='total UMI counts of a droplet', ylab = 'number of droplet')
+abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000
+abline(v=5000, col="blue", lwd=1)
+# a droplet contain an intact cell always have total UMI counts 2000-5000
+legend("topright", legend=c("2000", "5000"),
+       col=c("red", "blue"), lty=2, cex=1.2)
+
+  hist(x$genes_detected, main='total genes detected per droplet', xlab='genes detected of a droplet', ylab = 'number of droplet')
+abline(v=1000, col="red", lwd=1)
+abline(v=3000, col="blue", lwd=1)
+legend("topright", legend=c("1000", "3000"),
+       col=c("red", "blue"), lty=2, cex=1.2)
+
+  hist(x$mito_proportion, main='proportion of UMI counts of mito genes per droplet', xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet')
+abline(v=0.2, col="red", lwd=1)
+legend("topright", legend="0.2",
+       col="red", lty=2, cex=1.2)
+
+# Reset to default plotting layout
+par(mfrow=c(1, 1))
+
+  plot(x$mito_proportion, x$sum_counts, main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'), xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
+})
+
+```
+figure 7. histogram of droplet based on total UMI counts, histogram of droplet based on genes detected, histogram of droplet based on proportion of UMI counts of mito genes, mitochondrial proportion versus total UMI count
+
+While some level of mitochondrial expression is expected, excessively high levels (commonly around 10-20% of total UMI count) can flag a sample or cell for exclusion from downstream analysis
+
+most samples have most droplets whose UMI count around 2000-5000, detected genes around 1000-3000, mitochondrial UMI proportion around or below 0.05
+
+samples from run 1 often have a little higher total UMI count than samples from run 2, since we exclude high total UMI count outliers, the distribution of droplets are clearer to visualize and compared.
+
+droplets that have high proportion of mitochondrial UMI counts and low total UMI counts are usually poor quality droplets containing lysed cell fragments, and will be filtered.
+
+most samples 1-18 only have a small number these droplets, but samples 19-20 contain a lot of these droplets, we will filter droplets with outlier mitochondrial UMI proportions later.
+
+need to check:
+still most droplets in Sample 18 have low number of detected genes and low total UMI counts but with low mitochondrial proportion, seem are not lysed cells might be low sequencing depth droplets. droplets in Sample 17 are better than 18.
+
+
+we will check more qc metrics of sample 17-18 to decide if discard these low total UMI counts droplets from downstream analysis.
 
 
 <!-- ### 6.4 quickCluster and visualize the droplets in UMAP and color the plots based on QC metrics -->
