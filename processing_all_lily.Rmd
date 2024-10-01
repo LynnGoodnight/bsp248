@@ -22,7 +22,7 @@ if (sampSet == "") {
    sampSet <- "all"      # default
    
    }
-
+current_run <- "all"
 sampSet
 
 sampSets <- list( "all" = 1:18,
@@ -1355,249 +1355,250 @@ need to check:
 Now we will properly normalize the data and merge all of the samples together. We will keep Sample 17-18 tentatively even though they have lots of low total UMIs droplets. will check whether low total UMIs droplets cluster together.
 
 
-<!-- ## 8.1 merge samples from same run, exclude catastrophic samples if any -->
-<!-- ```{r exclude catastrophic samples if any and merge samples from same run} -->
+## 8.1 merge samples from same run, exclude catastrophic samples if any
+```{r exclude catastrophic samples if any and merge samples from same run}
 
-<!-- if(file.exists("preprocess8.1.RData")) -->
-<!-- { -->
-<!--   load("preprocess8.1.RData") -->
-<!-- }else -->
-<!-- { -->
+if(file.exists("preprocess8.1.RData"))
+{
+  load("preprocess8.1.RData")
+}else
+{
 
-<!--   for(i in 1:length(sce_list)){ -->
-<!--     colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), '-', as.character(i)) -->
-<!--   } -->
-<!--   names(sce_list) <- paste0('sample', c(1:20)) -->
+  for(i in 1:length(sce_list)){
+    colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), '-', as.character(i))
+  }
+  # names(sce_list) <- paste0('sample', c(1:20))
+  # 
+  # sce_run_1 <- do.call('cbind', sce_list[c(1:8)])
+  # sce_run_2 <- do.call('cbind', sce_list[c(9:16)])
+  # sce_run_3_lung <- do.call('cbind', sce_list[c(19:20)])
+  # sce_run_3_BAL <- do.call('cbind', sce_list[c(17:18)])
 
-<!--   sce_run_1 <- do.call('cbind', sce_list[c(1:8)]) -->
-<!--   sce_run_2 <- do.call('cbind', sce_list[c(9:16)]) -->
-<!--   sce_run_3_lung <- do.call('cbind', sce_list[c(19:20)]) -->
-<!--   sce_run_3_BAL <- do.call('cbind', sce_list[c(17:18)]) -->
 
+     save.image(file = "preprocess8.1.RData")
+}
 
-<!--      save.image(file = "preprocess8.1.RData") -->
-<!-- } -->
 
 
+```
 
-<!-- ``` -->
 
+```{r add conditions annotation to data}
 
-<!-- ```{r add conditions annotation to data} -->
 
-<!-- setwd(work_dir) -->
-<!-- annot <- read.csv('references/sample_biology.csv') -->
-<!-- samps <- paste("sample", formatC(1:20, width=2, flag="0"), sep="_") -->
-<!-- annot$sample <- samps -->
-<!-- rownames(annot) <- annot$sample -->
-<!-- ``` -->
+annot <- read.csv('references/sample_information.csv')
+samps <- names(sce_list)
+annot$sample <- samps
+rownames(annot) <- samps
+```
 
-<!-- then we perform quick clustering and normalization by pooled factors.  -->
+then we perform quick clustering and normalization by pooled factors.
 
 
-<!-- Now we look at the data to determine whether there are batch effects that ought to be removed between samples. Here we will look for the top 5000 highly variable genes for biological variability and use these for PCA and other dimensional reduction as these are the genes we will ultimately be interested in. -->
+Now we look at the data to determine whether there are batch effects that ought to be removed between samples. Here we will look for the top 5000 highly variable genes for biological variability and use these for PCA and other dimensional reduction as these are the genes we will ultimately be interested in.
 
-<!-- Whether or not sample should be specified in the design for determining biological variability is an interesting question.  -->
-<!-- In some ways, sample corresponds to a batch effect in that technical effects of (e.g. sample preparation procedures) will be captured here.  -->
-<!-- In other ways, it is a biological effect as different samples underwent different experimental treatments (here i suspect our samples are from inbreeding individual? ) and these would be expected to impact gene expression in quite a profound way. -->
+Whether or not sample should be specified in the design for determining biological variability is an interesting question.
+In some ways, sample corresponds to a batch effect in that technical effects of (e.g. sample preparation procedures) will be captured here.
+In other ways, it is a biological effect as different samples underwent different experimental treatments (here i suspect our samples are from inbreeding individual? ) and these would be expected to impact gene expression in quite a profound way.
 
-<!-- 1-8 samples from inbreed individual. -->
-<!-- Given that 1-8 samples come from the same sequencing run and presuming consistent sample preparation and processing, 1-4 under condition 1, 5-8 under condition 2, so we expect the sample 1-4 ideally should be same, sample 5-8 ideally should be same.  -->
+1-8 samples from inbreed individual.
+Given that 1-8 samples come from the same sequencing run and presuming consistent sample preparation and processing, 1-4 under condition 1, 5-8 under condition 2, so we expect the sample 1-4 ideally should be same, sample 5-8 ideally should be same.
 
-<!-- since we want to preserve the true biological signals related to the different conditions so that we can research the biological difference between these 2 conditions. -->
+since we want to preserve the true biological signals related to the different conditions so that we can research the biological difference between these 2 conditions.
 
-<!-- so we shouldn't batch correct between 2 conditions (ISU1 vs 135) to avoid -->
-<!-- diminishing the biological differences between these 2 conditions. so we don't apply Batch Effect Correction here.  -->
+so we shouldn't batch correct between 2 conditions (ISU1 vs 135) to avoid
+diminishing the biological differences between these 2 conditions. so we don't apply Batch Effect Correction here.
 
-<!-- maybe in the future. when we merge sample 1-18, we could apply Batch Effect Correction based on batch variables sequencing run. -->
+maybe in the future. when we merge sample 1-18, we could apply Batch Effect Correction based on batch variables sequencing run.
 
 
-<!-- after we cluster, we can check whether droplets from ISU1 are assigned into different cluster compared with droplets from 135. -->
+after we cluster, we can check whether droplets from ISU1 are assigned into different cluster compared with droplets from 135.
 
-<!-- if same cell type are assigned into different cluster due to condition, then it would be interesting, indicating same immune cell type behave differently under these 2 conditions. -->
+if same cell type are assigned into different cluster due to condition, then it would be interesting, indicating same immune cell type behave differently under these 2 conditions.
 
 
-<!-- i previously apply Batch Effect correct between all samples in same run to exclude the possible genome difference between different individuals and random effect. but i noticed this cause the difference between 2 conditions reduced. so i don't risk diminishing the biological differences between these 2 conditions in order to apply Batch Effect correct between all samples. -->
+i previously apply Batch Effect correct between all samples in same run to exclude the possible genome difference between different individuals and random effect. but i noticed this cause the difference between 2 conditions reduced. so i don't risk diminishing the biological differences between these 2 conditions in order to apply Batch Effect correct between all samples.
 
 
-<!-- ## 8.2 Normalization gene expression counts, conduct batch effect correction  -->
-<!-- ```{r perform quick clustering and normalization for run 1 samples and plot qc metrics before and after batch effect correction} -->
+## 8.2 Normalization gene expression counts, conduct batch effect correction
+```{r perform quick clustering and normalization for run 1 samples and plot qc metrics before and after batch effect correction}
 
 
-<!-- normalize_visualize_save <- function(current_run,sce_run_1, Correct_batch_effects = FALSE) -->
-<!-- { -->
-<!--   if(file.exists(paste0('sce_',current_run,'.rds'))) -->
-<!-- { -->
-<!--   sce_run_1 <- readRDS(paste0('sce_',current_run,'.rds')) -->
-<!-- }else -->
-<!-- { -->
-<!--   # log transfrom gene counts -->
+normalize_visualize_save <- function(current_run,sce_run_1, Correct_batch_effects = FALSE)
+{
+  if(file.exists(paste0('sce_',current_run,'.rds')))
+{
+  sce_run_1 <- readRDS(paste0('sce_',current_run,'.rds'))
+}else
+{
+  # log transfrom gene counts
 
-<!--   print(sce_run_1) -->
-<!--   clust <- quickCluster(sce_run_1) -->
-<!--   size_factors <- calculateSumFactors(sce_run_1, cluster=clust) -->
-<!--   sce_run_1 <- logNormCounts(sce_run_1, size_factors=size_factors) -->
-<!--   print(sce_run_1) -->
+  # print(head(sce_run_1))
+  clust <- quickCluster(sce_run_1)
+  size_factors <- calculateSumFactors(sce_run_1, cluster=clust)
+  sce_run_1 <- logNormCounts(sce_run_1, size_factors=size_factors)
+  # print(sce_run_1)
 
-<!--   # get the Top 5000 High Variable Genes -->
-<!--   varmod <- modelGeneVar(sce_run_1, block=sce_run_1$Sample) -->
-<!--   # Model the variance of the log-expression profiles for each gene, decomposing it into technical and biological components based on a fitted mean-variance trend. -->
-<!--   vargenes <- getTopHVGs(varmod, n=5000) -->
-<!--   length(vargenes) -->
+  # get the Top 5000 High Variable Genes
+  varmod <- modelGeneVar(sce_run_1, block=sce_run_1$Sample)
+  # Model the variance of the log-expression profiles for each gene, decomposing it into technical and biological components based on a fitted mean-variance trend.
+  vargenes <- getTopHVGs(varmod, n=5000)
+  length(vargenes)
 
-<!--   sce_run_1 <- fixedPCA(sce_run_1, subset.row=vargenes)  -->
-<!--   set.seed(100) -->
-<!--   sce_run_1 <- runUMAP(sce_run_1, dimred='PCA') -->
-<!--   set.seed(100) -->
-<!--   sce_run_1 <- runTSNE(sce_run_1, dimred='PCA') -->
-<!--   sce_run_1$condition <- annot[as.character(sce_run_1$Sample), 'Condition'] -->
-<!--   sce_run_1$run <- current_run -->
+  sce_run_1 <- fixedPCA(sce_run_1, subset.row=vargenes)
+  set.seed(100)
+  sce_run_1 <- runUMAP(sce_run_1, dimred='PCA')
+  set.seed(100)
+  sce_run_1 <- runTSNE(sce_run_1, dimred='PCA')
+  sce_run_1$condition <- annot[as.character(sce_run_1$Sample), 'Condition']
+  sce_run_1$run <- current_run
 
 
-<!--   saveRDS(sce_run_1, file = paste0('sce_',current_run,'.rds')) -->
+  saveRDS(sce_run_1, file = paste0('sce_',current_run,'.rds'))
 
-<!-- } -->
-
-<!--   ###################### plot -->
-<!--   title_suffix_1 = '\n based on PCA componets calculated using top 5000 highly variable genes' -->
-
-
-<!--   set.seed(100) -->
-<!--   ord <- sample.int(ncol(sce_run_1), ncol(sce_run_1), replace=FALSE) -->
-<!--   pl <- plotUMAP(sce_run_1[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1)) -->
-<!--   print(pl) -->
+}
+
+  ###################### plot
+  title_suffix_1 = '\n based on PCA componets calculated using top 5000 highly variable genes'
+
+
+  set.seed(100)
+  ord <- sample.int(ncol(sce_run_1), ncol(sce_run_1), replace=FALSE)
+  pl <- plotUMAP(sce_run_1[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
+  print(pl)
 
 
-<!--   pl <- plotUMAP(sce_run_1[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1)) -->
-<!--   print(pl) -->
+  pl <- plotUMAP(sce_run_1[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
+  print(pl)
 
-<!--   pl <- plotReducedDim(sce_run_1, 'UMAP', colour_by=rownames(sce_run_1)[which(rowData(sce_run_1)$Symbol == 'HNMT')]) + ggtitle(paste(current_run,'myeloid highlighted (HMNT)','UMAP uncorrected', title_suffix_1)) ## myeloid -->
-<!--   print(pl) -->
+  pl <- plotReducedDim(sce_run_1, 'UMAP', colour_by=rownames(sce_run_1)[which(rowData(sce_run_1)$Symbol == 'HNMT')]) + ggtitle(paste(current_run,'myeloid highlighted (HMNT)','UMAP uncorrected', title_suffix_1)) ## myeloid
+  print(pl)
 
-<!--   pl <- plotReducedDim(sce_run_1, 'UMAP', colour_by=rownames(sce_run_1)[which(rowData(sce_run_1)$Symbol == 'CD3E')]) + ggtitle(paste(current_run,'T cells highlighted (CD3E)', 'UMAP uncorrected', title_suffix_1)) ## T cells -->
-<!--   print(pl) -->
+  pl <- plotReducedDim(sce_run_1, 'UMAP', colour_by=rownames(sce_run_1)[which(rowData(sce_run_1)$Symbol == 'CD3E')]) + ggtitle(paste(current_run,'T cells highlighted (CD3E)', 'UMAP uncorrected', title_suffix_1)) ## T cells
+  print(pl)
 
-<!--   pl <- plotReducedDim(sce_run_1, 'UMAP', colour_by=rownames(sce_run_1)[which(rowData(sce_run_1)$Symbol == 'PAX5')]) + ggtitle(paste(current_run,'B cells highlighted (PAX5)', 'UMAP uncorrected', title_suffix_1)) ## B cells -->
-<!--   print(pl) -->
-<!--   # correct between all samples in same run and plot qc metrics and UMAP and save workspace and rds for run 1 samples -->
+  pl <- plotReducedDim(sce_run_1, 'UMAP', colour_by=rownames(sce_run_1)[which(rowData(sce_run_1)$Symbol == 'PAX5')]) + ggtitle(paste(current_run,'B cells highlighted (PAX5)', 'UMAP uncorrected', title_suffix_1)) ## B cells
+  print(pl)
+  # correct between all samples in same run and plot qc metrics and UMAP and save workspace and rds for run 1 samples
 
-<!--   p1 <- plotReducedDim(sce_run_1, 'UMAP', colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_1)) -->
-<!--   print(p1) -->
+  p1 <- plotReducedDim(sce_run_1, 'UMAP', colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_1))
+  print(p1)
 
 
-<!--   varmod <- modelGeneVar(sce_run_1, block=sce_run_1$Sample) -->
-<!--   vargenes <- getTopHVGs(varmod, n=5000) -->
+  varmod <- modelGeneVar(sce_run_1, block=sce_run_1$Sample)
+  vargenes <- getTopHVGs(varmod, n=5000)
 
-<!--   if(Correct_batch_effects) -->
-<!--   { -->
-<!--     library(batchelor) -->
-<!--     set.seed(100) -->
-<!--     sce_run_1_corrected <- fastMNN(sce_run_1, batch=sce_run_1$Sample, subset.row = vargenes, get.variance = TRUE) -->
-<!--   # # produce batch effects Corrected data -->
-<!--   #   if(file.exists(paste0('sce_',current_run,'_corrected.rds'))) -->
-<!--   # { -->
-<!--   #   sce_run_1_corrected <- readRDS(paste0('sce_',current_run,'_corrected.rds')) -->
-<!--   #   print(paste0("skip save ",'sce_',current_run,'_corrected.rds','since it already exist to save running time')) -->
-<!--   # }else -->
-<!--   #   { -->
-<!--   #    -->
-<!--   #   } -->
-<!--   }else -->
-<!--   { -->
-<!--   library(batchelor) -->
-<!--   set.seed(100) -->
-<!--   sce_run_1_corrected <- fastMNN(sce_run_1, batch=sce_run_1$run, subset.row = vargenes, get.variance = TRUE) -->
-<!--   sce_run_1_corrected -->
-<!--   } -->
+  if(Correct_batch_effects)
+  {
+    library(batchelor)
+    set.seed(100)
+    sce_run_1_corrected <- fastMNN(sce_run_1, batch=sce_run_1$run, subset.row = vargenes, get.variance = TRUE)
+    sce_run_1_corrected
+  # # produce batch effects Corrected data
+  #   if(file.exists(paste0('sce_',current_run,'_corrected.rds')))
+  # {
+  #   sce_run_1_corrected <- readRDS(paste0('sce_',current_run,'_corrected.rds'))
+  #   print(paste0("skip save ",'sce_',current_run,'_corrected.rds','since it already exist to save running time'))
+  # }else
+  #   {
+  #
+  #   }
+  }else
+  {
+  library(batchelor)
+  set.seed(100)
+  sce_run_1_corrected <- fastMNN(sce_run_1, batch=sce_run_1$run, subset.row = vargenes, get.variance = TRUE)
+  sce_run_1_corrected
+  }
 
-<!--   set.seed(100) -->
-<!--   sce_run_1_corrected <- runUMAP(sce_run_1_corrected, dimred="corrected") -->
-<!--   sce_run_1_corrected <- runTSNE(sce_run_1_corrected, dimred="corrected") -->
+  set.seed(100)
+  sce_run_1_corrected <- runUMAP(sce_run_1_corrected, dimred="corrected")
+  sce_run_1_corrected <- runTSNE(sce_run_1_corrected, dimred="corrected")
 
-<!--   sce_run_1_corrected$Sample <- sce_run_1$Sample -->
-<!--   sce_run_1_corrected$condition <- sce_run_1$condition -->
-<!--   sce_run_1_corrected$cxds_score <- sce_run_1$cxds_score -->
-<!--   sce_run_1_corrected$query_doublet <- sce_run_1$query_doublet -->
-<!--   sce_run_1_corrected$sum_counts <- sce_run_1$sum_counts -->
-<!--   sce_run_1_corrected$genes_detected <- sce_run_1$genes_detected -->
-<!--   sce_run_1_corrected$mito_proportion <- sce_run_1$mito_proportion -->
-<!--   sce_run_1_corrected$hgnc_symbol <- sce_run_1$hgnc_symbol -->
-<!--   sce_run_1_corrected$sum_counts_level <- sce_run_1$sum_counts_level -->
+  sce_run_1_corrected$Sample <- sce_run_1$Sample
+  sce_run_1_corrected$condition <- sce_run_1$condition
+  sce_run_1_corrected$cxds_score <- sce_run_1$cxds_score
+  sce_run_1_corrected$query_doublet <- sce_run_1$query_doublet
+  sce_run_1_corrected$sum_counts <- sce_run_1$sum_counts
+  sce_run_1_corrected$genes_detected <- sce_run_1$genes_detected
+  sce_run_1_corrected$mito_proportion <- sce_run_1$mito_proportion
+  sce_run_1_corrected$hgnc_symbol <- sce_run_1$hgnc_symbol
+  sce_run_1_corrected$sum_counts_level <- sce_run_1$sum_counts_level
 
-<!--   rowdat <- rowData(sce_run_1_corrected) -->
-<!--   rowdat <- cbind(rowdat, rowData(sce_run_1_corrected)[rownames(sce_run_1_corrected),]) -->
+  rowdat <- rowData(sce_run_1_corrected)
+  rowdat <- cbind(rowdat, rowData(sce_run_1_corrected)[rownames(sce_run_1_corrected),])
 
-<!--   rowData(sce_run_1_corrected) <- rowdat -->
+  rowData(sce_run_1_corrected) <- rowdat
 
 
-<!--   if(file.exists(paste0('sce_',current_run,'_corrected.rds'))) -->
-<!--   { -->
-<!--     print(paste0("skip save ",'sce_',current_run,'_corrected.rds','since it already exist to save running time')) -->
-<!--   }else -->
-<!--   { -->
-<!--     saveRDS(sce_run_1_corrected, file = paste0('sce_',current_run,'_corrected.rds'))    -->
-<!--   }     -->
-<!--   print(sce_run_1_corrected)     -->
-<!--   ###################### plot  -->
-<!--   set.seed(100) -->
-<!--   ord <- sample.int(ncol(sce_run_1_corrected), ncol(sce_run_1_corrected), replace=FALSE) -->
+  if(file.exists(paste0('sce_',current_run,'_corrected.rds')))
+  {
+    print(paste0("skip save ",'sce_',current_run,'_corrected.rds','since it already exist to save running time'))
+  }else
+  {
+    saveRDS(sce_run_1_corrected, file = paste0('sce_',current_run,'_corrected.rds'))
+  }
+  print(sce_run_1_corrected)
+  ###################### plot
+  set.seed(100)
+  ord <- sample.int(ncol(sce_run_1_corrected), ncol(sce_run_1_corrected), replace=FALSE)
 
-<!--   title_suffix_2 = '\n based on top 5000 highly variable genes' -->
+  title_suffix_2 = '\n based on top 5000 highly variable genes'
 
-<!--   pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2)) -->
-<!--   print(pl) -->
+  pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  print(pl)
 
-<!--   pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2)) -->
-<!--   print(pl) -->
+  pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  print(pl)
 
-<!--   pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2)) -->
-<!--   print(pl) -->
+  pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  print(pl)
 
-<!--   pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2)) -->
-<!--   print(pl) -->
-<!--   # lapply(sce_run_1_corrected, dim) -->
+  pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  print(pl)
+  # lapply(sce_run_1_corrected, dim)
 
-<!--   p1 <- plotUMAP(sce_run_1_corrected[,ord], colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_2)) -->
-<!--   print(p1)   -->
-<!-- } -->
+  p1 <- plotUMAP(sce_run_1_corrected[,ord], colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_2))
+  print(p1)
+}
 
-<!-- current_run <- "run_1" -->
-<!-- normalize_visualize_save(current_run,sce_run_1, Correct_batch_effects = FALSE) -->
+current_run <- "all"
+normalize_visualize_save(current_run,sce_run_1, Correct_batch_effects = TRUE)
 
 
-<!-- # title_suffix = 'corrected by samples in same run' -->
-<!-- ``` -->
+# title_suffix = 'corrected by samples in same run'
+```
 
-<!-- figure 12.1 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, myeloid;  cxds scores; suspected doublet for sequencing run 1 -->
+figure 12.1 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, myeloid;  cxds scores; suspected doublet for sequencing run 1
 
 
 
-<!-- after batch effect correction. we observe droplets from 8 samples distribute more uniformly in UMAP plots. droplets from 2 conditions distribute apprantly more uniformly. -->
+after batch effect correction. we observe droplets from 8 samples distribute more uniformly in UMAP plots. droplets from 2 conditions distribute apprantly more uniformly.
 
-<!-- We will leave this analysis here and start a new script where we cluster, subcluster, filter doublets, etc. -->
+We will leave this analysis here and start a new script where we cluster, subcluster, filter doublets, etc.
 
 
 
 
 
-<!-- ```{r perform quick clustering and normalization for run 2 samples and plot qc metrics before batch effect correction} -->
-<!-- current_run <- "run_2" -->
-<!-- normalize_visualize_save(current_run,sce_run_2, Correct_batch_effects = FALSE) -->
+```{r perform quick clustering and normalization for run 2 samples and plot qc metrics before batch effect correction}
+# current_run <- "run_2"
+# normalize_visualize_save(current_run,sce_run_2, Correct_batch_effects = FALSE)
 
-<!-- ``` -->
+```
 
-<!-- figure 12.2 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, myeloid;  cxds scores; suspected doublet for sequencing run 2 -->
+figure 12.2 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, myeloid;  cxds scores; suspected doublet for sequencing run 2
 
-<!-- ```{r perform quick clustering and normalization for run 3 samples and plot qc metrics before batch effect correction} -->
+```{r perform quick clustering and normalization for run 3 samples and plot qc metrics before batch effect correction}
 
+# 
+# normalize_visualize_save("run_3_BAL",sce_run_3_BAL, Correct_batch_effects = FALSE)
+# normalize_visualize_save("run_3_lung",sce_run_3_lung, Correct_batch_effects = FALSE)
 
-<!-- normalize_visualize_save("run_3_BAL",sce_run_3_BAL, Correct_batch_effects = FALSE) -->
-<!-- normalize_visualize_save("run_3_lung",sce_run_3_lung, Correct_batch_effects = FALSE) -->
 
 
+```
 
-
-<!-- ``` -->
 
 <!-- figure 12.3 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, myeloid;  cxds scores; suspected doublet for sequencing run 3 -->
 <!-- # 9 save image and show session Info -->
