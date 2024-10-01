@@ -222,7 +222,7 @@ Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter
     brs <- list()
     for (i in 1:length(sce_list)) 
     {
-      brs_result <- try(barcodeRanks(counts(sce_list[[i]]), lower = 200, fit.bounds = c(300,35000)), silent = FALSE  )
+      brs_result <- try(barcodeRanks(counts(sce_list[[i]]), lower = 200, fit.bounds = c(300,35000)), silent = TRUE  )
       
       # Check if an error occurred
       if (inherits(brs_result, "try-error")) {
@@ -1040,26 +1040,24 @@ sce_list <- lapply(sce_list, function(x){
   return(x)
 })
 
- lapply(sce_list, function(x){
-
-
+lapply(sce_list, function(x){
    # Set the plotting area to 1 row and 3 columns
 par(mfrow=c(1, 3))
 
-  hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'), xlab='total UMI counts of a droplet', ylab = 'number of droplet')
+hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'), xlab='total UMI counts of a droplet', ylab = 'number of droplet')
 abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000
 abline(v=5000, col="blue", lwd=1)
 # a droplet contain an intact cell always have total UMI counts 2000-5000
 legend("topright", legend=c("2000", "5000"),
-       col=c("red", "blue"), lty=2, cex=1.2)
+     col=c("red", "blue"), lty=2, cex=1.2)
 
-  hist(x$genes_detected, main='total genes detected per droplet', xlab='genes detected of a droplet', ylab = 'number of droplet')
+hist(x$genes_detected, main='total genes detected per droplet', xlab='genes detected of a droplet', ylab = 'number of droplet')
 abline(v=1000, col="red", lwd=1)
 abline(v=3000, col="blue", lwd=1)
 legend("topright", legend=c("1000", "3000"),
-       col=c("red", "blue"), lty=2, cex=1.2)
+     col=c("red", "blue"), lty=2, cex=1.2)
 
-  hist(x$mito_proportion, main='proportion of UMI counts of mito genes per droplet', xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet')
+hist(x$mito_proportion, main='proportion of UMI counts of mito genes per droplet', xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet')
 abline(v=0.2, col="red", lwd=1)
 legend("topright", legend="0.2",
        col="red", lty=2, cex=1.2)
@@ -1067,58 +1065,55 @@ legend("topright", legend="0.2",
 # Reset to default plotting layout
 par(mfrow=c(1, 1))
 
-  plot(x$mito_proportion, x$sum_counts, main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'), xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
+plot(x$mito_proportion, x$sum_counts, main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'), xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
 })
 
 ```
 figure 7. histogram of droplet based on total UMI counts, histogram of droplet based on genes detected, histogram of droplet based on proportion of UMI counts of mito genes, mitochondrial proportion versus total UMI count
 
+
 While some level of mitochondrial expression is expected, excessively high levels (commonly around 10-20% of total UMI count) can flag a sample or cell for exclusion from downstream analysis
 
-most samples have most droplets whose UMI count around 2000-5000, detected genes around 1000-3000, mitochondrial UMI proportion around or below 0.05
+good quality samples have most droplets whose UMI count around 2000-5000, detected genes around 1000-3000, mitochondrial UMI proportion around or below 0.05
 
-samples from run 1 often have a little higher total UMI count than samples from run 2, since we exclude high total UMI count outliers, the distribution of droplets are clearer to visualize and compared.
-
-droplets that have high proportion of mitochondrial UMI counts and low total UMI counts are usually poor quality droplets containing lysed cell fragments, and will be filtered.
-
-most samples 1-18 only have a small number these droplets, but samples 19-20 contain a lot of these droplets, we will filter droplets with outlier mitochondrial UMI proportions later.
-
-need to check:
-still most droplets in Sample 18 have low number of detected genes and low total UMI counts but with low mitochondrial proportion, seem are not lysed cells might be low sequencing depth droplets. droplets in Sample 17 are better than 18.
+suspicious sample: 
+too few droplets, 3 
+low total UMI counts in most droplets, too few transcripts captured or sequenced in sample 5, 10
 
 
-we will check more qc metrics of sample 17-18 to decide if discard these low total UMI counts droplets from downstream analysis.
+
+droplets that have high proportion of mitochondrial UMI counts and low total UMI counts are usually poor quality droplets containing lysed cell fragments, and will be filtered. most samples 1-18 only have a small number these droplets, we will filter droplets with outlier mitochondrial UMI proportions later.
 
 
-<!-- ### 6.4 quickCluster and visualize the droplets in UMAP and color the plots based on QC metrics -->
-<!-- Let's now visualize the droplets in UMAP and color the plots based on QC metrics (detected genes, mitochondrial UMI proportion) and main cell types' markers to see if the suspicious droplets and samples represent doublets or an odd cell type. -->
+### 6.4 quickCluster and visualize the droplets in UMAP and color the plots based on QC metrics
+Let's now visualize the droplets in UMAP and color the plots based on QC metrics (detected genes, mitochondrial UMI proportion) and main cell types' markers to see if the suspicious droplets and samples represent doublets or an odd cell type.
 
-<!-- ```{r run PCA and UMAP individually in each sample} -->
-<!-- sce_list -->
-<!-- if(file.exists("preprocess6.4.RData")) -->
-<!-- { -->
-<!--   load("preprocess6.4.RData") -->
-<!-- }else -->
-<!-- { -->
-<!--   library(scran) -->
-<!--   library(scater) -->
-<!--   library(uwot) -->
-<!--   for(i in 1:length(sce_list)){ -->
-<!--     set.seed(100)  -->
-<!--     clust <- quickCluster(sce_list[[i]]) -->
+```{r run PCA and UMAP individually in each sample}
+sce_list
+if(file.exists("preprocess6.4.RData"))
+{
+  load("preprocess6.4.RData")
+}else
+{
+  library(scran)
+  library(scater)
+  library(uwot)
+  for(i in 1:length(sce_list)){
+    set.seed(100)
+    clust <- quickCluster(sce_list[[i]])
 
-<!--     sce_list[[i]] <- computeSumFactors(sce_list[[i]], cluster=clust) -->
-<!--     sce_list[[i]] <- logNormCounts(sce_list[[i]]) -->
+    sce_list[[i]] <- computeSumFactors(sce_list[[i]], cluster=clust)
+    sce_list[[i]] <- logNormCounts(sce_list[[i]])
 
-<!--     sce_list[[i]] <- fixedPCA(sce_list[[i]], subset.row=NULL) ## note intentionally not using HVGs here as this is a rough visualization to see all effects on droplets -->
-<!--     sce_list[[i]] <- runUMAP(sce_list[[i]], dimred='PCA') -->
-<!--   } -->
+    sce_list[[i]] <- fixedPCA(sce_list[[i]], subset.row=NULL) ## note intentionally not using HVGs here as this is a rough visualization to see all effects on droplets
+    sce_list[[i]] <- runUMAP(sce_list[[i]], dimred='PCA')
+  }
 
-<!--     save.image(file = paste0(work_dir,"preprocess6.4.RData")) -->
-<!-- } -->
+    save.image(file = paste0(work_dir,"preprocess6.4.RData"))
+}
 
-<!-- sce_list -->
-<!-- ``` -->
+sce_list
+```
 
 <!-- Let's have a look at samples suspicious samples 17-18, and normal samples 1-16, 19-20 and check QC parameters and marker genes for typical cell types to determine whether QC-outliers are of one specific cell type. -->
 
@@ -1141,7 +1136,7 @@ we will check more qc metrics of sample 17-18 to decide if discard these low tot
 
 
 
-<!-- for (sample in c(17:20,1:16))  -->
+<!-- for (sample in c(17:20,1:16)) -->
 <!-- { -->
 <!--   x <- sce_list[[sample]] -->
 
@@ -1154,25 +1149,25 @@ we will check more qc metrics of sample 17-18 to decide if discard these low tot
 <!--   p_combined <- p1 + p2 + p3 + plot_layout(ncol = 3) -->
 
 <!--   # Display the combined plot -->
-<!--   print(p_combined)  -->
+<!--   print(p_combined) -->
 
 
 <!--   p1 <- plotReducedDim(x, 'UMAP', colour_by = 'sum_counts_level') + ggtitle(unique(x$Sample))+ coord_fixed() -->
 <!--   print(p1) -->
 
-<!-- ########################################   -->
+<!-- ######################################## -->
 <!--   p1 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'HNMT')]) + ggtitle(paste(unique(x$Sample),'myeloid, HNMT')) ## myeloid -->
 
 <!--   p2 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'CD3E')]) + ggtitle('T cells, CD3E gene') ## T cells -->
 
-<!--   p3 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'PAX5')]) + ggtitle('B cells, PAX5 gene') ## B cells   -->
-<!--   # Set uniform color scale limits  -->
+<!--   p3 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'PAX5')]) + ggtitle('B cells, PAX5 gene') ## B cells -->
+<!--   # Set uniform color scale limits -->
 <!--   # color_limits <- c(0, 5) -->
 <!--   color_set <- c("blue", "green", "yellow") -->
 
 <!--   p1 <- p1 + coord_fixed() + -->
-<!--     scale_color_gradientn(colors = color_set) +  -->
-<!--     theme(legend.position = "right", aspect.ratio = 1)  -->
+<!--     scale_color_gradientn(colors = color_set) + -->
+<!--     theme(legend.position = "right", aspect.ratio = 1) -->
 
 <!--   p2 <- p2 + coord_fixed() + -->
 <!--     scale_color_gradientn( colors = color_set) + -->
@@ -1184,7 +1179,7 @@ we will check more qc metrics of sample 17-18 to decide if discard these low tot
 
 <!--   # Combine plots with patchwork side by side -->
 <!--   p_combined <- (p1 | p2 | p3) & -->
-<!--     plot_layout( guides = "collect")  -->
+<!--     plot_layout( guides = "collect") -->
 <!--   # Print the combined plot -->
 <!--   print(p_combined) -->
 
@@ -1195,19 +1190,19 @@ we will check more qc metrics of sample 17-18 to decide if discard these low tot
 
 <!-- figure 8. visualize the droplets in UMAP and color the droplets based on QC metrics (total UMI counts, detected genes, proportion of mito UMI counts, 3 levels of total UMI counts,  marker gene of B cells, T cells, myeloid ) -->
 
-<!-- histogram of droplet based on total UMI counts, histogram of droplet based on genes detected, histogram of droplet based on proportion of UMI counts of mito genes, mitochondrial proportion versus total UMI count  -->
+<!-- histogram of droplet based on total UMI counts, histogram of droplet based on genes detected, histogram of droplet based on proportion of UMI counts of mito genes, mitochondrial proportion versus total UMI count -->
 
 <!-- need to check: -->
 <!-- we can observe three kinds of droplets distribution in UMAP, whose total UMI above 20,000, within normal range, or below 1000 to check if abnormal total UMI droplets cluster together. these droplets often locate in several different clusters, it seems fine? would  these abnormal total UMI droplets be an issue ?would filtering them necessary? -->
 
 <!-- From this examination, it appears that none of the major cell types are specifically characterized by high mitochondrial proportion, and most samples have few high mitochondrial proportion droplets. -->
 
-<!-- so I think that we can safely filter high mitochondrial proportion droplets out.  -->
+<!-- so I think that we can safely filter high mitochondrial proportion droplets out. -->
 
 <!-- It would be difficult to justify retaining these outliers. We can always revisit this later to look at marker genes for the droplets if desired. -->
 
 <!-- need to check: -->
-<!-- sample 19-20 looks fine in their plots above, but sample 17-18 seems fail to cluster due to their low detected genes and total UMI, results in not enough gene expression information to cluster and separate these droplets. namely, the algorithm fail to detect the significant difference between droplets. this will cause difficulty in assign cell types for these droplets. we might remove these low total UMI droplets from downstream analysis.  -->
+<!-- sample 19-20 looks fine in their plots above, but sample 17-18 seems fail to cluster due to their low detected genes and total UMI, results in not enough gene expression information to cluster and separate these droplets. namely, the algorithm fail to detect the significant difference between droplets. this will cause difficulty in assign cell types for these droplets. we might remove these low total UMI droplets from downstream analysis. -->
 
 
 <!-- need to check: -->
@@ -1219,7 +1214,7 @@ we will check more qc metrics of sample 17-18 to decide if discard these low tot
 <!-- here still filter out droplets with outlier high mitochondrial proportion within each sample and show filtered droplets in UMAP plots -->
 
 <!-- ### 6.5 filter out droplets with outlying mitochondrial proportion within each sample and show these filtered droplets in UMAP -->
-<!-- ```{r filter out droplets with outlying mitochondrial proportion within each sample and show these filtered droplets in UMAP, fig.width=5, fig.height=5}  -->
+<!-- ```{r filter out droplets with outlying mitochondrial proportion within each sample and show these filtered droplets in UMAP, fig.width=5, fig.height=5} -->
 <!-- # if(file.exists("preprocess6.5.RData")) -->
 <!-- # { -->
 <!-- #   load("preprocess6.5.RData") -->
@@ -1228,12 +1223,12 @@ we will check more qc metrics of sample 17-18 to decide if discard these low tot
 <!-- # } -->
 
 <!--   for(i in 1:length(sce_list)){ -->
-<!--    # sce_list[[i]]$mito_outlier <- (sce_list[[i]]$mito_proportion >= 0.2)  -->
+<!--    # sce_list[[i]]$mito_outlier <- (sce_list[[i]]$mito_proportion >= 0.2) -->
 <!--    # print(i) -->
 <!--    # print(table(sce_list[[i]]$mito_outlier)) -->
 <!--    #  cols <- rep('black', length(sce_list[[i]]$mito_outlier)) -->
 <!--    #  cols[sce_list[[i]]$mito_outlier] <- 'red' -->
-<!--    #  -->
+<!--    # -->
 <!--    #  plot(sce_list[[i]]$mito_proportion, sce_list[[i]]$sum_counts, main=paste0(i,', mitochondrial proportion versus total UMI count'), col=cols, xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet') -->
 
 
