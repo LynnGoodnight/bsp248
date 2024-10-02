@@ -1,15 +1,15 @@
 #!/bin/bash
 
-## run this with: sbatch --output="/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_185/lily/logs/%x-%j-outs_cluster-$SLURM_DATE.txt" /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_185/lily/code/html/muci_html_cluster.sh
+## run this with: sbatch muci_html_cluster.sh
 ## check queue with squeue
 ##
-## this script runs the R markdown scripts for the analysis of Elma's project: bsp185, taking input from /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_185/nicos/stages/count/
-## and creating htmls in /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/preprocess
+## this script runs the R markdown scripts for the analysis of bsp248
+## and creating htmls in bsp_248/lily/stages/
 
 ## Resource Request
-#SBATCH --job-name=muci_html
+#SBATCH --job-name=html_clustering
 ## %j is job number, %x is the job name above
-#SBATCH --output=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_185/lily/logs/%x-%j-outs_cluster-$SLURM_DATE.txt
+#SBATCH --output=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/logs/%x-%j-logs_clustering.txt
 ## 10 hours
 #SBATCH --time=1-10:00:00
 #SBATCH --ntasks=1
@@ -29,33 +29,14 @@ echo "clustK" $clustK
 echo "here: " `pwd`
 echo "clust date: " `date`
 
-cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_185/lily/code
+cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code/bsp248
 
-export sampSet="run_1"
+export sampSet="all"
 echo "sampSet" $sampSet
 ## sleep 10
-cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/preprocess/cluster_${sampSet}_k${clustK}.html"
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('clust_lily.Rmd',  output_file=\"${cF}\")"
+cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_clustering_${sampSet}_k${clustK}.html"
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('cluster_lily.Rmd',  output_file=\"${cF}\")"
 
-
-export sampSet="run_2"
-echo "sampSet" $sampSet
-## sleep 10
-cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/preprocess/cluster_${sampSet}_k${clustK}.html"
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('clust_lily.Rmd',  output_file=\"${cF}\")"
-
-# export sampSet="run_3_BAL"
-# echo "sampSet" $sampSet
-# ## sleep 10
-# cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/preprocess/cluster_${sampSet}_k${clustK}.html"
-# /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('clust_lily.Rmd',  output_file=\"${cF}\")"
-#
-# export sampSet="run_3_lung"
-# export clustK=10
-# echo "sampSet" $sampSet
-# ## sleep 10
-# cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/preprocess/cluster_${sampSet}_k${clustK}.html"
-# /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('clust_lily.Rmd',  output_file=\"${cF}\")"
 
 echo `date`
 sleep 10

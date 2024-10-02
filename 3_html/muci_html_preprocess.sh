@@ -22,8 +22,6 @@ echo `date`
 
 module load tools
 
-
-
 export sampSet="all"
 export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/"
 
