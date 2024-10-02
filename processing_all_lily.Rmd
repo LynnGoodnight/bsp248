@@ -1374,10 +1374,8 @@ if(file.exists("preprocess8.1.RData"))
   }
   # names(sce_list) <- paste0('sample', c(1:20))
   # 
-  # sce_run_1 <- do.call('cbind', sce_list[c(1:8)])
+  sce_run_all <- do.call('cbind', sce_list[c(1:sampNums )])
   # sce_run_2 <- do.call('cbind', sce_list[c(9:16)])
-  # sce_run_3_lung <- do.call('cbind', sce_list[c(19:20)])
-  # sce_run_3_BAL <- do.call('cbind', sce_list[c(17:18)])
 
 
      save.image(file = "preprocess8.1.RData")
@@ -1392,10 +1390,11 @@ if(file.exists("preprocess8.1.RData"))
 
 
 annot <- read.csv('references/sample_information.csv')
-samps <- paste("sample", formatC(nrow(annot), width=2, flag="0"), sep="_")
+samps <- paste("sample", formatC(1:nrow(annot), width=2, flag="0"), sep="_")
 
 annot$sample <- samps
 rownames(annot) <- samps
+
 ```
 
 then we perform quick clustering and normalization by pooled factors.
@@ -1430,37 +1429,37 @@ i previously apply Batch Effect correct between all samples in same run to exclu
 ```{r perform quick clustering and normalization for run 1 samples and plot qc metrics before and after batch effect correction}
 
 
-normalize_visualize_save <- function(current_run,sce_run_1, Correct_batch_effects = FALSE)
+normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch_effects = FALSE)
 {
   if(file.exists(paste0('sce_',current_run,'.rds')))
 {
-  sce_run_1 <- readRDS(paste0('sce_',current_run,'.rds'))
+  sce_run_selected <- readRDS(paste0('sce_',current_run,'.rds'))
 }else
 {
   # log transfrom gene counts
 
-  # print(head(sce_run_1))
-  clust <- quickCluster(sce_run_1)
-  size_factors <- calculateSumFactors(sce_run_1, cluster=clust)
-  sce_run_1 <- logNormCounts(sce_run_1, size_factors=size_factors)
-  # print(sce_run_1)
+  # print(head(sce_run_selected))
+  clust <- quickCluster(sce_run_selected)
+  size_factors <- calculateSumFactors(sce_run_selected, cluster=clust)
+  sce_run_selected <- logNormCounts(sce_run_selected, size_factors=size_factors)
+  # print(sce_run_selected)
 
   # get the Top 5000 High Variable Genes
-  varmod <- modelGeneVar(sce_run_1, block=sce_run_1$Sample)
+  varmod <- modelGeneVar(sce_run_selected, block=sce_run_selected$Sample)
   # Model the variance of the log-expression profiles for each gene, decomposing it into technical and biological components based on a fitted mean-variance trend.
   vargenes <- getTopHVGs(varmod, n=5000)
   length(vargenes)
 
-  sce_run_1 <- fixedPCA(sce_run_1, subset.row=vargenes)
+  sce_run_selected <- fixedPCA(sce_run_selected, subset.row=vargenes)
   set.seed(100)
-  sce_run_1 <- runUMAP(sce_run_1, dimred='PCA')
+  sce_run_selected <- runUMAP(sce_run_selected, dimred='PCA')
   set.seed(100)
-  sce_run_1 <- runTSNE(sce_run_1, dimred='PCA')
-  sce_run_1$condition <- annot[as.character(sce_run_1$Sample), 'condition']
-  sce_run_1$run <- annot[as.character(sce_run_1$Sample), 'run']
+  sce_run_selected <- runTSNE(sce_run_selected, dimred='PCA')
+  sce_run_selected$condition <- annot[as.character(sce_run_selected$Sample), 'condition']
+  sce_run_selected$run <- annot[as.character(sce_run_selected$Sample), 'run']
 
 
-  saveRDS(sce_run_1, file = paste0('sce_',current_run,'.rds'))
+  saveRDS(sce_run_selected, file = paste0('sce_',current_run,'.rds'))
 
 }
 
@@ -1469,41 +1468,41 @@ normalize_visualize_save <- function(current_run,sce_run_1, Correct_batch_effect
 
 
   set.seed(100)
-  ord <- sample.int(ncol(sce_run_1), ncol(sce_run_1), replace=FALSE)
-  pl <- plotUMAP(sce_run_1[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
+  ord <- sample.int(ncol(sce_run_selected), ncol(sce_run_selected), replace=FALSE)
+  pl <- plotUMAP(sce_run_selected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
   print(pl)
 
 
-  pl <- plotUMAP(sce_run_1[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
+  pl <- plotUMAP(sce_run_selected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
   print(pl)
 
-  pl <- plotReducedDim(sce_run_1, 'UMAP', colour_by=rownames(sce_run_1)[which(rowData(sce_run_1)$Symbol == 'HNMT')]) + ggtitle(paste(current_run,'myeloid highlighted (HMNT)','UMAP uncorrected', title_suffix_1)) ## myeloid
+  pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'HNMT')]) + ggtitle(paste(current_run,'myeloid highlighted (HMNT)','UMAP uncorrected', title_suffix_1)) ## myeloid
   print(pl)
 
-  pl <- plotReducedDim(sce_run_1, 'UMAP', colour_by=rownames(sce_run_1)[which(rowData(sce_run_1)$Symbol == 'CD3E')]) + ggtitle(paste(current_run,'T cells highlighted (CD3E)', 'UMAP uncorrected', title_suffix_1)) ## T cells
+  pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'CD3E')]) + ggtitle(paste(current_run,'T cells highlighted (CD3E)', 'UMAP uncorrected', title_suffix_1)) ## T cells
   print(pl)
 
-  pl <- plotReducedDim(sce_run_1, 'UMAP', colour_by=rownames(sce_run_1)[which(rowData(sce_run_1)$Symbol == 'PAX5')]) + ggtitle(paste(current_run,'B cells highlighted (PAX5)', 'UMAP uncorrected', title_suffix_1)) ## B cells
+  pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'PAX5')]) + ggtitle(paste(current_run,'B cells highlighted (PAX5)', 'UMAP uncorrected', title_suffix_1)) ## B cells
   print(pl)
   # correct between all samples in same run and plot qc metrics and UMAP and save workspace and rds for run 1 samples
 
-  p1 <- plotReducedDim(sce_run_1, 'UMAP', colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_1))
+  p1 <- plotReducedDim(sce_run_selected, 'UMAP', colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_1))
   print(p1)
 
 
-  varmod <- modelGeneVar(sce_run_1, block=sce_run_1$Sample)
+  varmod <- modelGeneVar(sce_run_selected, block=sce_run_selected$Sample)
   vargenes <- getTopHVGs(varmod, n=5000)
 
   if(Correct_batch_effects)
   {
     library(batchelor)
     set.seed(100)
-    sce_run_1_corrected <- fastMNN(sce_run_1, batch=sce_run_1$run, subset.row = vargenes, get.variance = TRUE)
-    sce_run_1_corrected
+    sce_run_selected_corrected <- fastMNN(sce_run_selected, batch=sce_run_selected$run, subset.row = vargenes, get.variance = TRUE)
+    sce_run_selected_corrected
   # # produce batch effects Corrected data
   #   if(file.exists(paste0('sce_',current_run,'_corrected.rds')))
   # {
-  #   sce_run_1_corrected <- readRDS(paste0('sce_',current_run,'_corrected.rds'))
+  #   sce_run_selected_corrected <- readRDS(paste0('sce_',current_run,'_corrected.rds'))
   #   print(paste0("skip save ",'sce_',current_run,'_corrected.rds','since it already exist to save running time'))
   # }else
   #   {
@@ -1513,28 +1512,28 @@ normalize_visualize_save <- function(current_run,sce_run_1, Correct_batch_effect
   {
   library(batchelor)
   set.seed(100)
-  sce_run_1_corrected <- fastMNN(sce_run_1, batch=sce_run_1$run, subset.row = vargenes, get.variance = TRUE)
-  sce_run_1_corrected
+  sce_run_selected_corrected <- fastMNN(sce_run_selected, batch=sce_run_selected$run, subset.row = vargenes, get.variance = TRUE)
+  sce_run_selected_corrected
   }
 
   set.seed(100)
-  sce_run_1_corrected <- runUMAP(sce_run_1_corrected, dimred="corrected")
-  sce_run_1_corrected <- runTSNE(sce_run_1_corrected, dimred="corrected")
+  sce_run_selected_corrected <- runUMAP(sce_run_selected_corrected, dimred="corrected")
+  sce_run_selected_corrected <- runTSNE(sce_run_selected_corrected, dimred="corrected")
 
-  sce_run_1_corrected$Sample <- sce_run_1$Sample
-  sce_run_1_corrected$condition <- sce_run_1$condition
-  sce_run_1_corrected$cxds_score <- sce_run_1$cxds_score
-  sce_run_1_corrected$query_doublet <- sce_run_1$query_doublet
-  sce_run_1_corrected$sum_counts <- sce_run_1$sum_counts
-  sce_run_1_corrected$genes_detected <- sce_run_1$genes_detected
-  sce_run_1_corrected$mito_proportion <- sce_run_1$mito_proportion
-  sce_run_1_corrected$hgnc_symbol <- sce_run_1$hgnc_symbol
-  sce_run_1_corrected$sum_counts_level <- sce_run_1$sum_counts_level
+  sce_run_selected_corrected$Sample <- sce_run_selected$Sample
+  sce_run_selected_corrected$condition <- sce_run_selected$condition
+  sce_run_selected_corrected$cxds_score <- sce_run_selected$cxds_score
+  sce_run_selected_corrected$query_doublet <- sce_run_selected$query_doublet
+  sce_run_selected_corrected$sum_counts <- sce_run_selected$sum_counts
+  sce_run_selected_corrected$genes_detected <- sce_run_selected$genes_detected
+  sce_run_selected_corrected$mito_proportion <- sce_run_selected$mito_proportion
+  sce_run_selected_corrected$hgnc_symbol <- sce_run_selected$hgnc_symbol
+  sce_run_selected_corrected$sum_counts_level <- sce_run_selected$sum_counts_level
 
-  rowdat <- rowData(sce_run_1_corrected)
-  rowdat <- cbind(rowdat, rowData(sce_run_1_corrected)[rownames(sce_run_1_corrected),])
+  rowdat <- rowData(sce_run_selected_corrected)
+  rowdat <- cbind(rowdat, rowData(sce_run_selected_corrected)[rownames(sce_run_selected_corrected),])
 
-  rowData(sce_run_1_corrected) <- rowdat
+  rowData(sce_run_selected_corrected) <- rowdat
 
 
   if(file.exists(paste0('sce_',current_run,'_corrected.rds')))
@@ -1542,34 +1541,34 @@ normalize_visualize_save <- function(current_run,sce_run_1, Correct_batch_effect
     print(paste0("skip save ",'sce_',current_run,'_corrected.rds','since it already exist to save running time'))
   }else
   {
-    saveRDS(sce_run_1_corrected, file = paste0('sce_',current_run,'_corrected.rds'))
+    saveRDS(sce_run_selected_corrected, file = paste0('sce_',current_run,'_corrected.rds'))
   }
-  print(sce_run_1_corrected)
+  print(sce_run_selected_corrected)
   ###################### plot
   set.seed(100)
-  ord <- sample.int(ncol(sce_run_1_corrected), ncol(sce_run_1_corrected), replace=FALSE)
+  ord <- sample.int(ncol(sce_run_selected_corrected), ncol(sce_run_selected_corrected), replace=FALSE)
 
   title_suffix_2 = '\n based on top 5000 highly variable genes'
 
-  pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
   print(pl)
 
-  pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
   print(pl)
 
-  pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
   print(pl)
 
-  pl <- plotUMAP(sce_run_1_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
   print(pl)
-  # lapply(sce_run_1_corrected, dim)
+  # lapply(sce_run_selected_corrected, dim)
 
-  p1 <- plotUMAP(sce_run_1_corrected[,ord], colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_2))
+  p1 <- plotUMAP(sce_run_selected_corrected[,ord], colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_2))
   print(p1)
 }
 
 current_run <- "all"
-normalize_visualize_save(current_run,sce_run_1, Correct_batch_effects = TRUE)
+normalize_visualize_save(current_run,sce_run_all, Correct_batch_effects = TRUE)
 
 
 # title_suffix = 'corrected by samples in same run'
