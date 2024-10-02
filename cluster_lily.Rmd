@@ -7,11 +7,10 @@ output: html_document
 
 ```{r, setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
-work_dir <- Sys.getenv("work_dir")
+work_dir  <- '/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/'
 knitr::opts_knit$set(root.dir = work_dir)
 
 work_dir
-# work_dir  <- '/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/'
 # work_dir  <- "/mnt/rstudio/lily/bsp248/")
 sampSet <- Sys.getenv("sampSet")
 if (sampSet == "") {
