@@ -1174,7 +1174,7 @@ for(i in 1:length(sce_list))
 
 
 
-for (sample in c(3, 5, 10, 1:2, 6:9, 11:sampNums ))
+for (sample in c(1:sampNums ))
 {
   x <- sce_list[[sample]]
 
@@ -1233,10 +1233,10 @@ sample 5 is mainly composed of droplets below 1000, too few transcripts to clust
 sample 10, similar issue as 5, less severe. 
 
 
-histogram of droplet based on total UMI counts, histogram of droplet based on genes detected, histogram of droplet based on proportion of UMI counts of mito genes, mitochondrial proportion versus total UMI count
-
 need to check:
-we can observe three kinds of droplets distribution in UMAP, whose total UMI above 20,000, within normal range, or below 1000 to check if abnormal total UMI droplets cluster together. these droplets often locate in several different clusters, it seems fine? would  these abnormal total UMI droplets be an issue ?would filtering them necessary?
+we can observe three kinds of droplets distribution in UMAP, whose total UMI above 20,000, within normal range, or below 1000.
+in most samples, abnormal total UMI droplets distributed into several cluster. 
+would  these abnormal total UMI droplets be an issue ?would filtering them necessary?
 
 From this examination, it appears that none of the major cell types are specifically characterized by high mitochondrial proportion, and most samples have few high mitochondrial proportion droplets.
 
@@ -1550,20 +1550,20 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
 
   title_suffix_2 = '\n based on top 5000 highly variable genes'
 
-  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
 
-  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
 
-  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
 
-  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP uncorrected',title_suffix_2))
+  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
   # lapply(sce_run_selected_corrected, dim)
 
-  p1 <- plotUMAP(sce_run_selected_corrected[,ord], colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_2))
+  p1 <- plotUMAP(sce_run_selected_corrected[,ord], colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP corrected', title_suffix_2))
   print(p1)
 }
 
