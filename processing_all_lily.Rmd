@@ -1503,13 +1503,14 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   rowData(sce_run_selected_corrected) <- rowdat
 
 
-  if(file.exists(paste0('sce_',current_run,'_corrected.rds')))
-  {
-    print(paste0("skip save ",'sce_',current_run,'_corrected.rds','since it already exist to save running time'))
-  }else
-  {
-    saveRDS(sce_run_selected_corrected, file = paste0('sce_',current_run,'_corrected.rds'))
-  }
+  saveRDS(sce_run_selected_corrected, file = paste0('sce_',current_run,'_corrected.rds'))
+  # if(file.exists(paste0('sce_',current_run,'_corrected.rds')))
+  # {
+  #   print(paste0("skip save ",'sce_',current_run,'_corrected.rds','since it already exist to save running time'))
+  # }else
+  # {
+  #   
+  # }
   print(sce_run_selected_corrected)
   ###################### plot
   set.seed(100)

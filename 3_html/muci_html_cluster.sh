@@ -22,7 +22,7 @@ echo `date`
 
 module load tools
 
-export clustK=20
+export clustK=15
 echo "clustK" $clustK
 
 
