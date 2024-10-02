@@ -1228,6 +1228,11 @@ for (sample in c(3, 5, 10, 1:2, 6:9, 11:sampNums ))
 
 figure 8. visualize the droplets in UMAP and color the droplets based on QC metrics (total UMI counts, detected genes, proportion of mito UMI counts, 3 levels of total UMI counts,  marker gene of B cells, T cells, myeloid )
 
+sample 3 seem fine in this check
+sample 5 is mainly composed of droplets below 1000, too few transcripts to cluster and distinguish cell types of these droplets within sample 5. 
+sample 10, similar issue as 5, less severe. 
+
+
 histogram of droplet based on total UMI counts, histogram of droplet based on genes detected, histogram of droplet based on proportion of UMI counts of mito genes, mitochondrial proportion versus total UMI count
 
 need to check:
@@ -1387,7 +1392,8 @@ if(file.exists("preprocess8.1.RData"))
 
 
 annot <- read.csv('references/sample_information.csv')
-samps <- names(sce_list)
+samps <- paste("sample", formatC(nrow(annot), width=2, flag="0"), sep="_")
+
 annot$sample <- samps
 rownames(annot) <- samps
 ```
@@ -1450,8 +1456,8 @@ normalize_visualize_save <- function(current_run,sce_run_1, Correct_batch_effect
   sce_run_1 <- runUMAP(sce_run_1, dimred='PCA')
   set.seed(100)
   sce_run_1 <- runTSNE(sce_run_1, dimred='PCA')
-  sce_run_1$condition <- annot[as.character(sce_run_1$Sample), 'Condition']
-  sce_run_1$run <- current_run
+  sce_run_1$condition <- annot[as.character(sce_run_1$Sample), 'condition']
+  sce_run_1$run <- annot[as.character(sce_run_1$Sample), 'run']
 
 
   saveRDS(sce_run_1, file = paste0('sce_',current_run,'.rds'))
