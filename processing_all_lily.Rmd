@@ -1233,23 +1233,15 @@ sample 5 is mainly composed of droplets below 1000, too few transcripts to clust
 sample 10, similar issue as 5, less severe. 
 
 
-need to check:
-we can observe three kinds of droplets distribution in UMAP, whose total UMI above 20,000, within normal range, or below 1000.
-in most samples, abnormal total UMI droplets distributed into several cluster. 
-would  these abnormal total UMI droplets be an issue ?would filtering them necessary?
-
-From this examination, it appears that none of the major cell types are specifically characterized by high mitochondrial proportion, and most samples have few high mitochondrial proportion droplets.
+From this examination, we need to manual check whether any major cell types are specifically characterized by high mitochondrial proportion?
+most samples have few high mitochondrial proportion droplets.
 
 so I think that we can safely filter high mitochondrial proportion droplets out.
 
 It would be difficult to justify retaining these outliers. We can always revisit this later to look at marker genes for the droplets if desired.
 
-need to check:
-sample 19-20 looks fine in their plots above, but sample 17-18 seems fail to cluster due to their low detected genes and total UMI, results in not enough gene expression information to cluster and separate these droplets. namely, the algorithm fail to detect the significant difference between droplets. this will cause difficulty in assign cell types for these droplets. we might remove these low total UMI droplets from downstream analysis.
+sample 5 seems fail to cluster due to their low detected genes and total UMI, results in not enough gene expression information to cluster and separate these droplets. namely, the algorithm fail to detect the significant difference between droplets. this will cause difficulty in assign cell types for these droplets. we might remove these low total UMI droplets from downstream analysis.
 
-
-need to check:
-in a few samples, the B cells number is quiet low. not sure it is okay?
 
 need to check:
 would that be reasonable to filter out droplets with outlier high mitochondrial proportion? or filter out droplets based on absolute mitochondrial proportion > 0.2?
@@ -1340,11 +1332,9 @@ for(i in 1:length(sce_list)){
 
 ```
 
-figure 11. visualize the droplets in UMAP and color the droplets based on cxds scores, visualize droplets with outlying cxds scores in mitochondrial
-proportion versus total UMI count plot
+figure 11. visualize the droplets in UMAP and color the droplets based on cxds scores, visualize droplets with outlying cxds scores in mitochondrial proportion versus total UMI count plot
 
-need to check:
-sample 18 have quiet compact cluster distribution in UMAP compared with remaining samples.
+sample 3 has outlier cxds score, need to check
 
 
 cxds_score can be affected by sequencing run, cell type constitution, so this varies vastly across samples
@@ -1356,9 +1346,8 @@ For this reason we've marked those droplets within each sample that are more tha
 
 # Normalization and merging
 
-need to check:
-Now we will properly normalize the data and merge all of the samples together. We will keep Sample 17-18 tentatively even though they have lots of low total UMIs droplets. will check whether low total UMIs droplets cluster together.
 
+Now we will properly normalize the data and merge all of the samples together. 
 
 ## 8.1 merge samples from same run, exclude catastrophic samples if any
 ```{r exclude catastrophic samples if any and merge samples from same run}
@@ -1397,32 +1386,10 @@ rownames(annot) <- samps
 
 ```
 
-then we perform quick clustering and normalization by pooled factors.
+then we perform quick clustering and normalization by pooled factors, correct batch effect between sequencing run.
 
 
 Now we look at the data to determine whether there are batch effects that ought to be removed between samples. Here we will look for the top 5000 highly variable genes for biological variability and use these for PCA and other dimensional reduction as these are the genes we will ultimately be interested in.
-
-Whether or not sample should be specified in the design for determining biological variability is an interesting question.
-In some ways, sample corresponds to a batch effect in that technical effects of (e.g. sample preparation procedures) will be captured here.
-In other ways, it is a biological effect as different samples underwent different experimental treatments (here i suspect our samples are from inbreeding individual? ) and these would be expected to impact gene expression in quite a profound way.
-
-1-8 samples from inbreed individual.
-Given that 1-8 samples come from the same sequencing run and presuming consistent sample preparation and processing, 1-4 under condition 1, 5-8 under condition 2, so we expect the sample 1-4 ideally should be same, sample 5-8 ideally should be same.
-
-since we want to preserve the true biological signals related to the different conditions so that we can research the biological difference between these 2 conditions.
-
-so we shouldn't batch correct between 2 conditions (ISU1 vs 135) to avoid
-diminishing the biological differences between these 2 conditions. so we don't apply Batch Effect Correction here.
-
-maybe in the future. when we merge sample 1-18, we could apply Batch Effect Correction based on batch variables sequencing run.
-
-
-after we cluster, we can check whether droplets from ISU1 are assigned into different cluster compared with droplets from 135.
-
-if same cell type are assigned into different cluster due to condition, then it would be interesting, indicating same immune cell type behave differently under these 2 conditions.
-
-
-i previously apply Batch Effect correct between all samples in same run to exclude the possible genome difference between different individuals and random effect. but i noticed this cause the difference between 2 conditions reduced. so i don't risk diminishing the biological differences between these 2 conditions in order to apply Batch Effect correct between all samples.
 
 
 ## 8.2 Normalization gene expression counts, conduct batch effect correction
@@ -1578,7 +1545,8 @@ figure 12.1 visualize the droplets in UMAP and color the droplets based on sampl
 
 
 
-after batch effect correction. we observe droplets from 8 samples distribute more uniformly in UMAP plots. droplets from 2 conditions distribute apprantly more uniformly.
+after batch effect correction. we observe droplets from all samples distribute more uniformly in UMAP plots. 
+sample 5 does not cluster together with other samples. 
 
 We will leave this analysis here and start a new script where we cluster, subcluster, filter doublets, etc.
 
@@ -1605,13 +1573,13 @@ figure 12.2 visualize the droplets in UMAP and color the droplets based on sampl
 ```
 
 
-<!-- figure 12.3 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, myeloid;  cxds scores; suspected doublet for sequencing run 3 -->
-<!-- # 9 save image and show session Info -->
-<!-- ```{r sessionInfo} -->
-<!-- save.image(file = "preprocess9.RData") -->
-<!-- sessionInfo() -->
+figure 12.3 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, myeloid;  cxds scores; suspected doublet for sequencing run 3
+# 9 save image and show session Info
+```{r sessionInfo}
+save.image(file = "preprocess9.RData")
+sessionInfo()
 
-<!-- ``` -->
+```
 
 
 
