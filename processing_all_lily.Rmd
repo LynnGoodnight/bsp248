@@ -231,6 +231,7 @@ Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter
       } else {
           # If no error, store the result in the list
           brs[[i]] <- brs_result
+          names(brs)[[i]] <- samps[i]
           print(paste('Success sample', names(sce_list)[i]))
       }
       # brs[[i]] <- barcodeRanks(counts(sce_list[[i]]), lower = 200, fit.bounds = c(300,35000))
@@ -254,7 +255,7 @@ Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter
     # returning only unique rank for plotting speed
     uniq <- !duplicated(brs[[i]]$rank)
     plot(brs[[i]]$rank[uniq], brs[[i]]$total[uniq], log="xy",
-         xlab="Rank", ylab="Total UMI count", main=unique(sce_list[[i]]$Sample), cex.lab=1.2)
+         xlab="Rank", ylab="Total UMI count", main=unique(names(brs)[[i]]), cex.lab=1.2)
 
     if(use_before_filter_brs)
     {
