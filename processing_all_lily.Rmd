@@ -284,15 +284,13 @@ Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter
   return(brs)
 
 }
+
+
 # use before_filter_brs to store the value of knee and inflection points derived from sce_list before filtering  empty droplets
 before_filter_brs <- Count_by_rank_plot(sce_list, calculate_brs = TRUE)
-sce_list[[13]] <- NULL
 
+sce_list[[13]] <- NULL
 sampNums <- length(sce_list)
-# before_filter_brs <- lapply(sce_list, function(x) {
-#     temp <- counts(x)
-#     return(barcodeRanks(temp, lower = 200, fit.bounds = c(300,35000)))})
-# 
 
 ```
 
@@ -365,11 +363,23 @@ if(file.exists("preprocess3.3.RData"))
 
 for(i in 1:length(sce_list))
 {
-  print(summary(e.out[[i]]$FDR <= 0.001))
+  
+  # print(summary(e.out[[i]]$FDR <= 0.001))
   # FDR <= 0.001 indicate droplets containing cell
 
-  print(table(Sig=e.out[[i]]$FDR <= 0.001, Limited=e.out[[i]]$Limited))
+  # print(table(Sig=e.out[[i]]$FDR <= 0.001, Limited=e.out[[i]]$Limited))
   # niters parameter can be increased in the future if Limited=TRUE and Sig=FALSE  are very high
+  table1 <- table(Sig=e.out[[i]]$FDR <= 0.001, Limited=e.out[[i]]$Limited)
+  
+  if(table1[3] == 0)
+  {
+    print(paste(names(sce_list)[i], 'value of niters parameter is sufficient'))
+    print(paste('number of droplets are estimated contain cell', summary(e.out[[i]]$FDR <= 0.001)[3]))
+  }else
+  {
+    print(paste(names(sce_list)[i], 'insufficient value of niters parameter, inaccurate estimation '))
+    print(paste('number of droplets are estimated contain cell', summary(e.out[[i]]$FDR <= 0.001)[3]))    
+  }
 
   hist(all.out[[i]]$PValue[all.out[[i]]$Total <= limit & all.out[[i]]$Total > 0],
      xlab="P-value", main=unique(sce_list[[i]]$Sample), col="grey80")
@@ -429,7 +439,7 @@ multi_list_bar_plot(sce_list,"after filter empty droplets", seperate_run = 9.5 )
 
 
 
-Count_by_rank_plot(sce_list, calculate_brs = TRUE, use_before_filter_brs = TRUE, before_filter_brs)
+brs_after_filtering <- Count_by_rank_plot(sce_list, calculate_brs = TRUE, use_before_filter_brs = TRUE, before_filter_brs)
 
 ```
 figure 4. Count by rank plot after filtering empty droplets
@@ -443,7 +453,7 @@ if these droplets are real outliers, them tend to cluster together, with abnorma
 let's have a look at the distribution total UMI, and filter abnormally high total UMI outlier droplets by set the threshold
 
 
-```{r plot total UMI per droplet histogram before and after filtering droplets with abnormally high or low total UMI }
+```{r draw total UMI per droplet histogram before and after filtering droplets with abnormally high or low total UMI }
 library("scuttle")
 sce_list <- lapply(sce_list, function(x){
   stats <- perCellQCMetrics(x)
@@ -677,12 +687,12 @@ if(file.exists("preprocess5.RData"))
   setwd(count_dir)
   dirs <- paste0('muci_', names(sce_list), '_count/outs/filtered_feature_bc_matrix')
   sce_list_cr <- vector('list', length=sampNums)
+  names(sce_list_cr) <- names(sce_list)
 
   for(i in 1:sampNums)
   {
-    sce_result <- read10xCounts(samples=dirs[i], sample.names=samps[i], col.names=TRUE)
 
-    try(read10xCounts(samples = dirs[i], sample.names = samps[i], col.names = TRUE), silent = TRUE)
+    try(sce_result <- read10xCounts(samples = dirs[i], sample.names = samps[i], col.names = TRUE), silent = TRUE)
 
       # Check if an error occurred
       if (inherits(sce_result, "try-error")) {
@@ -692,24 +702,27 @@ if(file.exists("preprocess5.RData"))
         {
           # If no error, store the result in the list
           sce_list_cr[[i]] <- sce_result
-          print(paste('load filtered data of sample', samps[i], 'successful'))
+          print(paste('load filtered data of ',dirs[i], 'successful'))
         }
 
 
   }
   sce_list_cr <- Filter(Negate(is.null), sce_list_cr)
+  print(names(sce_list_cr))
+  
 
 
   save.image(file = paste0(work_dir,"preprocess5.RData"))
 }
 
 
-multi_list_bar_plot(sce_list,"after qc filtering", seperate_run = 9.5 )
+multi_list_bar_plot(sce_list,"after  filtering extreme high or low total UMI droplets", seperate_run = 9.5 )
 multi_list_bar_plot(sce_list_cr,"after cellranger filtering", seperate_run = 9.5 )
 
 # lapply(sce_list, dim)
 # lapply(sce_list_cr, dim)
-
+print('compare the droplets number left after filtering')
+# compare the droplets number left after filtering
 for(i in 1:length(sce_list))
 {
   # print((dim(sce_list[[i]])[2] - dim(sce_list_cr[[i]])[2])/
