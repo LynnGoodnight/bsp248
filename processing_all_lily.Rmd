@@ -1289,7 +1289,7 @@ here still filter out droplets with outlier high mitochondrial proportion within
     cols[sce_list[[i]]$mito_outlier] <- 'red'
 
 
-    p1 <- plot(sce_list[[i]]$mito_proportion, sce_list[[i]]$sum_counts, main=paste0('sample', i,', mitochondrial proportion versus total UMI count'), col=cols, xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
+    p1 <- plot(sce_list[[i]]$mito_proportion, sce_list[[i]]$sum_counts, main=paste0(names(sce_list)[i], '\n mitochondrial proportion versus total UMI count'), col=cols, xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
 
     print(p1)
     p2 <- plotReducedDim(sce_list[[i]], 'UMAP', colour_by='mito_outlier')
@@ -1299,6 +1299,9 @@ here still filter out droplets with outlier high mitochondrial proportion within
 
 
     sce_list[[i]] <- sce_list[[i]][,!sce_list[[i]]$mito_outlier]
+    # also remove droplets whose mito_proportion higher than 0.1 to reduce noise
+    sce_list[[i]] <- sce_list[[i]][, sce_list[[i]]$mito_proportion < 0.1]
+    
   }
 
 # save.image(file = paste0(work_dir,"preprocess6.5.RData"))
@@ -1310,7 +1313,7 @@ here still filter out droplets with outlier high mitochondrial proportion within
 figure 9. visualize filtered droplets in UMAP and mitochondrial proportion versus total UMI count plot
 
 ```{r  overview number of droplets per sample }
-multi_list_bar_plot(sce_list,"after qc filtering")
+multi_list_bar_plot(sce_list,"after remove droplets whose mito_proportion higher than 0.1")
 
 ```
 
