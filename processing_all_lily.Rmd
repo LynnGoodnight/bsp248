@@ -1460,13 +1460,13 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
 
 
   set.seed(100)
-  ord <- sample.int(ncol(sce_run_selected), ncol(sce_run_selected), replace=FALSE)
-  pl <- plotUMAP(sce_run_selected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
-  print(pl)
-
-
-  pl <- plotUMAP(sce_run_selected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
-  print(pl)
+  # ord <- sample.int(ncol(sce_run_selected), ncol(sce_run_selected), replace=FALSE)
+  # pl <- plotUMAP(sce_run_selected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
+  # print(pl)
+  # 
+  # 
+  # pl <- plotUMAP(sce_run_selected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
+  # print(pl)
 
   pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'HNMT')]) + ggtitle(paste(current_run,'myeloid highlighted (HMNT)','UMAP uncorrected', title_suffix_1)) ## myeloid
   print(pl)
@@ -1478,8 +1478,8 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   print(pl)
   # correct between all samples in same run and plot qc metrics and UMAP and save workspace and rds for run 1 samples
 
-  p1 <- plotReducedDim(sce_run_selected, 'UMAP', colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_1))
-  print(p1)
+  # p1 <- plotReducedDim(sce_run_selected, 'UMAP', colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_1))
+  # print(p1)
 
 
   varmod <- modelGeneVar(sce_run_selected, block=sce_run_selected$Sample)
@@ -1491,15 +1491,6 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
     set.seed(100)
     sce_run_selected_corrected <- fastMNN(sce_run_selected, batch=sce_run_selected$run, subset.row = vargenes, get.variance = TRUE)
     sce_run_selected_corrected
-  # # produce batch effects Corrected data
-  #   if(file.exists(paste0('sce_',current_run,'_corrected.rds')))
-  # {
-  #   sce_run_selected_corrected <- readRDS(paste0('sce_',current_run,'_corrected.rds'))
-  #   print(paste0("skip save ",'sce_',current_run,'_corrected.rds','since it already exist to save running time'))
-  # }else
-  #   {
-  #
-  #   }
   }else
   {
   library(batchelor)
@@ -1529,13 +1520,6 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
 
 
   saveRDS(sce_run_selected_corrected, file = paste0('sce_',current_run,'_corrected.rds'))
-  # if(file.exists(paste0('sce_',current_run,'_corrected.rds')))
-  # {
-  #   print(paste0("skip save ",'sce_',current_run,'_corrected.rds','since it already exist to save running time'))
-  # }else
-  # {
-  #   
-  # }
   print(sce_run_selected_corrected)
   ###################### plot
   set.seed(100)
@@ -1543,11 +1527,11 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
 
   title_suffix_2 = '\n based on top 5000 highly variable genes'
 
-  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
-  print(pl)
-
-  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
-  print(pl)
+  # pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
+  # print(pl)
+  # 
+  # pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
+  # print(pl)
 
   pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
@@ -1556,8 +1540,8 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   print(pl)
   # lapply(sce_run_selected_corrected, dim)
 
-  p1 <- plotUMAP(sce_run_selected_corrected[,ord], colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP corrected', title_suffix_2))
-  print(p1)
+  # p1 <- plotUMAP(sce_run_selected_corrected[,ord], colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP corrected', title_suffix_2))
+  # print(p1)
 }
 
 current_run <- "all"
