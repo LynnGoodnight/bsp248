@@ -71,7 +71,7 @@ if(file.exists("preprocess1.RData"))
 {
   setwd(count_dir)
   
-  dirs <- paste0( count_filename, '/outs/raw_feature_bc_matrix')
+  dirs <- paste0('muci_', samps_id, '_count' , '/outs/raw_feature_bc_matrix')
   sce_list_raw <- vector('list', length=length(sampNums))
   names(sce_list_raw)  <- samps
 
@@ -353,11 +353,9 @@ if(file.exists("preprocess3.3.RData"))
   # Specifically, if the null hypothesis were true, p-values for low-count barcodes should have a uniform distribution. Any strong peaks in the p-values near zero indicate that emptyDrops is not controlling the FDR correctly.
   #
   # Note that, when setting test.ambient=TRUE in emptyDrops, barcodes less than or equal to lower will still have NA values in FDR. Such barcodes are still explicitly ignored in the correction as these are considered to be uninteresting.
-
-  save.image("preprocess3.3.RData")
-
-
   }
+  
+  save.image("preprocess3.3.RData")
 
 }
 
