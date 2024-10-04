@@ -1369,6 +1369,14 @@ Now we will properly normalize the data and merge all of the samples together.
 ## 8.1 merge samples from same run, exclude catastrophic samples if any
 ```{r exclude catastrophic samples if any and merge samples from same run}
 
+for(sample_id in c(c("sample_03", "sample_05", "sample_10" )))
+{
+ sce_list[[sample_id]] <- NULL
+  
+}
+
+sampNums <- length(sce_list)
+names(sce_list)
 if(file.exists("preprocess8.1.RData"))
 {
   load("preprocess8.1.RData")
