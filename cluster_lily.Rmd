@@ -520,7 +520,8 @@ print(p)
   the_cluster$sample <- rownames(the_cluster)
 
   p <-  ggplot(data=the_cluster, aes(x = sample, y=cluster_n)) +
-    geom_bar(stat="identity") + ggtitle(paste('cluster',cluster_n))
+    geom_bar(stat="identity") + ggtitle(paste('cluster',cluster_n)) +
+    theme(axis.text.x = element_text(angle = 90)) 
 
   print(p)
 
