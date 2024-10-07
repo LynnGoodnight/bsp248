@@ -337,7 +337,7 @@ if(file.exists("preprocess3.3.RData"))
   all.out <- vector('list', length=length(sce_list))
   for(i in 1:length(sce_list)){
     set.seed(100)
-    e.out[[i]] <- emptyDrops(counts(sce_list[[i]]), niters = n_niters,
+    e.out[[i]] <- emptyDrops(counts(sce_list[[i]]), niters = n_niters,  lower = 100,
                              test.ambient = FALSE)
     # Distinguish between droplets containing cell and ambient RNA in a droplet-based single-cell RNA sequencing experiment.
 
@@ -346,7 +346,8 @@ if(file.exists("preprocess3.3.RData"))
     limit <- 100   ## set at 100 because this is the default for emptyDrops used above
     # obtain all droplets' possibility of being non-empty droplets
 
-    all.out[[i]] <- emptyDrops(counts(sce_list[[i]]), lower=limit, test.ambient=TRUE, niters = n_niters)
+    all.out[[i]] <- emptyDrops(counts(sce_list[[i]]), lower=limit, test.ambient=TRUE,  lower = 100,
+                               niters = n_niters)
     # test.ambient=TRUE, A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to 'lower'.
     # lower=limit, A numeric scalar specifying the lower bound on the total UMI count,  at or below which all barcodes are assumed to correspond to empty droplets.
 
@@ -640,7 +641,7 @@ for(i in 1:length(sce_list))
   # colLabels(sce_list[[i]])
 
   sc = setClusters(sc, setNames(colLabels(sce_list[[i]]), colnames(sce_list[[i]])))
-  print(paste('autoEstCont sample', i))
+  print(paste('autoEstCont sample', names(sce_list)[i] ))
   # Estimate soup profile and contamination fraction
   # pdf(file = "SoupX_output.pdf")
 
@@ -1533,8 +1534,6 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   # pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   # print(pl)
 
-  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
-  print(pl)
 
   pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
