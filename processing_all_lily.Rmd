@@ -435,7 +435,7 @@ if(file.exists("preprocess3.4.RData"))
 
 
 # lapply(sce_list, dim)
-multi_list_bar_plot(sce_list,"after filter empty droplets", seperate_run = 9.5 )
+multi_list_bar_plot(sce_list,"after filter estimated empty droplets", seperate_run = 9.5 )
 
 
 
