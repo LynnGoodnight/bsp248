@@ -534,9 +534,9 @@ print(p)
 
   }
 
-  check_sample_contribution_location_for_selected_cluster(selected_sce,'23')
-  check_sample_contribution_location_for_selected_cluster(selected_sce,'22')
-  check_sample_contribution_location_for_selected_cluster(selected_sce,'25')
+  # check_sample_contribution_location_for_selected_cluster(selected_sce,'23')
+  # check_sample_contribution_location_for_selected_cluster(selected_sce,'22')
+  check_sample_contribution_location_for_selected_cluster(selected_sce,'19')
 
 
 ```
