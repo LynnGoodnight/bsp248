@@ -323,7 +323,9 @@ how much of the filtered droplet can still be used, distinguish droplets have am
 ### 3.3  validate assumption, droplets containing fewer than 100 UMIs do not contain any real droplets
 
 we retrieve droplets whose total UMI count between 0-100, check their P values (possibility of being non-empty droplets) using 'emptyDrops' function, and plot histogram of the predicted P-Value.
+
 default assumption is droplets containing fewer than 100 UMIs do not contain any real droplets, therefore, in theory P Value of these droplets should near 1, and should not peak around 0. 
+
 Specifically, if the null hypothesis were true, p-values for low-count (< 100 UMIs ) barcodes should have a uniform distribution. Any strong peaks in the p-values near zero indicate that emptyDrops is not controlling the FDR correctly.
 
 
@@ -343,10 +345,10 @@ if(file.exists("preprocess3.3.RData"))
 
 
     set.seed(100)
-    limit <- 100   ## set at 100 because this is the default for emptyDrops used above
+    limit <- 200   ## set at 100 because this is the default for emptyDrops used above
     # obtain all droplets' possibility of being non-empty droplets
 
-    all.out[[i]] <- emptyDrops(counts(sce_list[[i]]), lower=limit, test.ambient=TRUE,  lower = 100,
+    all.out[[i]] <- emptyDrops(counts(sce_list[[i]]), lower=limit, test.ambient=TRUE,  
                                niters = n_niters)
     # test.ambient=TRUE, A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to 'lower'.
     # lower=limit, A numeric scalar specifying the lower bound on the total UMI count,  at or below which all barcodes are assumed to correspond to empty droplets.
