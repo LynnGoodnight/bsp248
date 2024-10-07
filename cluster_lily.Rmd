@@ -136,7 +136,7 @@ save.image('clustering_run_all_k20_test.RData')
 
 
 ### Basic dim reduction plots
-```{r create dim_red_plots}
+```{r create basic UMAP plots, fig.width=10}
 # since r shiny use sce to plot UMAP, to make figure consistent, i change the input file to sce, and don't use sce_corrected with HGV 5000 as input 
 sce_corrected <- sce_run_x_corrected
 sce <- sce_run_x

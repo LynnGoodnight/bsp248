@@ -324,7 +324,7 @@ how much of the filtered droplet can still be used, distinguish droplets have am
 
 we retrieve droplets whose total UMI count between 0-100, check their P values (possibility of being non-empty droplets) using 'emptyDrops' function, and plot histogram of the predicted P-Value.
 default assumption is droplets containing fewer than 100 UMIs do not contain any real droplets, therefore, in theory P Value of these droplets should near 1, and should not peak around 0. 
-
+Specifically, if the null hypothesis were true, p-values for low-count (< 100 UMIs ) barcodes should have a uniform distribution. Any strong peaks in the p-values near zero indicate that emptyDrops is not controlling the FDR correctly.
 
 
 ```{r calculate P values for droplets containing fewer than 100 UMIs and plot histogram of their P values to check how accurate the emptyDrops estimate empty droplets}
@@ -353,8 +353,7 @@ if(file.exists("preprocess3.3.RData"))
 
   # If test.ambient=TRUE, p-values will be reported for all barcodes with positive total counts, including those not greater than lower, which otherwise were reported as non-NA. This is occasionally useful for diagnostics to ensure that the p-values are well-calibrated for barcodes corresponding to (presumably) empty droplets.
 
-  # Specifically, if the null hypothesis were true, p-values for low-count barcodes should have a uniform distribution. Any strong peaks in the p-values near zero indicate that emptyDrops is not controlling the FDR correctly.
-  #
+
   # Note that, when setting test.ambient=TRUE in emptyDrops, barcodes less than or equal to lower will still have NA values in FDR. Such barcodes are still explicitly ignored in the correction as these are considered to be uninteresting.
   }
   
