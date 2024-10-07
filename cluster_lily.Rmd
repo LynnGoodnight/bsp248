@@ -489,7 +489,7 @@ check sample contribution of suspicious cluster, sample distribution in UMAP of 
 
 
 
-```{r check QC metrics for all clusters and sample contribution - sample-condition distribution in UMAP of suspicious cluster}
+```{r check QC metrics for all clusters and sample contribution - sample-condition distribution in UMAP of suspicious cluster, fig.width=10}
 QC.tab <- data.frame(colData(sce_corrected)[,c('cluster', 'sum_counts', 'mito_proportion', 'genes_detected')])
 
 p <-  ggplot(QC.tab, aes(x=cluster, y=log2(sum_counts) )) +
