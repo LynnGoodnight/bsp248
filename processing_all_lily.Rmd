@@ -183,14 +183,14 @@ if(file.exists("preprocess2.RData"))
 }
   for (i in 1:9) 
   {
-    print(i)
+    print(names(sce_list)[i])
     print(sum(colSums(run1$cleaned[[i]]))/sum(colSums(counts(sce_list[[i]]))))
   }
   
   
   for (i in 1:run2_n) 
   {
-    print(i+9)
+    print(names(sce_list)[i+9])
     print(sum(colSums(run2$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+9]]))))
   }
 
@@ -228,12 +228,12 @@ Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter
       
       # Check if an error occurred
       if (inherits(brs_result, "try-error")) {
-          print(paste("Error for sample", samps[i]))
+          print(paste("Error for sample", names(sce_list)[i]))
         
       } else {
           # If no error, store the result in the list
           brs[[i]] <- brs_result
-          names(brs)[[i]] <- samps[i]
+          names(brs)[[i]] <- names(sce_list)[i]
           print(paste('Success sample', names(sce_list)[i]))
       }
       # brs[[i]] <- barcodeRanks(counts(sce_list[[i]]), lower = 200, fit.bounds = c(300,35000))
@@ -647,7 +647,7 @@ for(i in 1:length(sce_list))
   sc <- try(autoEstCont(sc, doPlot = FALSE), silent = FALSE)
   if (inherits(sc, "try-error")) 
   {
-    print(paste("Error, autoEstCont step fail", samps[i]))
+    print(paste("Error, autoEstCont step fail", names(sce_list)[i]))
   }else{
   # Output the clean data which removed the predicted ambient reads
   out <- adjustCounts(sc)
@@ -692,12 +692,12 @@ if(file.exists("preprocess5.RData"))
   for(i in 1:sampNums)
   {
 
-    try(sce_result <- read10xCounts(samples = dirs[i], sample.names = samps[i], col.names = TRUE), silent = TRUE)
+    try(sce_result <- read10xCounts(samples = dirs[i], sample.names = names(sce_list)[i], col.names = TRUE), silent = TRUE)
 
       # Check if an error occurred
       if (inherits(sce_result, "try-error")) {
 
-          print(paste("Error, there is no filtered_feature_bc_matrix files for sample", samps[i], ": demultiplex or count step fail"))
+          print(paste("Error, there is no filtered_feature_bc_matrix files for sample", names(sce_list)[i], ": demultiplex or count step fail"))
       } else
         {
           # If no error, store the result in the list
