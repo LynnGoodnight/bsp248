@@ -646,12 +646,13 @@ for(i in 1:length(sce_list))
   # Estimate soup profile and contamination fraction
   # pdf(file = "SoupX_output.pdf")
 
-  sc <- try(autoEstCont(sc, doPlot = FALSE), silent = FALSE)
+  sc <- try(autoEstCont(sc, doPlot = FALSE), silent = TRUE)
   if (inherits(sc, "try-error")) 
   {
     print(paste("Error, autoEstCont step fail", names(sce_list)[i]))
   }else{
   # Output the clean data which removed the predicted ambient reads
+  sc <- autoEstCont(sc, doPlot = TRUE)
   out <- adjustCounts(sc)
   counts(sce_list[[i]]) <- out    
   }
