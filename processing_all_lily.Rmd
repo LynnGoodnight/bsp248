@@ -32,7 +32,9 @@ sampSets <- list( "all" = 1:18,
 sampNums <- sampSets[[sampSet]]
 run1 <- 1:9
 run2 <- 10:18
-n_niters <- 10000
+n_niters <- 100000
+limit <- 200   ## set at 100 because this is the default for emptyDrops used above
+
 
 samps <- paste("sample", formatC(sampNums, width=2, flag="0"), sep="_")
 
@@ -359,15 +361,16 @@ if(file.exists("preprocess3.3.RData"))
     set.seed(100)
     e.out[[i]] <- emptyDrops(counts(sce_list[[i]]), niters = n_niters,  lower = 100,
                              test.ambient = FALSE)
+    print(n_niters)
     # Distinguish between droplets containing cell and ambient RNA in a droplet-based single-cell RNA sequencing experiment.
 
 
     set.seed(100)
-    limit <- 200   ## set at 100 because this is the default for emptyDrops used above
     # obtain all droplets' possibility of being non-empty droplets
 
     all.out[[i]] <- emptyDrops(counts(sce_list[[i]]), lower=limit, test.ambient=TRUE,  
                                niters = n_niters)
+    print(limit)
     # test.ambient=TRUE, A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to 'lower'.
     # lower=limit, A numeric scalar specifying the lower bound on the total UMI count,  at or below which all barcodes are assumed to correspond to empty droplets.
 
