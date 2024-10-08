@@ -1,5 +1,5 @@
 ---
-title: "Processing scRNA data bsp 248"
+title: "Processing scRNA data bsp 248 lung sample"
 author: "lily yang"
 date: "`r Sys.Date()`"
 output: html_document
@@ -131,6 +131,24 @@ multi_list_bar_plot(sce_list_raw,"before qc filtering", seperate_run = 9.5 )
 
 figure 1. droplet number per sample before preprocess 
 
+```{r extract sequencing saturation values and shown on html}
+setwd(count_dir)
+
+dirs <- paste0('muci_', names(sce_list_raw), '_count' , '/outs/metrics_summary.csv')
+seq_saturation <- 1:sampNums
+cell_ranger_metrics <- vector('list', length=sampNums)
+
+names(seq_saturation) <- names(sce_list_raw)
+names(cell_ranger_metrics) <- names(sce_list_raw)
+
+for (i in 1:sampNums) 
+{
+  cell_ranger_metrics[[i]] <- read.csv(dirs[i], header = TRUE)
+  seq_saturation[i] <- cell_ranger_metrics[[i]]["Sequencing.Saturation"]
+}
+print(seq_saturation)
+```
+the Sequencing.Saturation values are not consistent between run 1 and 2.
 
 ## 2 Removing swapped droplets
 
@@ -1371,6 +1389,8 @@ Now we will properly normalize the data and merge all of the samples together.
 
 ## 8.1 merge samples from same run, exclude catastrophic samples if any
 ```{r exclude catastrophic samples if any and merge samples from same run}
+# "sample_01" has some good quality droplets that can remain, but due to low number of droplets left, not comparable with other samples, it's not a good representation for this sample, and could not used in differential expression analysis
+
 
 for(sample_id in c(c("sample_03", "sample_05", "sample_10" )))
 {
