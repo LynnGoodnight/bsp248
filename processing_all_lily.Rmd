@@ -37,7 +37,7 @@ limit <- 200   ## set at 100 because this is the default for emptyDrops used abo
 
 
 samps <- paste("sample", formatC(sampNums, width=2, flag="0"), sep="_")
-samps <- samps_id
+samps_id  <- samps
 # load packages
 library(SingleCellExperiment)
 library(DropletUtils)
