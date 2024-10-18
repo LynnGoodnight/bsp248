@@ -1081,6 +1081,31 @@ sce_list <- lapply(sce_list, function(x){
   return(x)
 })
 
+QC_violin_plot_across_samples <- function(sce_list)
+{
+  QC.tab.all <- NULL
+  for(i in 1:length(sce_list))
+  {
+    QC.tab.per <- data.frame(colData(sce_list[[i]])[,c('Sample', 'sum_counts', 'mito_proportion', 'genes_detected')])
+    QC.tab.all <- rbind(QC.tab.all, QC.tab.per)
+  }
+  
+  p <-  ggplot(QC.tab.all, aes(x=Sample, y=log2(sum_counts) )) +
+    ggbeeswarm::geom_quasirandom(method="smiley")
+  print(p)
+  
+  p <-  ggplot(QC.tab.all, aes(x=Sample, y=log2(genes_detected) )) +
+    ggbeeswarm::geom_quasirandom(method="smiley")
+  print(p)
+  
+  p <-  ggplot(QC.tab.all, aes(x=Sample, y=mito_proportion )) +
+    ggbeeswarm::geom_quasirandom(method="smiley") + ggtitle("mitochondrial proportion")
+  print(p)
+  
+}
+QC_violin_plot_across_samples(sce_list)
+
+
 invisible(lapply(sce_list, function(x){
   # Set the plotting area to 1 row and 3 columns
   par(mfrow=c(1, 3))
@@ -1332,7 +1357,9 @@ here still filter out droplets with outlier high mitochondrial proportion within
   }
 
 # save.image(file = paste0(work_dir,"preprocess6.5.RData"))
+multi_list_bar_plot(sce_list,"after remove droplets whose mito_proportion higher than 0.1", seperate_run = seperate_run_value)
 
+QC_violin_plot_across_samples(sce_list)
 
 
 ```
