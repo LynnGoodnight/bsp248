@@ -30,11 +30,14 @@ sampSets <- list( "all" = 1:18,
                 )
               
 sampNums <- sampSets[[sampSet]]
+run1_n <- 9
+run2_n <- 9  
+
 run1 <- 1:9
 run2 <- 10:18
 n_niters <- 100000
 limit <- 200   ## set at 100 because this is the default for emptyDrops used above
-
+seperate_run_value <- 9.5
 
 samps <- paste("sample", formatC(sampNums, width=2, flag="0"), sep="_")
 samps_id  <- samps
@@ -168,25 +171,25 @@ if(file.exists("preprocess2.RData"))
   
   
   ## run 1
-  fs <- paste0('muci_sample_0', as.character(1:9), '_count/outs/molecule_info.h5')
+  fs <- paste0('muci_', samps_id[run1], '_count/outs/molecule_info.h5')
   run1 <- swappedDrops(samples=fs)
   
   # samps_path <- paste("muci_sample", formatC(sampNums, width=2, flag="0"), sep="_")
 
 ## run 2
   
-  fs <- paste0('muci_sample_', as.character(c(10:14, 16:18)), '_count/outs/molecule_info.h5')
+  fs <- paste0('muci_', samps_id[run2], '_count/outs/molecule_info.h5')
   run2 <- swappedDrops(fs)
-  run2_n <- 8
+
 
   # create a empty list to save the data that have Removed swapped drops
   cleaned <- list()
   
-  for (i in 1:9) {
+  for (i in 1:run1_n) {
       cleaned[[i]] <- run1[[1]][[i]]
   }
-  for (i in 10: (9+run2_n)) {
-      cleaned[[i]] <- run2[[1]][[i-9]]
+  for (i in (run1_n+1) : ( (run1_n) + run2_n)) {
+     cleaned[[i]] <- run2[[1]][[i-run1_n]]
       # head(paste0(colnames(cleaned[[i]]), '-1'))
       # typeof(run2[[1]][[1]])
       # names(run2[[1]])
@@ -201,7 +204,7 @@ if(file.exists("preprocess2.RData"))
   # evaluate how much droplets are removed in this step
 
 }
-  for (i in 1:9) 
+for (i in 1:run1_n) 
   {
     print(names(sce_list)[i])
     print(sum(colSums(run1$cleaned[[i]]))/sum(colSums(counts(sce_list[[i]]))))
@@ -210,8 +213,8 @@ if(file.exists("preprocess2.RData"))
   
   for (i in 1:run2_n) 
   {
-    print(names(sce_list)[i+9])
-    print(sum(colSums(run2$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+9]]))))
+  print(names(sce_list)[i+run1_n])
+  print(sum(colSums(run2$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+run1_n]]))))
   }
 
   # replace original data with clean data that have Removed swapped drops
