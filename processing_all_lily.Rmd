@@ -364,7 +364,7 @@ if(file.exists("preprocess3.3.RData"))
     set.seed(100)
     e.out[[i]] <- emptyDrops(counts(sce_list[[i]]), niters = n_niters,  lower = 100,
                              test.ambient = FALSE)
-    print(n_niters)
+    # print(n_niters)
     # Distinguish between droplets containing cell and ambient RNA in a droplet-based single-cell RNA sequencing experiment.
 
 
@@ -373,7 +373,7 @@ if(file.exists("preprocess3.3.RData"))
 
     all.out[[i]] <- emptyDrops(counts(sce_list[[i]]), lower=limit, test.ambient=TRUE,  
                                niters = n_niters)
-    print(limit)
+    # print(limit)
     # test.ambient=TRUE, A logical scalar indicating whether results should be returned for barcodes with totals less than or equal to 'lower'.
     # lower=limit, A numeric scalar specifying the lower bound on the total UMI count,  at or below which all barcodes are assumed to correspond to empty droplets.
 
@@ -396,15 +396,15 @@ for(i in 1:length(sce_list))
   # print(table(Sig=e.out[[i]]$FDR <= 0.001, Limited=e.out[[i]]$Limited))
   # niters parameter can be increased in the future if Limited=TRUE and Sig=FALSE  are very high
   table1 <- table(Sig=e.out[[i]]$FDR <= 0.001, Limited=e.out[[i]]$Limited)
-  
+  print(table1)
   if(table1[3] == 0)
   {
     print(paste(names(sce_list)[i], 'value of niters parameter is sufficient'))
-    print(paste('number of droplets are estimated contain cell', summary(e.out[[i]]$FDR <= 0.001)[3]))
+    # print(paste('number of droplets are estimated contain cell', summary(e.out[[i]]$FDR <= 0.001)[3]))
   }else
   {
     print(paste(names(sce_list)[i], 'insufficient value of niters parameter, inaccurate estimation '))
-    print(paste('number of droplets are estimated contain cell', summary(e.out[[i]]$FDR <= 0.001)[3]))    
+    # print(paste('number of droplets are estimated contain cell', summary(e.out[[i]]$FDR <= 0.001)[3]))    
   }
 
   hist(all.out[[i]]$PValue[all.out[[i]]$Total <= limit & all.out[[i]]$Total > 0],
@@ -418,22 +418,23 @@ for(i in 1:length(sce_list))
 figure 3. P values histogram of droplets containing fewer than 100 UMIs
 
 
-if Limited=TRUE, it indicates whether the p-value for a droplet is limited by the number of iterations (niters),  it indicate the true p-value could potentially be lower than computed if more iterations were performed.
+if Limited=TRUE, it indicates the p-value for a droplet is limited by the number of iterations (niters),  it indicate the true p-value could potentially be lower than computed if more iterations were performed.
 
 "PValue" refers to the statistical p-value obtained from testing each barcode (representing a droplet) for significant deviations from the ambient RNA profile
 
-If any barcodes have Limited=TRUE but does not reject the null hypothesis(), it suggests that niters should be increased.
+If any barcodes have Limited=TRUE but does not reject the null hypothesis(Sig=FALSE ), it suggests that niters should be increased.
 
+all droplets with PValue=TRUE are estimated as non-empty droplets. 
 
 Number of iterations for all samples looks appropriate now, as all droplets whose value of Limited=TRUE and Sig=FALSE are always 0.
 
 ideal niters parameter should make Limited=TRUE and Sig=FALSE are 0 for each sample
-need to do:
-add code to automatically check whether Limited=TRUE and Sig=FALSE are 0 for each sample, and report fail samples.
+
+the code will automatically check whether Limited=TRUE and Sig=FALSE are 0 for each sample, and report fail samples.
 
 
 in the histogram, P-values of droplets that are assumed to ambient reads sometimes dip near 1 but have no peaks near 0, coincide with the assumption that droplets containing fewer than 100 UMIs do not contain any real droplets.
-therefore, samples have ideal quality plots there are:  5, 7, 8
+therefore, samples have ideal quality plots there are: 
 
 
 
