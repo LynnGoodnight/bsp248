@@ -21,9 +21,17 @@ echo "Starting: in sbatch we asked for 10 thread and 256G mem"
 echo `date`
 
 module load tools
-
+export bsp_num="bsp_248"
 export sampSet="all"
 export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/"
+
+export run1_n="9"
+export run2_n="9"
+export seperate_run_value="9.5"
+export n_niters="100000"
+export limit="100"
+export UMI_counts_threshold="50000"
+export genes_detected_threshold="250"
 
 echo "sampSet" $sampSet
 
@@ -33,7 +41,7 @@ echo "running date: " `date`
 cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code/bsp248
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_preprocess_${sampSet}.html"
 
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('processing_all_lily.Rmd',  output_file=\"${cF}\")"
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('processing_all_lily_uniform.Rmd',  output_file=\"${cF}\")"
 
 echo `date`
 sleep 10

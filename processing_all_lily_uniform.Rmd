@@ -1,50 +1,53 @@
 ---
-title: "Processing scRNA data bsp 248 lung sample"
+title: "uniform preprocessing script for scRNA data "
 author: "lily yang"
 date: "`r Sys.Date()`"
 output: html_document
 ---
 
-# setup Environment  
+# setup Environment, load package and data  
 ```{r, setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
+
 work_dir <- Sys.getenv("work_dir")
+bsp_num <- Sys.getenv("bsp_num")
+samples_set <- Sys.getenv("sampSet")
+
 knitr::opts_knit$set(root.dir = work_dir)
 
-work_dir
-# work_dir  <- '/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/'
-# work_dir  <- "/mnt/rstudio/lily/bsp248/")
-count_dir <- '/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/count'
+count_dir <- paste0('/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/', bsp_num, '/lily/stages/count')
+
+if (samples_set == "") 
+  {
+   samples_set <- "all"      # default
+  }
+current_run <- samples_set
 
 
-sampSet <- Sys.getenv("sampSet")
-if (sampSet == "") {
-   sampSet <- "all"      # default
-   
-   }
-current_run <- "all"
-sampSet
 
-sampSets <- list( "all" = 1:18,
-                  "run1" = 1:9   
-                )
-              
-sampNums <- sampSets[[sampSet]]
-run1_n <- 9
-run2_n <- 9  
+run1_n <- as.numeric(Sys.getenv("run1_n"))
+run2_n <- as.numeric(Sys.getenv("run2_n"))  
+seperate_run_value <- as.numeric(Sys.getenv("seperate_run_value"))
+n_niters <- as.numeric(Sys.getenv("n_niters"))
+limit <- as.numeric(Sys.getenv("limit"))  
+UMI_counts_threshold <- as.numeric(Sys.getenv("UMI_counts_threshold"))  
+genes_detected_threshold <- as.numeric(Sys.getenv("genes_detected_threshold")) 
 
-run1 <- 1:9
-run2 <- 10:18
-n_niters <- 100000
-limit <- 200   ## set at 100 because this is the default for emptyDrops used above
-seperate_run_value <- 9.5
 
-samps <- paste("sample", formatC(sampNums, width=2, flag="0"), sep="_")
-samps_id  <- samps
+run1 <- 1:run1_n
+run2 <- (run1_n+1 ):(run1_n+run2_n)
+sampNums <- (run1_n+run2_n)
+print(paste('work_dir', work_dir, 'samples_set', samples_set))              
+
+## set to 100 because this is the default for emptyDrops used above
+
+samps_id <- paste("sample", formatC(1:sampNums, width=2, flag="0"), sep="_")
+
 # load packages
 library(SingleCellExperiment)
 library(DropletUtils)
 library(viridisLite)     
+library(ggplot2)
 
 ```
 
@@ -79,17 +82,17 @@ if(file.exists("preprocess1.RData"))
   setwd(count_dir)
   
   dirs <- paste0('muci_', samps_id, '_count' , '/outs/raw_feature_bc_matrix')
-  sce_list_raw <- vector('list', length=length(sampNums))
-  names(sce_list_raw)  <- samps
+  sce_list_raw <- vector('list', length=sampNums)
+  names(sce_list_raw)  <- samps_id
 
-  for(i in sampNums) {
+  for(i in 1:sampNums) {
       # Use try() to capture potential errors
-      sce_result <- try(read10xCounts(samples = dirs[i], sample.names = samps[i], col.names = TRUE), silent = TRUE)
+      sce_result <- try(read10xCounts(samples = dirs[i], sample.names = samps_id[i], col.names = TRUE), silent = TRUE)
       
       # Check if an error occurred
       if (inherits(sce_result, "try-error")) {
         
-          print(paste("Error, there is no fq files for sample", samps[i], ": demultiplex or count step fail"))
+          print(paste("Error, there is no fq files for sample", samps_id[i], ": demultiplex or count step fail"))
       } else {
           # If no error, store the result in the list
           sce_list_raw[[i]] <- sce_result
@@ -109,8 +112,8 @@ sce_list_raw <- Filter(Negate(is.null), sce_list_raw)
 sampNums <- length(sce_list_raw)
 
 
-sce = sce_list_raw
-multi_list_bar_plot <- function(sce, my_flag, seperate_run = 9.5)
+
+multi_list_bar_plot <- function(sce, my_flag, seperate_run = seperate_run_value)
 {
   df <- as.data.frame(lapply(sce, dim))
   df <- as.data.frame(t(df))
@@ -130,11 +133,11 @@ multi_list_bar_plot <- function(sce, my_flag, seperate_run = 9.5)
 
 }
 
-multi_list_bar_plot(sce_list_raw,"before qc filtering", seperate_run = 9.5 )
+multi_list_bar_plot(sce_list_raw,"before qc filtering", seperate_run = seperate_run_value )
 
 ```
-
 figure 1. droplet number per sample before preprocess 
+
 
 ```{r extract sequencing saturation values and shown on html}
 setwd(count_dir)
@@ -151,9 +154,28 @@ for (i in 1:sampNums)
   cell_ranger_metrics[[i]] <- read.csv(dirs[i], header = TRUE)
   seq_saturation[i] <- cell_ranger_metrics[[i]]["Sequencing.Saturation"]
 }
-print(seq_saturation)
+
+print(as.data.frame(seq_saturation))
+
+# draw a bar plot 
+seq_saturation <- t(as.data.frame(seq_saturation))
+seq_saturation = as.data.frame(seq_saturation)
+seq_saturation$sample <- rownames(seq_saturation)
+colnames(seq_saturation)[1] <- 'value'
+
+# Test if the quotes are part of the string
+grepl('"', seq_saturation$value)
+seq_saturation$number <- as.numeric(gsub('%', '', seq_saturation$value))/ 100
+
+p <- ggplot(data=seq_saturation, aes(x=sample, y=number)) +
+  geom_bar(stat="identity")+
+  geom_text(aes(label=value), vjust=-0.2, size=3.5)+
+  theme(axis.text.x = element_text(angle = 90)) 
+print(p)
+
 ```
 the Sequencing.Saturation values are not consistent between run 1 and 2.
+
 
 ## 2 Removing swapped droplets
 
@@ -173,8 +195,6 @@ if(file.exists("preprocess2.RData"))
   ## run 1
   fs <- paste0('muci_', samps_id[run1], '_count/outs/molecule_info.h5')
   run1 <- swappedDrops(samples=fs)
-  
-  # samps_path <- paste("muci_sample", formatC(sampNums, width=2, flag="0"), sep="_")
 
 ## run 2
   
@@ -189,10 +209,7 @@ if(file.exists("preprocess2.RData"))
       cleaned[[i]] <- run1[[1]][[i]]
   }
   for (i in (run1_n+1) : ( (run1_n) + run2_n)) {
-     cleaned[[i]] <- run2[[1]][[i-run1_n]]
-      # head(paste0(colnames(cleaned[[i]]), '-1'))
-      # typeof(run2[[1]][[1]])
-      # names(run2[[1]])
+      cleaned[[i]] <- run2[[1]][[i-run1_n]]
   }
   # add -1 for each droplet barcode 
   for(i in 1:length(cleaned)){
@@ -204,27 +221,29 @@ if(file.exists("preprocess2.RData"))
   # evaluate how much droplets are removed in this step
 
 }
+
+
 for (i in 1:run1_n) 
-  {
-    print(names(sce_list)[i])
-    print(sum(colSums(run1$cleaned[[i]]))/sum(colSums(counts(sce_list[[i]]))))
-  }
-  
-  
-  for (i in 1:run2_n) 
-  {
+{
+  print(names(sce_list)[i])
+  print(sum(colSums(run1$cleaned[[i]]))/sum(colSums(counts(sce_list[[i]]))))
+}
+
+for (i in 1:run2_n) 
+{
   print(names(sce_list)[i+run1_n])
   print(sum(colSums(run2$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+run1_n]]))))
-  }
+}
 
-  # replace original data with clean data that have Removed swapped drops
-  for(i in 1:length(sce_list)){
-    counts(sce_list[[i]])[,colnames(cleaned[[i]])] <- cleaned[[i]]
-      # take long to run this step
-  }
-  
-  rm(cleaned, run1, run2)  
+# replace original data with clean data that have Removed swapped drops
+for(i in 1:length(sce_list)){
+  counts(sce_list[[i]])[, colnames(cleaned[[i]])] <- cleaned[[i]]
+    # take long to run this step
+}
+# head(counts(sce_list[[i]]))
+# head(colnames(cleaned[[i]]))
 
+rm(cleaned, run1, run2)  
 
 ```
 
@@ -314,8 +333,8 @@ Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter
 # use before_filter_brs to store the value of knee and inflection points derived from sce_list before filtering  empty droplets
 before_filter_brs <- Count_by_rank_plot(sce_list, calculate_brs = TRUE)
 
-sce_list[[13]] <- NULL
-sampNums <- length(sce_list)
+# sce_list[[13]] <- NULL
+# sampNums <- length(sce_list)
 
 ```
 
@@ -346,10 +365,9 @@ how much of the filtered droplet can still be used, distinguish droplets have am
 ### 3.3  validate assumption, droplets containing fewer than 100 UMIs do not contain any real droplets
 
 we retrieve droplets whose total UMI count between 0-100, check their P values (possibility of being non-empty droplets) using 'emptyDrops' function, and plot histogram of the predicted P-Value.
-
 default assumption is droplets containing fewer than 100 UMIs do not contain any real droplets, therefore, in theory P Value of these droplets should near 1, and should not peak around 0. 
 
-Specifically, if the null hypothesis were true, p-values for low-count (< 100 UMIs ) barcodes should have a uniform distribution. Any strong peaks in the p-values near zero indicate that emptyDrops is not controlling the FDR correctly.
+
 
 
 ```{r calculate P values for droplets containing fewer than 100 UMIs and plot histogram of their P values to check how accurate the emptyDrops estimate empty droplets}
@@ -439,6 +457,7 @@ therefore, samples have ideal quality plots there are:
 
 
 
+
 ### 3.4 filter the estimated empty droplets and plot total UMI histogram
 Thus we can filter the droplets
 
@@ -462,7 +481,7 @@ if(file.exists("preprocess3.4.RData"))
 
 
 # lapply(sce_list, dim)
-multi_list_bar_plot(sce_list,"after filter estimated empty droplets", seperate_run = 9.5 )
+multi_list_bar_plot(sce_list,"after filter estimated empty droplets", seperate_run = seperate_run_value )
 
 
 
@@ -479,7 +498,7 @@ if these droplets are real outliers, them tend to cluster together, with abnorma
 
 let's have a look at the distribution total UMI, and filter abnormally high total UMI outlier droplets by set the threshold
 
-
+### 3.5 filter droplets with abnormally high or low total UMI
 ```{r draw total UMI per droplet histogram before and after filtering droplets with abnormally high or low total UMI }
 library("scuttle")
 sce_list <- lapply(sce_list, function(x){
@@ -496,11 +515,11 @@ plot_total_UMI_distribution <- function(sce_list)
   lapply(sce_list, function(x){
 
     hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per cell'), xlab='total UMI counts of a cell', ylab = 'number of droplets',
-         xlim = c(0,20000), breaks = seq(0,200000,by=1000))
-  abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000
-  abline(v=5000, col="blue", lwd=1)
+         xlim = c(0,10000), breaks = seq(0, 90000, by=1000)) # breaks = seq(0, 10000, by=1000) need to cover total UMI per cell for all cells 
+  abline(v=500, col="red", lwd=1) # Add a vertical red line at x=2000
+  abline(v=3000, col="blue", lwd=1)
   # a droplet contain an intact cell always have total UMI counts 2000-5000
-  legend("topright", legend=c("2000", "5000"),
+  legend("topright", legend=c("500", "3000"),
          col=c("red", "blue"), lty=2, cex=1.2)
 # better to combine plots 
 })
@@ -509,20 +528,21 @@ plot_total_UMI_distribution <- function(sce_list)
 par(mfrow=c(1, 1))
 }
 
-print('total UMI per droplet histogram before filtering droplets with abnormally high or low total UMI')
+# print('total UMI per droplet histogram before filtering droplets with abnormally high or low total UMI')
 
-plot_total_UMI_distribution(sce_list)
+# plot_total_UMI_distribution(sce_list)
 
 
 
 # remove droplets with extreme high or low Total UMI
  for(i in 1:length(sce_list)){
-   # sce_list[[i]]$UMI_counts_outlier <- isOutlier(sce_list[[i]]$sum_counts, type='higher', nmads = 5)
+   # sce_list[[i]]$UMI_counts_outlier <- isOutlier(sce_list[[i]]$sum_counts, type='higher', nmads = 3)
    # since large number of droplets that have quiet low total UMI (<600) in sample 17-18 will make other droplets that have normal total UMI (2000-5000) become ouliers, so there we don't use isOutlier to filter abnormally high total UMI droplets (>50,000)
 
-   sce_list[[i]]$UMI_counts_outlier <- (sce_list[[i]]$sum_counts >= 50000) | (sce_list[[i]]$sum_counts <= 500)
+   # sce_list[[i]]$UMI_counts_outlier <- (sce_list[[i]]$sum_counts >= 50000) | (sce_list[[i]]$sum_counts <= 500)
+   sce_list[[i]]$UMI_counts_outlier <- (sce_list[[i]]$sum_counts >= UMI_counts_threshold) 
    # maybe will filter sum_counts <= 800 in the future. sample 18 have too many droplets around 800 total UMI, need to check if them can cluster successfully
-   print(paste('TRUE = the number of droplets that will be filtered due to abnormally high 50,000 or low total UMI 500 in sample', i ))
+   print(paste('TRUE = the number of droplets that will be filtered due to abnormally high UMI counts', UMI_counts_threshold, 'in sample', i ))
    
    print(table(sce_list[[i]]$UMI_counts_outlier))
 
@@ -532,12 +552,12 @@ plot_total_UMI_distribution(sce_list)
 
 
 
-print('total UMI per droplet histogram after filtering droplets with abnormally high or low total UMI')
-
-plot_total_UMI_distribution(sce_list)
+# print('total UMI per droplet histogram after filtering droplets with abnormally high or low total UMI')
+# 
+# plot_total_UMI_distribution(sce_list)
 
 # lapply(sce_list, dim)
-multi_list_bar_plot(sce_list,"after filter droplets droplets abnormally high or low total UMI", seperate_run = 9.5 )
+multi_list_bar_plot(sce_list,"after filter droplets with abnormally high total UMI", seperate_run = seperate_run_value )
 
 ```
 
@@ -545,10 +565,10 @@ figure 5. plot total UMI per droplet histogram before and after filtering
 
 
 issue of most droplets have total UMI lower than 2000, too few droplets have total UMI 2000-5000.
-severe: samples 1 3 5 7 8 
-moderate: samples 2 4 6 9 17
+severe: samples
+moderate: samples
 
-good quality samples: 16 18
+good quality samples: 
 
 need to check:
 shall we filter sum_counts >= 20,000 in the future?
@@ -561,10 +581,10 @@ we try produce Count by rank plot again using previously predicted inflation and
 # Count_by_rank_plot(sce_list, calculate_brs = TRUE, use_before_filter_brs = FALSE)
 
 
-print('the proportion of droplets remained after filtering empty droplets')
+print('the proportion of droplets remained after filtering empty and high UMI counts droplets')
 for(i in 1:length(sce_list))
 {
-  print(dim(sce_list[[i]])[2] / dim(sce_list_raw[[i]])[2])
+  print(paste(names(sce_list)[i], dim(sce_list[[i]])[2] / dim(sce_list_raw[[i]])[2]))
 }
 ```
 
@@ -667,19 +687,18 @@ for(i in 1:length(sce_list))
   # colLabels(sce_list[[i]])
 
   sc = setClusters(sc, setNames(colLabels(sce_list[[i]]), colnames(sce_list[[i]])))
-  print(paste('autoEstCont sample', names(sce_list)[i] ))
+  print(paste('autoEstCont sample', names(sce_list)[i]))
   # Estimate soup profile and contamination fraction
   # pdf(file = "SoupX_output.pdf")
 
-  sc <- try(autoEstCont(sc, doPlot = FALSE), silent = TRUE)
-  if (inherits(sc, "try-error")) 
+  sc <- try(autoEstCont(sc, doPlot = FALSE), silent = FALSE)
+  if (inherits(sc, "try-error"))
   {
     print(paste("Error, autoEstCont step fail", names(sce_list)[i]))
   }else{
   # Output the clean data which removed the predicted ambient reads
-  sc <- autoEstCont(sc, doPlot = TRUE)
   out <- adjustCounts(sc)
-  counts(sce_list[[i]]) <- out    
+  counts(sce_list[[i]]) <- out
   }
   # dev.off()
   # print(paste('test sample', i))
@@ -691,7 +710,7 @@ print('the proportion of total read counts remained after remove ambient RNA')
 for(i in 1:length(sce_list))
 {
   proportion <-  sum(assays(sce_list[[i]], withDimnames=FALSE)$counts) / sum(assays(sce_list_before_remove_ambient_rna[[i]], withDimnames=FALSE)$counts)
-  print(paste('proportion of sample', i, ':', proportion))
+  print(paste('proportion of sample', names(sce_list)[i], ':', proportion))
   # cell number doesn't change for each sample, the total UMI of each sample might change
 }
 
@@ -720,12 +739,12 @@ if(file.exists("preprocess5.RData"))
   for(i in 1:sampNums)
   {
 
-    try(sce_result <- read10xCounts(samples = dirs[i], sample.names = names(sce_list)[i], col.names = TRUE), silent = TRUE)
+    try(sce_result <- read10xCounts(samples = dirs[i], sample.names = samps_id[i], col.names = TRUE), silent = TRUE)
 
       # Check if an error occurred
       if (inherits(sce_result, "try-error")) {
 
-          print(paste("Error, there is no filtered_feature_bc_matrix files for sample", names(sce_list)[i], ": demultiplex or count step fail"))
+          print(paste("Error, there is no filtered_feature_bc_matrix files for sample", samps_id[i], ": demultiplex or count step fail"))
       } else
         {
           # If no error, store the result in the list
@@ -737,15 +756,15 @@ if(file.exists("preprocess5.RData"))
   }
   sce_list_cr <- Filter(Negate(is.null), sce_list_cr)
   print(names(sce_list_cr))
-  
+
 
 
   save.image(file = paste0(work_dir,"preprocess5.RData"))
 }
 
 
-multi_list_bar_plot(sce_list,"after  filtering extreme high or low total UMI droplets", seperate_run = 9.5 )
-multi_list_bar_plot(sce_list_cr,"after cellranger filtering", seperate_run = 9.5 )
+multi_list_bar_plot(sce_list,"after  filtering extreme high or low total UMI droplets", seperate_run = seperate_run_value )
+multi_list_bar_plot(sce_list_cr,"after cellranger filtering", seperate_run = seperate_run_value )
 
 # lapply(sce_list, dim)
 # lapply(sce_list_cr, dim)
@@ -755,7 +774,7 @@ for(i in 1:length(sce_list))
 {
   # print((dim(sce_list[[i]])[2] - dim(sce_list_cr[[i]])[2])/
   #         ((dim(sce_list[[i]])[2] + dim(sce_list_cr[[i]])[2])/2)*100)
-  
+
   print(paste(names(sce_list)[[i]], dim(sce_list[[i]])[2] / dim(sce_list_cr[[i]])[2]))
 }
 
@@ -770,16 +789,26 @@ has quiet big difference between cellranger filtered output and our filtered out
 
 ## 6 Removing residual low quality droplets
 
-### 6.1 filter zero counts genes and annotate genes names
+### 6.1 filter zero counts genes, annotate genes names
 Here we will look for outlying droplets in terms of detected gene number and proportion of mitochondrial reads.
 
 In order to look at specific types of genes, we need to annotate the dataset. To make this easier, we'll first remove genes with no counts in every sample
 
 ```{r filter zero counts genes and map genes symbols original}
+if(bsp_num == "bsp_247")
+{
+  library(org.Gg.eg.db)
+   
+}
+if(bsp_num == "bsp_248") 
+{
+  library(org.Ss.eg.db)
+}
+library(dplyr)
 
-
-# Remove genes with zero counts
+# Remove genes with zero counts in all droplets across all samples
 detected <- lapply(sce_list, function(x){rowSums(counts(x)) > 0})
+
 # detected is a list with 20 elements, each element contain all genes with true or false value
 names(detected) <- paste0('Sample', as.character(c(1:sampNums )))
 detected <- data.frame(detected)
@@ -798,54 +827,53 @@ if(file.exists("preprocess6.1.RData"))
   sce_list <- lapply(sce_list, function(x) {return(x[-undetected,])})
   rm(detected, undetected)
   # lapply(sce_list, dim)
-  if(file.exists("references/ensembl_map.csv"))
+  if(file.exists("references/ensembl_map.csv") && file.exists('references/ensembl_ENTREZ_symbol_map.csv'))
   {
     map <- read.csv("references/ensembl_map.csv", row.names = 1)
     # head(map)
   }else
   {
-
-  # retrieve hgnc_symbol for the remaining non-zero genes
-# unloadNamespace("tidyselect")
-    unloadNamespace("dplyr")
-    library(biomaRt)
-
-    success <- FALSE
-    while(!success )
-    {
-      try({
-        ensembl <- useEnsembl(biomart = "genes", dataset = "sscrofa_gene_ensembl", mirror = "www", verbose = TRUE)
-        # If the above line runs without error, set success to TRUE to exit the loop
-        success <- TRUE}, silent = TRUE)
-      # 'silent = TRUE' suppresses the error message in the console
-
-      if(!success)
-      {
-        message(paste("Attempt failed. Retrying..."))
-        Sys.sleep(5) # Wait for 5 seconds before retrying to give some time for the internet issue to resolve
-      }
-
-    }
-
-    map <- getBM(attributes=c('ensembl_gene_id',
-                              'hgnc_symbol', 'chromosome_name',
-                              'start_position', 'end_position'),
-                 filters='ensembl_gene_id',
-                 values=rownames(sce_list[[1]]),
-                 mart=ensembl)
-    rownames(map) <- as.character(map$ensembl_gene_id)
-    write.csv(map, "ensembl_map.csv")
+    print('please create ensemblif symbol map files first')
   }
 
+  if(bsp_num == "bsp_247")
+  {
+      # Combine rows with the same 'ensembl_gene_id' and combine their 'chromosome_name', 'start_position', and 'end_position'
+    unique_map <- map %>%
+      group_by(ensembl_gene_id) %>%
+      summarise(
+        external_gene_name = paste(unique(external_gene_name[!is.na(external_gene_name)]), collapse = ";"),
+        chromosome_name = paste(unique(chromosome_name[!is.na(chromosome_name)]), collapse = ";"),
+        start_position = paste(unique(start_position[!is.na(start_position)]), collapse = ";"),
+        end_position = paste(unique(end_position[!is.na(end_position)]), collapse = ";")
+      ) %>%
+      ungroup()
+    unique_map <- as.data.frame(unique_map)
+    rownames(unique_map) <- unique_map$ensembl_gene_id
+    # head(unique_map)
+    # dim(unique_map)
+      # Update 'sce_list' with the unique 'ensembl_gene_id' data
+    sce_list <- lapply(sce_list, function(x) {
+      rowData(x)$gene_symbol_ensembl <- unique_map[rownames(x), 'external_gene_name']
+      rowData(x)$chr <- unique_map[rownames(x), 'chromosome_name']
+      rowData(x)$start <- unique_map[rownames(x), 'start_position']
+      rowData(x)$end <- unique_map[rownames(x), 'end_position']
+      return(x)
+    })
+  
+     
+  }
 
-
-  sce_list <- lapply(sce_list, function(x){
-    rowData(x)$hgnc_symbol_old <- map[rownames(x), 'hgnc_symbol']
-    rowData(x)$chr <- map[rownames(x), 'chromosome_name']
-    rowData(x)$start <- map[rownames(x), 'start_position']
-    rowData(x)$end <- map[rownames(x), 'end_position']
-    return(x)})
-
+  if(bsp_num == "bsp_248") 
+  {
+    sce_list <- lapply(sce_list, function(x){
+      rowData(x)$gene_symbol_ensembl <- map[rownames(x), 'hgnc_symbol']
+      rowData(x)$chr <- map[rownames(x), 'chromosome_name']
+      rowData(x)$start <- map[rownames(x), 'start_position']
+      rowData(x)$end <- map[rownames(x), 'end_position']
+      return(x)})
+    
+  }
 
 
   head(rowData(sce_list[[1]]))
@@ -856,180 +884,35 @@ if(file.exists("preprocess6.1.RData"))
 
 
 ```{r examine map quality of original method}
-print(paste('number of unique hgnc_symbol_old', length(unique(rowData(sce_list[[1]])$hgnc_symbol_old))))
-print(paste('total number of hgnc_symbol_old', length(rowData(sce_list[[1]])$hgnc_symbol_old)))
+print(paste('number of unique gene_symbol_ensembl', length(unique(rowData(sce_list[[1]])$gene_symbol_ensembl))))
+print(paste('total number of contained gene_symbol_ensembl', length(rowData(sce_list[[1]])$gene_symbol_ensembl)))
 # check how much gene names are assigned successfully
 
 print(paste('number of unique ensembl_gene_id', length(unique(rownames(sce_list[[1]])))))
 print(paste('total number of ensembl_gene_id', length(rownames(sce_list[[1]]))))
 # check how much unique gene id exist
 
-# check if CD8B assigned successfully
-grep('CD8B',rowData(sce_list[[1]])$hgnc_symbol_old)
-
-rowData(sce_list[[1]])$hgnc_symbol_old[grep('CD8',rowData(sce_list[[1]])$hgnc_symbol_old)]
-
-# check if CD8B exist according its ensembl_gene_id
-grep('ENSSSCG00000008213',rownames(sce_list[[1]]))
-
-
-map['ENSSSCG00000008213',]
-
-map[map$ensembl_gene_id == 'ENSSSCG00000060380',]
-map[map$ensembl_gene_id == 'ENSSSCG00000008213',]
 
 
 ```
 
 ```{r second map genes symbols method and examine map quality of second method}}
 
-if(file.exists("references/ensembl_entrez_map.csv"))
-{
-  ensembl_entrez <- read.csv("references/ensembl_entrez_map.csv", row.names = 1)
-}else
-{
-  ################################## Get Entrez Gene IDs corresponding to each Ensembl ID
-  # library(biomaRt)
-  success <- FALSE
-  while(!success )
-  {
-    try({
-      ensembl <- useEnsembl(biomart = "genes", dataset = "sscrofa_gene_ensembl", mirror = "www", verbose = TRUE)
-      # If the above line runs without error, set success to TRUE to exit the loop
-      success <- TRUE}, silent = TRUE)
-    # 'silent = TRUE' suppresses the error message in the console
-
-    if(!success)
-    {
-      message(paste("Attempt failed. Retrying..."))
-      Sys.sleep(5) # Wait for 5 seconds before retrying to give some time for the internet issue to resolve
-    }
-
-  }
-
-  entrez_ids <- getBM(attributes=c('ensembl_gene_id', 'entrezgene_id'),
-                      filters='ensembl_gene_id',
-                      values=rownames(sce_list[[1]]),
-                      mart=ensembl)
-  dim(entrez_ids)
-  # head(entrez_ids)
-
-  entrez_ids[entrez_ids$ensembl_gene_id == 'ENSSSCG00000008213',]
-
-  ################################## Get symbols corresponding to each Entrez Gene IDs
-  # BiocManager::install("org.Ss.eg.db")
-  library(org.Ss.eg.db)
-  vector <- as.character(entrez_ids$entrezgene_id)
-
-  Named_vector_of_HGNC_symbols <- mapIds(org.Ss.eg.db,
-                                         keys=vector,
-                                         column="SYMBOL",
-                                         keytype="ENTREZID",
-                                         multiVals = "first")
-
-  # the key of the output list are the ENTREZID IDs of the input
-  # vector. The values of the output vector are the HGNC symbols.
-
-  # see all the info and ID types stored in the annotation database using:
-  columns(org.Ss.eg.db)
-  # this database package can also been used for gene ontology enrichment
-
-
-
-
-  # Convert the map list to a data frame
-  df <- data.frame(entrezgene_id = names(Named_vector_of_HGNC_symbols),
-                   symbols = sapply(Named_vector_of_HGNC_symbols, function(x) paste(x, collapse = "; ")),
-                   stringsAsFactors = FALSE)
-
-  # Printing the resulting data frame
-  print(dim(df))
-
-  # check how much symbols mapped to Entrez Gene IDs
-
-  # keytypes(org.Ss.eg.db)
-  length(Named_vector_of_HGNC_symbols)
-  head(Named_vector_of_HGNC_symbols)
-  # ensembl_gene_id entrezgene_id
-  #  ENSSSCG00000008213        396636
-  Named_vector_of_HGNC_symbols[['396636']]
-
-  # check how much entrez_id map symbols successfully
-  print(sum(!is.na(df$symbols) & df$symbols != ""))
-  print(length(unique(df$symbols) ))
-  # a few entrez_id map same symbols
-
-  # df$entrez_ids == entrez_ids$entrezgene_id
-  ensembl_entrez <- cbind(df,entrez_ids)
-  # rownames(ensembl_entrez) <- ensembl_entrez$ensembl_gene_id
-  ensembl_entrez$entrezgene_id = NULL
-
-  # ensembl_entrez[ensembl_entrez$entrezgene_id == 'ENSSSCG00000008213',]
-
-  write.csv(ensembl_entrez, "ensembl_entrez_map.csv")
-
-}
-
-
 ################################## merge symbols which have same ensembl id
-if(file.exists("references/ensembl_hgnc_symbol_new_map.csv"))
+if(file.exists("references/ensembl_ENTREZ_symbol_map.csv"))
 {
-  hgnc_symbol_new <- read.csv("references/ensembl_hgnc_symbol_new_map.csv", row.names = 1)
+  hgnc_symbol_new <- read.csv("references/ensembl_ENTREZ_symbol_map.csv", row.names = 1)
 }else
 {
-  library(dplyr)
-  hgnc_symbol_new <- ensembl_entrez %>%
-    group_by(ensembl_gene_id) %>%
-    summarise(symbols = paste(unique(symbols), collapse = ", ")) %>%
-    ungroup()
-  hgnc_symbol_new <- as.data.frame(hgnc_symbol_new)
-  rownames(hgnc_symbol_new) <- hgnc_symbol_new$ensembl_gene_id
-  write.csv(hgnc_symbol_new, "ensembl_hgnc_symbol_new_map.csv")
-
+  print("fail to find references/ensembl_ENTREZ_symbol_map.csv")
 }
 
-
-
-
-# print(sum(!is.na(hgnc_symbol_new$symbols) & hgnc_symbol_new$symbols != ""))
-# entrez_ids[entrez_ids$ensembl_gene_id == 'ENSSSCG00000008213',]
-ensembl_entrez[ensembl_entrez$ensembl_gene_id == 'ENSSSCG00000008213',]
-hgnc_symbol_new['ENSSSCG00000008213',]
-head(rowData(sce_list[[1]])$hgnc_symbol)
-
-
+# head(hgnc_symbol_new)
 ################################## add new map symbols in sce_list
 sce_list <- lapply(sce_list, function(x){
-  rowData(x)$hgnc_symbol <- hgnc_symbol_new[rownames(x), 'symbols']
+  rowData(x)$ENTREZ_symbol <- hgnc_symbol_new[rownames(x), 'ENTREZ_symbol']
   return(x)})
 
-################################# compare the mapping results of two methods
-# show rows which have same ensembl_gene_id, check if they have same symbol annotation
-df <- ensembl_entrez
-
-# Find rows with duplicate 'ensembl_gene_id' values
-duplicates <- df[duplicated(df$ensembl_gene_id) | duplicated(df$ensembl_gene_id, fromLast = TRUE), ]
-
-# Output the rows with duplicate 'ensembl_gene_id'
-# print(duplicates)
-
-
-# grep('TNFRSF13B',rowData(sce_list[[1]])$hgnc_symbol_new)
-#
-# test = rowData(sce_list[[1]])$hgnc_symbol
-# test_new = rowData(sce_list[[1]])$hgnc_symbol_new
-# flag = (test==test_new)
-# sum(!flag)
-#
-# df1 <- data.frame(hgnc_symbol = test[!flag],
-#                   hgnc_symbol_new = test_new[!flag])
-#
-#
-# install.packages('rapport')
-# library(rapport)
-# library(rapportools)
-# sum(is.empty(df1$hgnc_symbol))
-# sum(is.empty(df1$hgnc_symbol_new))
 
 ```
 
@@ -1082,61 +965,87 @@ sce_list <- lapply(sce_list, function(x){
   return(x)
 })
 
-QC_violin_plot_across_samples <- function(sce_list)
-{
+QC_violin_plot_across_samples <- function(sce_list) {
   QC.tab.all <- NULL
-  for(i in 1:length(sce_list))
-  {
+  for(i in 1:length(sce_list)) {
     QC.tab.per <- data.frame(colData(sce_list[[i]])[,c('Sample', 'sum_counts', 'mito_proportion', 'genes_detected')])
     QC.tab.all <- rbind(QC.tab.all, QC.tab.per)
   }
   
-  p <-  ggplot(QC.tab.all, aes(x=Sample, y=log2(sum_counts) )) +
-    ggbeeswarm::geom_quasirandom(method="smiley")
+  # Create the plot with horizontal lines
+  p <- ggplot(QC.tab.all, aes(x=Sample, y=log2(sum_counts))) +
+    ggbeeswarm::geom_quasirandom(method="smiley") +
+    theme(axis.text.x = element_text(angle = 90)) +
+    geom_hline(aes(yintercept=log2(500), color="500"), linetype="dashed", size=1) +  # Add red line at y=500
+    geom_hline(aes(yintercept=log2(4000), color="4000"), linetype="dashed", size=1) +  # Add blue line at y=1000
+    scale_color_manual(name="Threshold", 
+                       values=c("500"="red", "4000"="blue"),  # Set colors for the lines
+                       labels=c("4000", "500")) +  # Set labels for the legend
+    labs(y="log2(sum_counts)", x="Sample")  # Labels for x and y axis
+  
   print(p)
   
-  p <-  ggplot(QC.tab.all, aes(x=Sample, y=log2(genes_detected) )) +
-    ggbeeswarm::geom_quasirandom(method="smiley")
+  # If you want to add additional plots, you can continue as needed:
+
+  p <- ggplot(QC.tab.all, aes(x=Sample, y=log2(genes_detected))) +
+    ggbeeswarm::geom_quasirandom(method="smiley") +
+    theme(axis.text.x = element_text(angle = 90)) +
+    geom_hline(aes(yintercept=log2(500), color="500"), linetype="dashed", size=1) +  # Add red line at y=500
+    geom_hline(aes(yintercept=log2(3000), color="3000"), linetype="dashed", size=1) +  # Add blue line at y=1000
+    scale_color_manual(name="Threshold", 
+                       values=c("500"="red", "3000"="blue"),  # Set colors for the lines
+                       labels=c("3000", "500")) +  # Set labels for the legend
+    labs(y="log2(sum_counts)", x="Sample")  # Labels for x and y axis
   print(p)
-  
-  p <-  ggplot(QC.tab.all, aes(x=Sample, y=mito_proportion )) +
-    ggbeeswarm::geom_quasirandom(method="smiley") + ggtitle("mitochondrial proportion")
+
+  p <- ggplot(QC.tab.all, aes(x=Sample, y=mito_proportion)) +
+    ggbeeswarm::geom_quasirandom(method="smiley") +
+    ggtitle("mitochondrial proportion") +
+    theme(axis.text.x = element_text(angle = 90)) +
+    geom_hline(aes(yintercept=0.2, color="0.2"), linetype="dashed", size=1) +  # Add red line at y=500
+    geom_hline(aes(yintercept=0.1, color="0.1"), linetype="dashed", size=1) +  # Add blue line at y=1000
+    scale_color_manual(name="Threshold", 
+                       values=c("0.1"="red", "0.2"="blue"),  # Set colors for the lines
+                       labels=c("0.1", "0.2")) +  # Set labels for the legend
+    labs(y="log2(sum_counts)", x="Sample")  # Labels for x and y axis
   print(p)
-  
 }
+
+
+
 QC_violin_plot_across_samples(sce_list)
 
 
+# invisible: do not print out the returned variable
 invisible(lapply(sce_list, function(x){
   # Set the plotting area to 1 row and 3 columns
-  par(mfrow=c(1, 3))
-  
-  hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'), 
-       xlab='total UMI counts of a droplet', ylab = 'number of droplet')
-  abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000
-  abline(v=5000, col="blue", lwd=1)
-  legend("topright", legend=c("2000", "5000"),
-         col=c("red", "blue"), lty=2, cex=1.2)
-  
-  hist(x$genes_detected, main='total genes detected per droplet', 
-       xlab='genes detected of a droplet', ylab = 'number of droplet')
-  abline(v=1000, col="red", lwd=1)
-  abline(v=3000, col="blue", lwd=1)
-  legend("topright", legend=c("1000", "3000"),
-         col=c("red", "blue"), lty=2, cex=1.2)
-  
-  hist(x$mito_proportion, main='proportion of UMI counts of mito genes per droplet', 
-       xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet')
-  abline(v=0.2, col="red", lwd=1)
-  legend("topright", legend="0.2",
-         col="red", lty=2, cex=1.2)
-  
-  # Reset to default plotting layout
-  par(mfrow=c(1, 1))
-  
-  plot(x$mito_proportion, x$sum_counts, 
-       main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'), 
-       xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
+  # par(mfrow=c(1, 3))
+  # 
+  # hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'),
+  #      xlab='total UMI counts of a droplet', ylab = 'number of droplet')
+  # abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000
+  # abline(v=5000, col="blue", lwd=1)
+  # legend("topright", legend=c("1000", "5000"),
+  #        col=c("red", "blue"), lty=2, cex=1.2)
+  # hist(x$genes_detected, main=paste(unique(x$Sample),'\n total genes detected per droplet'),
+  #      xlab='genes detected of a droplet', ylab = 'number of droplet')
+  # abline(v=500, col="red", lwd=1)
+  # abline(v=4000, col="blue", lwd=1)
+  # legend("topright", legend=c("500", "4000"),
+  #        col=c("red", "blue"), lty=2, cex=1.2)
+  # 
+  # hist(x$mito_proportion, main=paste(unique(x$Sample),'\n proportion of UMI counts of mito genes per droplet'),
+  #      xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet')
+  # abline(v=0.2, col="red", lwd=1)
+  # legend("topright", legend="0.2",
+  #        col="red", lty=2, cex=1.2)
+  # 
+  # # Reset to default plotting layout
+  # par(mfrow=c(1, 1))
+  # 
+  # plot(x$mito_proportion, x$sum_counts,
+  #      main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'),
+  #      xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
 
 }))
 
@@ -1144,28 +1053,28 @@ invisible(lapply(sce_list, function(x){
 # lapply(sce_list, function(x){
 #    # Set the plotting area to 1 row and 3 columns
 # par(mfrow=c(1, 3))
-# 
+#
 # hist(x$sum_counts, main=paste0(unique(x$Sample),', total UMI per droplet'), xlab='total UMI counts of a droplet', ylab = 'number of droplet')
 # abline(v=2000, col="red", lwd=1) # Add a vertical red line at x=2000
 # abline(v=5000, col="blue", lwd=1)
 # # a droplet contain an intact cell always have total UMI counts 2000-5000
 # legend("topright", legend=c("2000", "5000"),
 #      col=c("red", "blue"), lty=2, cex=1.2)
-# 
+#
 # hist(x$genes_detected, main='total genes detected per droplet', xlab='genes detected of a droplet', ylab = 'number of droplet')
 # abline(v=1000, col="red", lwd=1)
 # abline(v=3000, col="blue", lwd=1)
 # legend("topright", legend=c("1000", "3000"),
 #      col=c("red", "blue"), lty=2, cex=1.2)
-# 
+#
 # hist(x$mito_proportion, main='proportion of UMI counts of mito genes per droplet', xlab='proportion of UMI counts of mito genes per droplet', ylab = 'number of droplet')
 # abline(v=0.2, col="red", lwd=1)
 # legend("topright", legend="0.2",
 #        col="red", lty=2, cex=1.2)
-# 
+#
 # # Reset to default plotting layout
 # par(mfrow=c(1, 1))
-# 
+#
 # plot(x$mito_proportion, x$sum_counts, main=paste0(unique(x$Sample),', mitochondrial proportion versus total UMI count'), xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
 # })
 
@@ -1177,8 +1086,8 @@ While some level of mitochondrial expression is expected, excessively high level
 
 good quality samples have most droplets whose UMI count around 2000-5000, detected genes around 1000-3000, mitochondrial UMI proportion around or below 0.05
 
-suspicious sample: 
-too few droplets, 3 
+suspicious sample:
+too few droplets, 3
 low total UMI counts in most droplets, too few transcripts captured or sequenced in sample 5, 10
 
 
@@ -1223,7 +1132,7 @@ Let's have a look at samples suspicious samples 3 5 10, and normal samples 1-2, 
 
 and check QC parameters and marker genes for typical cell types to determine whether QC-outliers are of one specific cell type.
 
-```{r check suspicious and normal samples QC plots and marker genes expression distribution, fig.width=12}
+```{r check samples QC plots and marker genes expression distribution in UMAP, fig.width=12}
 # install.packages("patchwork")
 
 library(patchwork)
@@ -1261,7 +1170,16 @@ for (sample in c(1:sampNums ))
   print(p1)
 
 ########################################
-  p1 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'HNMT')]) + ggtitle(paste(unique(x$Sample),'myeloid, HNMT')) ## myeloid
+  
+  if(bsp_num == "bsp_247")
+  {
+      p1 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'CD4')]) + ggtitle(paste(unique(x$Sample),', CD4 gene')) ## CD4
+  }
+  if(bsp_num == "bsp_248")
+  {
+      p1 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'HNMT')]) + ggtitle(paste(unique(x$Sample),'myeloid, HNMT')) ## myeloid
+  }
+
 
   p2 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'CD3E')]) + ggtitle('T cells, CD3E gene') ## T cells
 
@@ -1293,11 +1211,11 @@ for (sample in c(1:sampNums ))
 
 ```
 
-figure 8. visualize the droplets in UMAP and color the droplets based on QC metrics (total UMI counts, detected genes, proportion of mito UMI counts, 3 levels of total UMI counts,  marker gene of B cells, T cells, myeloid )
+figure 8. visualize the droplets in UMAP and color the droplets based on QC metrics (total UMI counts, detected genes, proportion of mito UMI counts, 3 levels of total UMI counts,  marker gene of B cells, T cells, CD4 )
 
 sample 3 seem fine in this check
-sample 5 is mainly composed of droplets below 1000, too few transcripts to cluster and distinguish cell types of these droplets within sample 5. 
-sample 10, similar issue as 5, less severe. 
+sample 5 is mainly composed of droplets below 1000, too few transcripts to cluster and distinguish cell types of these droplets within sample 5.
+sample 10, similar issue as 5, less severe.
 
 
 From this examination, we need to manual check whether any major cell types are specifically characterized by high mitochondrial proportion?
@@ -1315,60 +1233,120 @@ would that be reasonable to filter out droplets with outlier high mitochondrial 
 
 here still filter out droplets with outlier high mitochondrial proportion within each sample and show filtered droplets in UMAP plots
 
-### 6.5 filter out droplets with outlying mitochondrial proportion within each sample and show these filtered droplets in UMAP
+### 6.5 filter out droplets with outlying mitochondrial proportion within each sample 
+we also show these filtered droplets in UMAP
 ```{r filter out droplets with outlying mitochondrial proportion within each sample and show these filtered droplets in UMAP, fig.width=5, fig.height=5}
-# if(file.exists("preprocess6.5.RData"))
-# {
-#   load("preprocess6.5.RData")
-# }else
-# {
-# }
 
-  for(i in 1:length(sce_list)){
+for(i in 1:length(sce_list)){
    # filter the droplets with mito_proportion larger than 0.2
-   # sce_list[[i]]$mito_outlier <- (sce_list[[i]]$mito_proportion >= 0.2)
-   # print(i)
-   # print(table(sce_list[[i]]$mito_outlier))
-   #  cols <- rep('black', length(sce_list[[i]]$mito_outlier))
-   #  cols[sce_list[[i]]$mito_outlier] <- 'red'
-   #
-   #  plot(sce_list[[i]]$mito_proportion, sce_list[[i]]$sum_counts, main=paste0(i,', mitochondrial proportion versus total UMI count'), col=cols, xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
-
-
-    # filter the droplets with outlier mito_proportion value 
-    sce_list[[i]]$mito_outlier <- isOutlier(sce_list[[i]]$mito_proportion, type='higher',nmads = 5)
-    print(table(sce_list[[i]]$mito_outlier))
+   sce_list[[i]]$mito_outlier <- (sce_list[[i]]$mito_proportion >= 0.2)
+   print(names(sce_list)[[i]])
+   print(table(sce_list[[i]]$mito_outlier))
     cols <- rep('black', length(sce_list[[i]]$mito_outlier))
     cols[sce_list[[i]]$mito_outlier] <- 'red'
 
+    plot(sce_list[[i]]$mito_proportion, sce_list[[i]]$sum_counts, main=paste0(i,', mitochondrial proportion versus total UMI count'), col=cols, xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
 
-    p1 <- plot(sce_list[[i]]$mito_proportion, sce_list[[i]]$sum_counts, main=paste0(names(sce_list)[i], '\n mitochondrial proportion versus total UMI count'), col=cols, xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
 
-    print(p1)
+    # # filter the droplets with outlier mito_proportion value
+    # sce_list[[i]]$mito_outlier <- isOutlier(sce_list[[i]]$mito_proportion, type='higher',nmads = 5)
+    # print(table(sce_list[[i]]$mito_outlier))
+    # cols <- rep('black', length(sce_list[[i]]$mito_outlier))
+    # cols[sce_list[[i]]$mito_outlier] <- 'red'
+    # 
+    # 
+    # p1 <- plot(sce_list[[i]]$mito_proportion, sce_list[[i]]$sum_counts, main=paste0(names(sce_list)[i], '\n mitochondrial proportion versus total UMI count'), col=cols, xlab='proportion of UMI counts of mito genes per droplet', ylab='total UMI counts of a droplet')
+    # 
+    # print(p1)
     p2 <- plotReducedDim(sce_list[[i]], 'UMAP', colour_by='mito_outlier')
     print(p2)
+    # sce_list[[i]] <- sce_list[[i]][,!sce_list[[i]]$mito_outlier]
 
 
 
 
-    sce_list[[i]] <- sce_list[[i]][,!sce_list[[i]]$mito_outlier]
-    # also remove droplets whose mito_proportion higher than 0.1 to reduce noise
-    sce_list[[i]] <- sce_list[[i]][, sce_list[[i]]$mito_proportion < 0.1]
+    # also remove droplets whose mito_proportion higher than 0.2 to reduce noise
+    sce_list[[i]] <- sce_list[[i]][, sce_list[[i]]$mito_proportion < 0.2]
+
+
+  }
+# overview number of droplets per sample
+multi_list_bar_plot(sce_list,"after remove droplets \n whose mito_proportion higher than 0.2", seperate_run = seperate_run_value)
+```
+
+
+```{r check marker gene expression again, fig.width=10}
+visulize_marker_expression_across_samples <- function(sce_list)
+{
+  sampNums <- length(sce_list)
+  for (sample in c(1:sampNums ))
+  {
+    x <- sce_list[[sample]]
+    
+    
+    p1 <- plotReducedDim(x, 'UMAP', colour_by = 'sum_counts_level') + ggtitle(unique(x$Sample))+ coord_fixed()
+    print(p1)
+    
+    ########################################
+    if(bsp_num == "bsp_247")
+    {
+          p1 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'CD4')]) + ggtitle(paste(unique(x$Sample),', CD4 gene')) 
+    }
+    if(bsp_num == "bsp_248")
+    {
+        p1 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'HNMT')]) + ggtitle(paste(unique(x$Sample),'myeloid, HNMT')) ## myeloid
+    }
+
+    
+    p2 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'CD3E')]) + ggtitle('T cells, CD3E gene') ## T cells
+    
+    p3 <- plotReducedDim(x, 'UMAP', colour_by=rownames(sce_list[[1]])[which(rowData(sce_list[[1]])$Symbol == 'PAX5')]) + ggtitle('B cells, PAX5 gene') ## B cells
+    # Set uniform color scale limits
+    # color_limits <- c(0, 5)
+    color_set <- c("blue", "green", "yellow")
+    
+    p1 <- p1 + coord_fixed() +
+      scale_color_gradientn(colors = color_set) +
+      theme(legend.position = "right", aspect.ratio = 1)
+    
+    p2 <- p2 + coord_fixed() +
+      scale_color_gradientn( colors = color_set) +
+      theme(legend.position = "right", aspect.ratio = 1)
+    
+    p3 <- p3 + coord_fixed() +
+      scale_color_gradientn( colors = color_set) +
+      theme(legend.position = "right", aspect.ratio = 1)
+    
+    # Combine plots with patchwork side by side
+    p_combined <- (p1 | p2 | p3) &
+      plot_layout( guides = "collect")
+    # Print the combined plot
+    print(p_combined)
+    
     
   }
-
-# save.image(file = paste0(work_dir,"preprocess6.5.RData"))
-multi_list_bar_plot(sce_list,"after remove droplets whose mito_proportion higher than 0.1", seperate_run = seperate_run_value)
-
+  
+}
 QC_violin_plot_across_samples(sce_list)
+visulize_marker_expression_across_samples(sce_list)
 
 
 ```
 
 figure 9. visualize filtered droplets in UMAP and mitochondrial proportion versus total UMI count plot
+### 6.6 filter out droplets whose detected gene less than 500 
+```{r remove droplets whose detected gene less than genes_detected_threshold, fig.width=10}
 
-```{r  overview number of droplets per sample }
-multi_list_bar_plot(sce_list,"after remove droplets whose mito_proportion higher than 0.1")
+for(i in 1:length(sce_list))
+{
+    sce_list[[i]] <- sce_list[[i]][, sce_list[[i]]$genes_detected > genes_detected_threshold]  
+}
+
+multi_list_bar_plot(sce_list, paste("after remove droplets whose detected gene less than", genes_detected_threshold), seperate_run = seperate_run_value )
+QC_violin_plot_across_samples(sce_list)
+
+
+visulize_marker_expression_across_samples(sce_list)
 
 ```
 
@@ -1419,18 +1397,20 @@ For this reason we've marked those droplets within each sample that are more tha
 # Normalization and merging
 
 
-Now we will properly normalize the data and merge all of the samples together. 
+Now we will properly normalize the data and merge all of the samples together.
 
 ## 8.1 merge samples from same run, exclude catastrophic samples if any
-```{r exclude catastrophic samples if any and merge samples from same run}
-# "sample_01" has some good quality droplets that can remain, but due to low number of droplets left, not comparable with other samples, it's not a good representation for this sample, and could not used in differential expression analysis
-
-
-for(sample_id in c(c("sample_03", "sample_05", "sample_10" )))
+```{r exclude catastrophic samples if any and merge samples }
+if(bsp_num == "bsp_248")
 {
- sce_list[[sample_id]] <- NULL
+  for(sample_id in c(c("sample_03", "sample_05", "sample_10" )))
+  {
+   sce_list[[sample_id]] <- NULL
   
+  }
 }
+
+
 
 sampNums <- length(sce_list)
 names(sce_list)
@@ -1441,17 +1421,15 @@ if(file.exists("preprocess8.1.RData"))
 {
 
   for(i in 1:length(sce_list)){
-    colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), '-', as.character(i))
+    colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), '-', names(sce_list)[i])
   }
-  # names(sce_list) <- paste0('sample', c(1:20))
-  # 
+
   sce_run_all <- do.call('cbind', sce_list[c(1:sampNums )])
   # sce_run_2 <- do.call('cbind', sce_list[c(9:16)])
 
 
-     save.image(file = "preprocess8.1.RData")
+  save.image(file = "preprocess8.1.RData")
 }
-
 
 
 ```
@@ -1461,10 +1439,10 @@ if(file.exists("preprocess8.1.RData"))
 
 
 annot <- read.csv('references/sample_information.csv')
-samps <- paste("sample", formatC(1:nrow(annot), width=2, flag="0"), sep="_")
+samps_id <- paste("sample", formatC(1:nrow(annot), width=2, flag="0"), sep="_")
 
-annot$sample <- samps
-rownames(annot) <- samps
+annot$sample <- samps_id
+rownames(annot) <- samps_id
 
 ```
 
@@ -1480,16 +1458,11 @@ Now we look at the data to determine whether there are batch effects that ought 
 
 normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch_effects = FALSE)
 {
-  if(file.exists(paste0('sce_',current_run,'.rds')))
-{
-  sce_run_selected <- readRDS(paste0('sce_',current_run,'.rds'))
-}else
-{
-  # log transfrom gene counts
-
+  # cluster across all samples
   # print(head(sce_run_selected))
   clust <- quickCluster(sce_run_selected)
   size_factors <- calculateSumFactors(sce_run_selected, cluster=clust)
+  # log transfrom gene counts  
   sce_run_selected <- logNormCounts(sce_run_selected, size_factors=size_factors)
   # print(sce_run_selected)
 
@@ -1504,29 +1477,48 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   sce_run_selected <- runUMAP(sce_run_selected, dimred='PCA')
   set.seed(100)
   sce_run_selected <- runTSNE(sce_run_selected, dimred='PCA')
+  
+  head(sce_run_selected$Sample)
+  
+
+  if(bsp_num == "bsp_247")
+  {
+  sce_run_selected$condition <- annot[as.character(sce_run_selected$Sample), 'Condition']
+  sce_run_selected$run <- annot[as.character(sce_run_selected$Sample), 'sequencing.Run'] 
+  sce_run_selected$tissue <- annot[as.character(sce_run_selected$Sample), 'tissue']
+  sce_run_selected$cull_date <- annot[as.character(sce_run_selected$Sample), "cull.date..DPI."]
+  sce_run_selected$animal_id <- annot[as.character(sce_run_selected$Sample), 'animal.id']
+  sce_run_selected$sex <- annot[as.character(sce_run_selected$Sample), 'Sex']  
+  }
+  if(bsp_num == "bsp_248")
+  {
   sce_run_selected$condition <- annot[as.character(sce_run_selected$Sample), 'condition']
-  sce_run_selected$run <- annot[as.character(sce_run_selected$Sample), 'run']
+  sce_run_selected$run <- annot[as.character(sce_run_selected$Sample), 'run']    
+  }
+
 
 
   saveRDS(sce_run_selected, file = paste0('sce_',current_run,'.rds'))
 
-}
+
 
   ###################### plot
   title_suffix_1 = '\n based on PCA componets calculated using top 5000 highly variable genes'
-
-
   set.seed(100)
-  # ord <- sample.int(ncol(sce_run_selected), ncol(sce_run_selected), replace=FALSE)
-  # pl <- plotUMAP(sce_run_selected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
-  # print(pl)
-  # 
-  # 
-  # pl <- plotUMAP(sce_run_selected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
-  # print(pl)
 
-  pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'HNMT')]) + ggtitle(paste(current_run,'myeloid highlighted (HMNT)','UMAP uncorrected', title_suffix_1)) ## myeloid
+  if(bsp_num == "bsp_248")
+  {
+      pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'HNMT')]) + ggtitle(paste(current_run,'myeloid highlighted (HMNT)','UMAP uncorrected', title_suffix_1)) ## myeloid
   print(pl)
+  }
+  
+  if(bsp_num == "bsp_247")
+  {
+  pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'CD4')]) + ggtitle(paste(current_run,'CD4 highlighted (CD4)','UMAP uncorrected', title_suffix_1)) ## CD4
+  print(pl)    
+  }
+
+
 
   pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'CD3E')]) + ggtitle(paste(current_run,'T cells highlighted (CD3E)', 'UMAP uncorrected', title_suffix_1)) ## T cells
   print(pl)
@@ -1535,12 +1527,7 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   print(pl)
   # correct between all samples in same run and plot qc metrics and UMAP and save workspace and rds for run 1 samples
 
-  # p1 <- plotReducedDim(sce_run_selected, 'UMAP', colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP uncorrected', title_suffix_1))
-  # print(p1)
 
-
-  varmod <- modelGeneVar(sce_run_selected, block=sce_run_selected$Sample)
-  vargenes <- getTopHVGs(varmod, n=5000)
 
   if(Correct_batch_effects)
   {
@@ -1550,10 +1537,10 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
     sce_run_selected_corrected
   }else
   {
-  library(batchelor)
-  set.seed(100)
-  sce_run_selected_corrected <- fastMNN(sce_run_selected, batch=sce_run_selected$run, subset.row = vargenes, get.variance = TRUE)
-  sce_run_selected_corrected
+  # library(batchelor)
+  # set.seed(100)
+  # sce_run_selected_corrected <- fastMNN(sce_run_selected, batch=sce_run_selected$run, subset.row = vargenes, get.variance = TRUE)
+  # sce_run_selected_corrected
   }
 
   set.seed(100)
@@ -1562,12 +1549,24 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
 
   sce_run_selected_corrected$Sample <- sce_run_selected$Sample
   sce_run_selected_corrected$condition <- sce_run_selected$condition
+  
+  if(bsp_num == "bsp_247")
+  {
+  sce_run_selected_corrected$run <- sce_run_selected$run
+  sce_run_selected_corrected$tissue <- sce_run_selected$tissue
+  sce_run_selected_corrected$cull_date <- sce_run_selected$cull_date
+  sce_run_selected_corrected$animal_id <- sce_run_selected$animal_id
+  sce_run_selected_corrected$sex <- sce_run_selected$sex  
+      
+  }
+
+  
   sce_run_selected_corrected$cxds_score <- sce_run_selected$cxds_score
   sce_run_selected_corrected$query_doublet <- sce_run_selected$query_doublet
   sce_run_selected_corrected$sum_counts <- sce_run_selected$sum_counts
   sce_run_selected_corrected$genes_detected <- sce_run_selected$genes_detected
   sce_run_selected_corrected$mito_proportion <- sce_run_selected$mito_proportion
-  sce_run_selected_corrected$hgnc_symbol <- sce_run_selected$hgnc_symbol
+  sce_run_selected_corrected$ENTREZ_symbol<- sce_run_selected$ENTREZ_symbol
   sce_run_selected_corrected$sum_counts_level <- sce_run_selected$sum_counts_level
 
   rowdat <- rowData(sce_run_selected_corrected)
@@ -1584,19 +1583,14 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
 
   title_suffix_2 = '\n based on top 5000 highly variable genes'
 
-  # pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="Sample") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
-  # print(pl)
-  # 
-  # pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="condition") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
-  # print(pl)
-
+  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
+  print(pl)
 
   pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
   # lapply(sce_run_selected_corrected, dim)
 
-  # p1 <- plotUMAP(sce_run_selected_corrected[,ord], colour_by = 'sum_counts_level') + ggtitle(paste(current_run, 'UMAP corrected', title_suffix_2))
-  # print(p1)
+
 }
 
 current_run <- "all"
@@ -1606,12 +1600,12 @@ normalize_visualize_save(current_run,sce_run_all, Correct_batch_effects = TRUE)
 # title_suffix = 'corrected by samples in same run'
 ```
 
-figure 12.1 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, myeloid;  cxds scores; suspected doublet for sequencing run 1
+figure 12.1 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, CD4;  cxds scores; suspected doublet for sequencing run 1
 
 
 
-after batch effect correction. we observe droplets from all samples distribute more uniformly in UMAP plots. 
-sample 5 does not cluster together with other samples. 
+after batch effect correction. we observe droplets from all samples distribute more uniformly in UMAP plots.
+sample 5 does not cluster together with other samples.
 
 We will leave this analysis here and start a new script where we cluster, subcluster, filter doublets, etc.
 
@@ -1625,11 +1619,11 @@ We will leave this analysis here and start a new script where we cluster, subclu
 
 ```
 
-figure 12.2 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, myeloid;  cxds scores; suspected doublet for sequencing run 2
+figure 12.2 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, CD4;  cxds scores; suspected doublet for sequencing run 2
 
 ```{r perform quick clustering and normalization for run 3 samples and plot qc metrics before batch effect correction}
 
-# 
+#
 # normalize_visualize_save("run_3_BAL",sce_run_3_BAL, Correct_batch_effects = FALSE)
 # normalize_visualize_save("run_3_lung",sce_run_3_lung, Correct_batch_effects = FALSE)
 
@@ -1638,13 +1632,13 @@ figure 12.2 visualize the droplets in UMAP and color the droplets based on sampl
 ```
 
 
-figure 12.3 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, myeloid;  cxds scores; suspected doublet for sequencing run 3
-# 9 save image and show session Info
-```{r sessionInfo}
-save.image(file = "preprocess9.RData")
-sessionInfo()
+figure 12.3 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, CD4;  cxds scores; suspected doublet for sequencing run 3
+<!-- # 9 save image and show session Info -->
+<!-- ```{r sessionInfo} -->
+<!-- save.image(file = "preprocess9.RData") -->
+<!-- sessionInfo() -->
 
-```
+<!-- ``` -->
 
 
 
