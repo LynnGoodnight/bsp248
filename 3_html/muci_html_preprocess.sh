@@ -31,7 +31,8 @@ export seperate_run_value="9.5"
 export n_niters="100000"
 export limit="100"
 export UMI_counts_threshold="50000"
-export genes_detected_threshold="250"
+export genes_detected_threshold="500"
+export sum_counts_up="10000"
 
 echo "sampSet" $sampSet
 

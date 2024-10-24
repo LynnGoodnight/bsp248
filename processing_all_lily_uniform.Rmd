@@ -17,10 +17,7 @@ knitr::opts_knit$set(root.dir = work_dir)
 
 count_dir <- paste0('/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/', bsp_num, '/lily/stages/count')
 
-if (samples_set == "") 
-  {
-   samples_set <- "all"      # default
-  }
+
 current_run <- samples_set
 
 
@@ -32,12 +29,12 @@ n_niters <- as.numeric(Sys.getenv("n_niters"))
 limit <- as.numeric(Sys.getenv("limit"))  
 UMI_counts_threshold <- as.numeric(Sys.getenv("UMI_counts_threshold"))  
 genes_detected_threshold <- as.numeric(Sys.getenv("genes_detected_threshold")) 
-
+sum_counts_up <- as.numeric(Sys.getenv("sum_counts_up")) 
 
 run1 <- 1:run1_n
 run2 <- (run1_n+1 ):(run1_n+run2_n)
 sampNums <- (run1_n+run2_n)
-print(paste('work_dir', work_dir, 'samples_set', samples_set))              
+print(paste('work_dir', work_dir, 'samples_set', samples_set, bsp_num))              
 
 ## set to 100 because this is the default for emptyDrops used above
 
@@ -139,7 +136,7 @@ multi_list_bar_plot(sce_list_raw,"before qc filtering", seperate_run = seperate_
 figure 1. droplet number per sample before preprocess 
 
 
-```{r extract sequencing saturation values and shown on html}
+```{r extract sequencing saturation values and visulize in bar plot, fig.width=10}
 setwd(count_dir)
 
 dirs <- paste0('muci_', names(sce_list_raw), '_count' , '/outs/metrics_summary.csv')
@@ -976,11 +973,11 @@ QC_violin_plot_across_samples <- function(sce_list) {
   p <- ggplot(QC.tab.all, aes(x=Sample, y=log2(sum_counts))) +
     ggbeeswarm::geom_quasirandom(method="smiley") +
     theme(axis.text.x = element_text(angle = 90)) +
-    geom_hline(aes(yintercept=log2(500), color="500"), linetype="dashed", size=1) +  # Add red line at y=500
-    geom_hline(aes(yintercept=log2(4000), color="4000"), linetype="dashed", size=1) +  # Add blue line at y=1000
+    geom_hline(aes(yintercept=log2(500), color="500"), linetype="dashed", size=1) +  # Add red line at y=
+    geom_hline(aes(yintercept=log2(sum_counts_up), color="sum_counts_up"), linetype="dashed", size=1) +  # Add blue line at y=
     scale_color_manual(name="Threshold", 
-                       values=c("500"="red", "4000"="blue"),  # Set colors for the lines
-                       labels=c("4000", "500")) +  # Set labels for the legend
+                       values=c("500"="red", "sum_counts_up"="blue"),  # Set colors for the lines
+                       labels=c("sum_counts_up", "500")) +  # Set labels for the legend
     labs(y="log2(sum_counts)", x="Sample")  # Labels for x and y axis
   
   print(p)
@@ -1270,12 +1267,14 @@ for(i in 1:length(sce_list)){
 
 
   }
-# overview number of droplets per sample
-multi_list_bar_plot(sce_list,"after remove droplets \n whose mito_proportion higher than 0.2", seperate_run = seperate_run_value)
+
 ```
 
 
 ```{r check marker gene expression again, fig.width=10}
+# overview number of droplets per sample
+multi_list_bar_plot(sce_list,"after remove droplets \n whose mito_proportion higher than 0.2", seperate_run = seperate_run_value)
+
 visulize_marker_expression_across_samples <- function(sce_list)
 {
   sampNums <- length(sce_list)
@@ -1334,7 +1333,7 @@ visulize_marker_expression_across_samples(sce_list)
 ```
 
 figure 9. visualize filtered droplets in UMAP and mitochondrial proportion versus total UMI count plot
-### 6.6 filter out droplets whose detected gene less than 500 
+### 6.6 filter out droplets whose detected gene less than genes_detected_threshold 
 ```{r remove droplets whose detected gene less than genes_detected_threshold, fig.width=10}
 
 for(i in 1:length(sce_list))
