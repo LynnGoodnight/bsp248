@@ -1048,7 +1048,7 @@ for(i in unique(names(marker.info.perbatch))){
   # if(i %in% c('8a', '8b', '8c', '14a', '14b','14c' , '9a', '9b', '11a', '11b','12a', '12b','12c'))
   # {
     ord <- marker.info.perbatch[[i]][order(marker.info.perbatch[[i]]$mean.logFC.cohen, decreasing=TRUE),]
-    ord$symbol <- rowData(sce)[rownames(ord), 'Symbol']
+    ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']
 
     pfx <- paste0(work_dir,"/markers_",sampSet,'_k',clustK)
     dir.create(pfx, showWarnings = FALSE)
@@ -1084,7 +1084,7 @@ for(i in unique(names(marker.info.perbatch)))
 {
   print(i)
   ord <- marker.info.corrected[[i]][order(marker.info.corrected[[i]]$mean.logFC.cohen, decreasing=TRUE),]
-  ord$symbol <- rowData(sce)[rownames(ord), 'hgnc_symbol']
+  ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']
 
   pfx <- paste0(work_dir,"markers_",sampSet,'_k',clustK)
   dir.create(pfx, showWarnings = FALSE)

@@ -1335,6 +1335,7 @@ visulize_marker_expression_across_samples(sce_list)
 figure 9. visualize filtered droplets in UMAP and mitochondrial proportion versus total UMI count plot
 ### 6.6 filter out droplets whose detected gene less than genes_detected_threshold 
 ```{r remove droplets whose detected gene less than genes_detected_threshold, fig.width=10}
+genes_detected_threshold <- as.numeric(Sys.getenv("genes_detected_threshold")) 
 
 for(i in 1:length(sce_list))
 {
@@ -1488,6 +1489,11 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   sce_run_selected$cull_date <- annot[as.character(sce_run_selected$Sample), "cull.date..DPI."]
   sce_run_selected$animal_id <- annot[as.character(sce_run_selected$Sample), 'animal.id']
   sce_run_selected$sex <- annot[as.character(sce_run_selected$Sample), 'Sex']  
+  
+
+
+  sce_run_selected$cull_date <- as.factor(sce_run_selected$cull_date)  
+  sce_run_selected$animal_id <- as.factor(sce_run_selected$animal_id)  
   }
   if(bsp_num == "bsp_248")
   {
@@ -1495,7 +1501,7 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   sce_run_selected$run <- annot[as.character(sce_run_selected$Sample), 'run']    
   }
 
-
+  sce_run_selected$run <- as.factor(sce_run_selected$run)
 
   saveRDS(sce_run_selected, file = paste0('sce_',current_run,'.rds'))
 
@@ -1504,7 +1510,10 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   ###################### plot
   title_suffix_1 = '\n based on PCA componets calculated using top 5000 highly variable genes'
   set.seed(100)
+  ord <- sample.int(ncol(sce_run_selected), ncol(sce_run_selected), replace=FALSE)
 
+  pl <- plotUMAP(sce_run_selected[,ord], colour_by="run") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
+  print(pl)    
   if(bsp_num == "bsp_248")
   {
       pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'HNMT')]) + ggtitle(paste(current_run,'myeloid highlighted (HMNT)','UMAP uncorrected', title_suffix_1)) ## myeloid
@@ -1585,6 +1594,9 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
 
+  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="run") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
+  print(pl)  
+  
   pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
   # lapply(sce_run_selected_corrected, dim)
