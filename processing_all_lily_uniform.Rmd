@@ -173,6 +173,57 @@ print(p)
 ```
 the Sequencing.Saturation values are not consistent between run 1 and 2.
 
+```{r check the correlation between sequencing saturation and sequencing metrics}
+
+setwd(count_dir)
+
+dirs <- paste0('muci_', names(sce_list_raw), '_count' , '/outs/metrics_summary.csv')
+quality_metrics <- data.frame('Sequencing.Saturation' = 1:sampNums,
+                             'Mean.Reads.per.Cell' = 1:sampNums,
+                             'Median.Genes.per.Cell' = 1:sampNums,
+                             'Median.UMI.Counts.per.Cell' = 1:sampNums)
+cell_ranger_metrics <- vector('list', length=sampNums)
+
+rownames(quality_metrics) <- names(sce_list_raw)
+names(cell_ranger_metrics) <- names(sce_list_raw)
+
+for (i in 1:sampNums) 
+{
+  cell_ranger_metrics[[i]] <- read.csv(dirs[i], header = TRUE)
+  quality_metrics[i, ] <- cell_ranger_metrics[[i]][c("Sequencing.Saturation", 'Mean.Reads.per.Cell', 'Median.Genes.per.Cell', 'Median.UMI.Counts.per.Cell')]
+}
+
+
+sapply(quality_metrics, class)
+quality_metrics$Sequencing.Saturation <- as.numeric(gsub('%', '', quality_metrics$Sequencing.Saturation))/ 100
+
+# Load dplyr library
+library(dplyr)
+
+# Convert relevant columns from character to numeric
+quality_metrics <- quality_metrics %>%
+  mutate(across(everything(), ~ as.numeric(gsub(",", "", .))))
+
+# View the updated dataframe
+print(quality_metrics)
+
+correlation_plot <- function(quality_metrics, y_axis = "Mean.Reads.per.Cell")
+{
+  library("ggpubr")
+  p <-  ggscatter(quality_metrics, x = "Sequencing.Saturation", y = y_axis, 
+            add = "reg.line", conf.int = TRUE, 
+            cor.coef = TRUE, cor.method = "pearson",
+            xlab = "Sequencing.Saturation", ylab = y_axis)
+  print(p)  
+}
+correlation_plot(quality_metrics, "Mean.Reads.per.Cell")
+correlation_plot(quality_metrics, "Median.Genes.per.Cell")
+correlation_plot(quality_metrics, "Median.UMI.Counts.per.Cell")
+
+
+
+```
+
 
 ## 2 Removing swapped droplets
 
