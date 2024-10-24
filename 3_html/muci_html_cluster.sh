@@ -22,6 +22,10 @@ echo `date`
 
 module load tools
 
+export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/"
+export bsp_num="bsp_248"
+export sampSet="all"
+
 export clustK=15
 echo "clustK" $clustK
 
@@ -35,7 +39,7 @@ export sampSet="all"
 echo "sampSet" $sampSet
 ## sleep 10
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_clustering_${sampSet}_k${clustK}.html"
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('cluster_lily.Rmd',  output_file=\"${cF}\")"
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('cluster_lily_uniform.Rmd',  output_file=\"${cF}\")"
 
 
 echo `date`
