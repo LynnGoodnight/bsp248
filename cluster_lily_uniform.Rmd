@@ -185,6 +185,8 @@ umap_coords <- as.data.frame(reducedDim(selected_sce, "UMAP"))
 umap_coords$Sample <- selected_sce$Sample
 umap_coords$condition <- selected_sce$condition
 umap_coords$sum_counts_level <- selected_sce$sum_counts_level
+umap_coords$sum_counts_level <- selected_sce$run
+
 
 # Group by UMAP coordinates and sample one point from each group
 umap_sampled <- umap_coords %>%

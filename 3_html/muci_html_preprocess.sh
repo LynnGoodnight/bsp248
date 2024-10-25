@@ -33,6 +33,7 @@ export limit="100"
 export UMI_counts_threshold="50000"
 export genes_detected_threshold="500"
 export sum_counts_up="10000"
+export sum_counts_min="1000"
 
 echo "sampSet" $sampSet
 

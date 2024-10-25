@@ -1005,6 +1005,8 @@ Now we can check various QC plots and metrics (total UMI per droplet, total gene
 
 ### 6.3 check and plot various QC paramters
 ```{r check and plot various QC paramters lily, fig.width=10}
+sum_counts_up <- as.numeric(Sys.getenv("sum_counts_up"))
+
 library("scuttle")
 sce_list <- lapply(sce_list, function(x){
   stats <- perCellQCMetrics(x, subsets=list(Mito=which(rowData(x)$chr=="MT")))
@@ -1326,9 +1328,26 @@ for(i in 1:length(sce_list)){
 # overview number of droplets per sample
 multi_list_bar_plot(sce_list,"after remove droplets \n whose mito_proportion higher than 0.2", seperate_run = seperate_run_value)
 
-visulize_marker_expression_across_samples <- function(sce_list)
+visulize_marker_expression_across_samples <- function(sce_list, re_Cluster = FALSE)
 {
   sampNums <- length(sce_list)
+  if(re_Cluster)
+  {
+    for(i in 1:length(sce_list)){
+      set.seed(100)
+      clust <- quickCluster(sce_list[[i]])
+  
+      sce_list[[i]] <- computeSumFactors(sce_list[[i]], cluster=clust)
+      sce_list[[i]] <- logNormCounts(sce_list[[i]])
+  
+      sce_list[[i]] <- fixedPCA(sce_list[[i]], subset.row=NULL) ## note intentionally not using HVGs here as this is a rough visualization to see all effects on droplets
+      sce_list[[i]] <- runUMAP(sce_list[[i]], dimred='PCA')    
+  }
+
+  }
+  
+  
+  
   for (sample in c(1:sampNums ))
   {
     x <- sce_list[[sample]]
@@ -1395,10 +1414,22 @@ for(i in 1:length(sce_list))
 
 multi_list_bar_plot(sce_list, paste("after remove droplets whose detected gene less than", genes_detected_threshold), seperate_run = seperate_run_value )
 QC_violin_plot_across_samples(sce_list)
+visulize_marker_expression_across_samples(sce_list, re_Cluster = TRUE)
 
 
-visulize_marker_expression_across_samples(sce_list)
-
+if(bsp_num == "bsp_248")
+{
+  sum_counts_min <- as.numeric(Sys.getenv("sum_counts_min"))
+  for(i in 1:length(sce_list))
+  {
+      sce_list[[i]] <- sce_list[[i]][, sce_list[[i]]$sum_counts > sum_counts_min]  
+  }
+  
+  multi_list_bar_plot(sce_list, paste("after remove droplets whose sum_counts less than", sum_counts_min), seperate_run = seperate_run_value )
+  QC_violin_plot_across_samples(sce_list)
+  visulize_marker_expression_across_samples(sce_list, re_Cluster = TRUE)
+    
+}
 ```
 
 figure 10. overview number of droplets per sample
