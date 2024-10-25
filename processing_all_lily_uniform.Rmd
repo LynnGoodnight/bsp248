@@ -1045,7 +1045,7 @@ QC_violin_plot_across_samples <- function(sce_list) {
     scale_color_manual(name="Threshold", 
                        values=c("500"="red", "3000"="blue"),  # Set colors for the lines
                        labels=c("3000", "500")) +  # Set labels for the legend
-    labs(y="log2(sum_counts)", x="Sample")  # Labels for x and y axis
+    labs(y="log2(genes_detected)", x="Sample")  # Labels for x and y axis
   print(p)
 
   p <- ggplot(QC.tab.all, aes(x=Sample, y=mito_proportion)) +
@@ -1057,7 +1057,7 @@ QC_violin_plot_across_samples <- function(sce_list) {
     scale_color_manual(name="Threshold", 
                        values=c("0.1"="red", "0.2"="blue"),  # Set colors for the lines
                        labels=c("0.1", "0.2")) +  # Set labels for the legend
-    labs(y="log2(sum_counts)", x="Sample")  # Labels for x and y axis
+    labs(y="mito_proportion", x="Sample")  # Labels for x and y axis
   print(p)
 }
 
@@ -1508,85 +1508,85 @@ Now we look at the data to determine whether there are batch effects that ought 
 ```{r perform quick clustering and normalization for run 1 samples and plot qc metrics before and after batch effect correction}
 
 
-normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch_effects = FALSE)
+normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects = FALSE)
 {
   # cluster across all samples
-  # print(head(sce_run_selected))
-  clust <- quickCluster(sce_run_selected)
-  size_factors <- calculateSumFactors(sce_run_selected, cluster=clust)
+  # print(head(sce_all))
+  clust <- quickCluster(sce_all)
+  size_factors <- calculateSumFactors(sce_all, cluster=clust)
   # log transfrom gene counts  
-  sce_run_selected <- logNormCounts(sce_run_selected, size_factors=size_factors)
-  # print(sce_run_selected)
+  sce_all <- logNormCounts(sce_all, size_factors=size_factors)
+  print(sce_all)
 
   # get the Top 5000 High Variable Genes
-  varmod <- modelGeneVar(sce_run_selected, block=sce_run_selected$Sample)
+  varmod <- modelGeneVar(sce_all, block=sce_all$Sample)
   # Model the variance of the log-expression profiles for each gene, decomposing it into technical and biological components based on a fitted mean-variance trend.
   vargenes <- getTopHVGs(varmod, n=5000)
   length(vargenes)
 
-  sce_run_selected <- fixedPCA(sce_run_selected, subset.row=vargenes)
+  sce_all <- fixedPCA(sce_all, subset.row=vargenes)
   set.seed(100)
-  sce_run_selected <- runUMAP(sce_run_selected, dimred='PCA')
+  sce_all <- runUMAP(sce_all, dimred='PCA')
   set.seed(100)
-  sce_run_selected <- runTSNE(sce_run_selected, dimred='PCA')
+  sce_all <- runTSNE(sce_all, dimred='PCA')
   
-  head(sce_run_selected$Sample)
+  head(sce_all$Sample)
 
  
   
   if(bsp_num == "bsp_247")
   {
-  sce_run_selected$condition <- annot[as.character(sce_run_selected$Sample), 'Condition']
-  sce_run_selected$run <- annot[as.character(sce_run_selected$Sample), 'sequencing.Run'] 
-  sce_run_selected$tissue <- annot[as.character(sce_run_selected$Sample), 'tissue']
-  sce_run_selected$cull_date <- annot[as.character(sce_run_selected$Sample), "cull.date..DPI."]
-  sce_run_selected$sex <- annot[as.character(sce_run_selected$Sample), 'Sex']  
+  sce_all$condition <- annot[as.character(sce_all$Sample), 'Condition']
+  sce_all$run <- annot[as.character(sce_all$Sample), 'sequencing.Run'] 
+  sce_all$tissue <- annot[as.character(sce_all$Sample), 'tissue']
+  sce_all$cull_date <- annot[as.character(sce_all$Sample), "cull.date..DPI."]
+  sce_all$sex <- annot[as.character(sce_all$Sample), 'Sex']  
 
   }
   if(bsp_num == "bsp_248")
   {
-  sce_run_selected$condition <- annot[as.character(sce_run_selected$Sample), 'condition']
-  sce_run_selected$run <- annot[as.character(sce_run_selected$Sample), 'run']   
-  sce_run_selected$cull_date <- annot[as.character(sce_run_selected$Sample), 'DPI']
+  sce_all$condition <- annot[as.character(sce_all$Sample), 'condition']
+  sce_all$run <- annot[as.character(sce_all$Sample), 'run']   
+  sce_all$cull_date <- annot[as.character(sce_all$Sample), 'DPI']
 
   
-  # head(sce_run_selected$run)
+  # head(sce_all$run)
   }
   
-  sce_run_selected$animal_id <- annot[as.character(sce_run_selected$Sample), 'animal.id']      
-  sce_run_selected$animal_id <- as.factor(sce_run_selected$animal_id) 
-  sce_run_selected$cull_date <- as.factor(sce_run_selected$cull_date)  
-  sce_run_selected$run <- as.factor(sce_run_selected$run)
+  sce_all$animal_id <- annot[as.character(sce_all$Sample), 'animal.id']      
+  sce_all$animal_id <- as.factor(sce_all$animal_id) 
+  sce_all$cull_date <- as.factor(sce_all$cull_date)  
+  sce_all$run <- as.factor(sce_all$run)
 
-  saveRDS(sce_run_selected, file = paste0('sce_',current_run,'.rds'))
+  saveRDS(sce_all, file = paste0('sce_',current_run,'.rds'))
 
 
 
   ###################### plot
   title_suffix_1 = '\n based on PCA componets calculated using top 5000 highly variable genes'
   set.seed(100)
-  ord <- sample.int(ncol(sce_run_selected), ncol(sce_run_selected), replace=FALSE)
+  ord <- sample.int(ncol(sce_all), ncol(sce_all), replace=FALSE)
 
-  pl <- plotUMAP(sce_run_selected[,ord], colour_by="run") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
+  pl <- plotUMAP(sce_all[,ord], colour_by="run") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
   print(pl)    
   if(bsp_num == "bsp_248")
   {
-      pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'HNMT')]) + ggtitle(paste(current_run,'myeloid highlighted (HMNT)','UMAP uncorrected', title_suffix_1)) ## myeloid
+      pl <- plotReducedDim(sce_all, 'UMAP', colour_by=rownames(sce_all)[which(rowData(sce_all)$Symbol == 'HNMT')]) + ggtitle(paste(current_run,'myeloid highlighted (HMNT)','UMAP uncorrected', title_suffix_1)) ## myeloid
   print(pl)
   }
   
   if(bsp_num == "bsp_247")
   {
-  pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'CD4')]) + ggtitle(paste(current_run,'CD4 highlighted (CD4)','UMAP uncorrected', title_suffix_1)) ## CD4
+  pl <- plotReducedDim(sce_all, 'UMAP', colour_by=rownames(sce_all)[which(rowData(sce_all)$Symbol == 'CD4')]) + ggtitle(paste(current_run,'CD4 highlighted (CD4)','UMAP uncorrected', title_suffix_1)) ## CD4
   print(pl)    
   }
 
 
 
-  pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'CD3E')]) + ggtitle(paste(current_run,'T cells highlighted (CD3E)', 'UMAP uncorrected', title_suffix_1)) ## T cells
+  pl <- plotReducedDim(sce_all, 'UMAP', colour_by=rownames(sce_all)[which(rowData(sce_all)$Symbol == 'CD3E')]) + ggtitle(paste(current_run,'T cells highlighted (CD3E)', 'UMAP uncorrected', title_suffix_1)) ## T cells
   print(pl)
 
-  pl <- plotReducedDim(sce_run_selected, 'UMAP', colour_by=rownames(sce_run_selected)[which(rowData(sce_run_selected)$Symbol == 'PAX5')]) + ggtitle(paste(current_run,'B cells highlighted (PAX5)', 'UMAP uncorrected', title_suffix_1)) ## B cells
+  pl <- plotReducedDim(sce_all, 'UMAP', colour_by=rownames(sce_all)[which(rowData(sce_all)$Symbol == 'PAX5')]) + ggtitle(paste(current_run,'B cells highlighted (PAX5)', 'UMAP uncorrected', title_suffix_1)) ## B cells
   print(pl)
   # correct between all samples in same run and plot qc metrics and UMAP and save workspace and rds for run 1 samples
 
@@ -1596,66 +1596,68 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   {
     library(batchelor)
     set.seed(100)
-    sce_run_selected_corrected <- fastMNN(sce_run_selected, batch=sce_run_selected$run, subset.row = vargenes, get.variance = TRUE)
-    sce_run_selected_corrected
+    sce_all_corrected <- fastMNN(sce_all, batch=sce_all$run, subset.row = vargenes, get.variance = TRUE)
+    sce_all_corrected
+    
   }else
   {
   # library(batchelor)
   # set.seed(100)
-  # sce_run_selected_corrected <- fastMNN(sce_run_selected, batch=sce_run_selected$run, subset.row = vargenes, get.variance = TRUE)
-  # sce_run_selected_corrected
+  # sce_all_corrected <- fastMNN(sce_all, batch=sce_all$run, subset.row = vargenes, get.variance = TRUE)
+  # sce_all_corrected
   }
 
   set.seed(100)
-  sce_run_selected_corrected <- runUMAP(sce_run_selected_corrected, dimred="corrected")
-  sce_run_selected_corrected <- runTSNE(sce_run_selected_corrected, dimred="corrected")
+  sce_all_corrected <- runUMAP(sce_all_corrected, dimred="corrected")
+  sce_all_corrected <- runTSNE(sce_all_corrected, dimred="corrected")
 
-  sce_run_selected_corrected$Sample <- sce_run_selected$Sample
-  sce_run_selected_corrected$condition <- sce_run_selected$condition
-  sce_run_selected_corrected$run <- sce_run_selected$run
-  sce_run_selected_corrected$cull_date <- sce_run_selected$cull_date
-  sce_run_selected_corrected$animal_id <- sce_run_selected$animal_id  
+  sce_all_corrected$Sample <- sce_all$Sample
+  sce_all_corrected$condition <- sce_all$condition
+  sce_all_corrected$run <- sce_all$run
+  sce_all_corrected$cull_date <- sce_all$cull_date
+  sce_all_corrected$animal_id <- sce_all$animal_id  
   
   if(bsp_num == "bsp_247")
   {
   
-  sce_run_selected_corrected$tissue <- sce_run_selected$tissue
-  sce_run_selected_corrected$sex <- sce_run_selected$sex  
+  sce_all_corrected$tissue <- sce_all$tissue
+  sce_all_corrected$sex <- sce_all$sex  
       
   }
 
-  
-  sce_run_selected_corrected$cxds_score <- sce_run_selected$cxds_score
-  sce_run_selected_corrected$query_doublet <- sce_run_selected$query_doublet
-  sce_run_selected_corrected$sum_counts <- sce_run_selected$sum_counts
-  sce_run_selected_corrected$genes_detected <- sce_run_selected$genes_detected
-  sce_run_selected_corrected$mito_proportion <- sce_run_selected$mito_proportion
-  sce_run_selected_corrected$ENTREZ_symbol<- sce_run_selected$ENTREZ_symbol
-  sce_run_selected_corrected$sum_counts_level <- sce_run_selected$sum_counts_level
+  # sce_all_corrected$cxds_score store cxds_score values for each cell
+  sce_all_corrected$cxds_score <- sce_all$cxds_score
+  sce_all_corrected$query_doublet <- sce_all$query_doublet
+  sce_all_corrected$sum_counts <- sce_all$sum_counts
+  sce_all_corrected$genes_detected <- sce_all$genes_detected
+  sce_all_corrected$mito_proportion <- sce_all$mito_proportion
+  sce_all_corrected$sum_counts_level <- sce_all$sum_counts_level
 
-  rowdat <- rowData(sce_run_selected_corrected)
-  rowdat <- cbind(rowdat, rowData(sce_run_selected_corrected)[rownames(sce_run_selected_corrected),])
+  # rowData(sce_all) store the ENTREZ_symbol, char, start etc information for each gene (ensemble id)
+  # rowData(sce_all_corrected) store only the score of each genes in the first 50 PC
+  # so we add the ENTREZ_symbol, char, start etc information of each gene into rowData(sce_all_corrected) again
+  rowdat <- rowData(sce_all_corrected)
+  rowdat <- cbind(rowData(sce_all)[rownames(sce_all_corrected),], rowdat )
+  rowData(sce_all_corrected) <- rowdat
 
-  rowData(sce_run_selected_corrected) <- rowdat
 
-
-  saveRDS(sce_run_selected_corrected, file = paste0('sce_',current_run,'_corrected.rds'))
-  print(sce_run_selected_corrected)
+  saveRDS(sce_all_corrected, file = paste0('sce_',current_run,'_corrected.rds'))
+  print(sce_all_corrected)
   ###################### plot
   set.seed(100)
-  ord <- sample.int(ncol(sce_run_selected_corrected), ncol(sce_run_selected_corrected), replace=FALSE)
+  ord <- sample.int(ncol(sce_all_corrected), ncol(sce_all_corrected), replace=FALSE)
 
   title_suffix_2 = '\n based on top 5000 highly variable genes'
 
-  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
+  pl <- plotUMAP(sce_all_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
 
-  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="run") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
+  pl <- plotUMAP(sce_all_corrected[,ord], colour_by="run") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)  
   
-  pl <- plotUMAP(sce_run_selected_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
+  pl <- plotUMAP(sce_all_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
-  # lapply(sce_run_selected_corrected, dim)
+  # lapply(sce_all_corrected, dim)
 
 
 }

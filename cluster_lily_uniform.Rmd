@@ -1,5 +1,5 @@
 ---
-title: "BSP_247: clustering and sub-clustering"
+title: "clustering and sub-clustering"
 author: "lily yang"
 date: "`r Sys.Date()`"
 output: html_document
@@ -129,32 +129,18 @@ save.image('clustering_run_all_k20_test.RData')
 # since r shiny use sce to plot UMAP, to make figure consistent, i change the input file to sce, and don't use sce_corrected with HGV 5000 as input 
 sce_corrected <- sce_run_x_corrected
 sce <- sce_run_x
-selected_sce <- sce_run_x
+selected_sce <- sce_corrected
 
 set.seed(55698)
-umap_plot <- plotUMAP(selected_sce, colour_by="cluster", point_size=0.3,text_by = "cluster")
-
+umap_plot <- plotUMAP(selected_sce, colour_by="cluster", point_size=0.3,text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6)))+ ggtitle(paste(sampSet))
 # Adjust the legend text and title size
-umap_plot <- umap_plot + guides(colour = guide_legend(override.aes = list(size=6)))+ ggtitle(paste(sampSet))
 
 # Print the plot
 print(umap_plot)
 
 
-# umap_plot <- plotUMAP(selected_sce, colour_by="Sample", point_size=0.3,text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6))) + ggtitle(paste(sampSet))
-# 
-# # Print the plot
-# print(umap_plot)
-
-# umap_plot <- plotUMAP(selected_sce, colour_by="sum_counts_level", point_size=0.3,text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6)))
-# 
-# # Print the plot
-# print(umap_plot)
-
-
 TSNE_plot <- plotTSNE(selected_sce, colour_by="cluster", point_size=0.3,text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6)))
 print(TSNE_plot)
-
 
 
 
@@ -181,6 +167,7 @@ table(colnames(sce_corrected) == colnames(sce))
 assays(sce_corrected)$counts <- assays(sce)$counts[rownames(sce_corrected),]
 assays(sce_corrected)$logcounts <- assays(sce)$logcounts[rownames(sce_corrected),]
 
+selected_sce <- sce_corrected
 
 ```
 
@@ -231,7 +218,13 @@ umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = sum_counts_l
 # Print the plot
 print(umap_plot)
 
+umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = run)) +
+  geom_point(size = 0.1) +
+  ggtitle(paste(sampSet)) +
+  guides(colour = guide_legend(override.aes = list(size = 6)))
 
+# Print the plot
+print(umap_plot)
 ```
 
 ### colour cluster plot by condition, also sub-dividing controls to bal/lung
@@ -498,35 +491,35 @@ print(p)
 
 ### check sample&condition contribution&distribution:
 ```{r check sample-condition contribution and distribution in UMAP of suspicious cluster}
+# 
+# check_sample_contribution_location_for_selected_cluster <- function(selected_sce,cluster_n = '12')
+# {
+# # check the sample contribution for cluster
+# the_cluster <- prop.table(table(selected_sce$cluster, selected_sce$Sample), margin=1)[cluster_n,]
+# 
+# the_cluster <- as.data.frame(the_cluster)
+# colnames(the_cluster) <- 'cluster_n'
+# the_cluster$sample <- rownames(the_cluster)
+# 
+# p <-  ggplot(data=the_cluster, aes(x = sample, y=cluster_n)) +
+#   geom_bar(stat="identity") + ggtitle(paste('cluster',cluster_n)) +
+#   theme(axis.text.x = element_text(angle = 90)) 
+# 
+# print(p)
+# 
+# p <-  plotUMAP(selected_sce[,selected_sce$cluster==cluster_n], colour_by="Sample", point_size=1) + ggtitle(paste('cluster',cluster_n))
+# # plotUMAP(selected_sce, colour_by="cluster", point_size=1)
+# print(p)
+# 
+# p <-  plotUMAP(selected_sce[,selected_sce$cluster==cluster_n], colour_by="condition", point_size=1) + ggtitle(paste('cluster',cluster_n))
+# # plotUMAP(selected_sce, colour_by="cluster", point_size=1)
+# print(p)
+# 
+# }
 
-  check_sample_contribution_location_for_selected_cluster <- function(selected_sce,cluster_n = '12')
-  {
-  # check the sample contribution for cluster
-  the_cluster <- prop.table(table(selected_sce$cluster, selected_sce$Sample), margin=1)[cluster_n,]
-
-  the_cluster <- as.data.frame(the_cluster)
-  colnames(the_cluster) <- 'cluster_n'
-  the_cluster$sample <- rownames(the_cluster)
-
-  p <-  ggplot(data=the_cluster, aes(x = sample, y=cluster_n)) +
-    geom_bar(stat="identity") + ggtitle(paste('cluster',cluster_n)) +
-    theme(axis.text.x = element_text(angle = 90)) 
-
-  print(p)
-
-  p <-  plotUMAP(selected_sce[,selected_sce$cluster==cluster_n], colour_by="Sample", point_size=1) + ggtitle(paste('cluster',cluster_n))
-  # plotUMAP(selected_sce, colour_by="cluster", point_size=1)
-  print(p)
-
-  p <-  plotUMAP(selected_sce[,selected_sce$cluster==cluster_n], colour_by="condition", point_size=1) + ggtitle(paste('cluster',cluster_n))
-  # plotUMAP(selected_sce, colour_by="cluster", point_size=1)
-  print(p)
-
-  }
-
-  # check_sample_contribution_location_for_selected_cluster(selected_sce,'23')
-  # check_sample_contribution_location_for_selected_cluster(selected_sce,'22')
-  # check_sample_contribution_location_for_selected_cluster(selected_sce,'19')
+# check_sample_contribution_location_for_selected_cluster(selected_sce,'23')
+# check_sample_contribution_location_for_selected_cluster(selected_sce,'22')
+# check_sample_contribution_location_for_selected_cluster(selected_sce,'19')
 
 
 ```
