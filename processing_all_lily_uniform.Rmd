@@ -45,7 +45,9 @@ library(SingleCellExperiment)
 library(DropletUtils)
 library(viridisLite)     
 library(ggplot2)
-
+library(scran)
+library(scater)
+library(uwot)
 ```
 
 
@@ -1156,9 +1158,7 @@ if(file.exists("preprocess6.4.RData"))
   load("preprocess6.4.RData")
 }else
 {
-  library(scran)
-  library(scater)
-  library(uwot)
+
   for(i in 1:length(sce_list)){
     set.seed(100)
     clust <- quickCluster(sce_list[[i]])
@@ -1494,6 +1494,7 @@ samps_id <- paste("sample", formatC(1:nrow(annot), width=2, flag="0"), sep="_")
 
 annot$sample <- samps_id
 rownames(annot) <- samps_id
+head(annot)
 
 ```
 
@@ -1530,28 +1531,31 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
   sce_run_selected <- runTSNE(sce_run_selected, dimred='PCA')
   
   head(sce_run_selected$Sample)
-  
 
+ 
+  
   if(bsp_num == "bsp_247")
   {
   sce_run_selected$condition <- annot[as.character(sce_run_selected$Sample), 'Condition']
   sce_run_selected$run <- annot[as.character(sce_run_selected$Sample), 'sequencing.Run'] 
   sce_run_selected$tissue <- annot[as.character(sce_run_selected$Sample), 'tissue']
   sce_run_selected$cull_date <- annot[as.character(sce_run_selected$Sample), "cull.date..DPI."]
-  sce_run_selected$animal_id <- annot[as.character(sce_run_selected$Sample), 'animal.id']
   sce_run_selected$sex <- annot[as.character(sce_run_selected$Sample), 'Sex']  
-  
 
-
-  sce_run_selected$cull_date <- as.factor(sce_run_selected$cull_date)  
-  sce_run_selected$animal_id <- as.factor(sce_run_selected$animal_id)  
   }
   if(bsp_num == "bsp_248")
   {
   sce_run_selected$condition <- annot[as.character(sce_run_selected$Sample), 'condition']
-  sce_run_selected$run <- annot[as.character(sce_run_selected$Sample), 'run']    
-  }
+  sce_run_selected$run <- annot[as.character(sce_run_selected$Sample), 'run']   
+  sce_run_selected$cull_date <- annot[as.character(sce_run_selected$Sample), 'DPI']
 
+  
+  # head(sce_run_selected$run)
+  }
+  
+  sce_run_selected$animal_id <- annot[as.character(sce_run_selected$Sample), 'animal.id']      
+  sce_run_selected$animal_id <- as.factor(sce_run_selected$animal_id) 
+  sce_run_selected$cull_date <- as.factor(sce_run_selected$cull_date)  
   sce_run_selected$run <- as.factor(sce_run_selected$run)
 
   saveRDS(sce_run_selected, file = paste0('sce_',current_run,'.rds'))
@@ -1608,13 +1612,14 @@ normalize_visualize_save <- function(current_run,sce_run_selected, Correct_batch
 
   sce_run_selected_corrected$Sample <- sce_run_selected$Sample
   sce_run_selected_corrected$condition <- sce_run_selected$condition
+  sce_run_selected_corrected$run <- sce_run_selected$run
+  sce_run_selected_corrected$cull_date <- sce_run_selected$cull_date
+  sce_run_selected_corrected$animal_id <- sce_run_selected$animal_id  
   
   if(bsp_num == "bsp_247")
   {
-  sce_run_selected_corrected$run <- sce_run_selected$run
+  
   sce_run_selected_corrected$tissue <- sce_run_selected$tissue
-  sce_run_selected_corrected$cull_date <- sce_run_selected$cull_date
-  sce_run_selected_corrected$animal_id <- sce_run_selected$animal_id
   sce_run_selected_corrected$sex <- sce_run_selected$sex  
       
   }
