@@ -231,71 +231,71 @@ correlation_plot(quality_metrics, "Median.UMI.Counts.per.Cell")
 
 Now we want to look for any droplets that have swapped cell barcodes due to use of patterned flow cell sequencing. 8 samples were sequenced in each run, and so swapping could occur anywhere within the sequencing run but not outside of it.
 
-<!-- ```{r Removing swapped transcript molecules} -->
+```{r Removing swapped transcript molecules}
 
-<!-- if(file.exists("preprocess2.RData")) -->
-<!-- { -->
-<!--   load("preprocess2.RData")}else -->
-<!-- { -->
-<!--   getwd() -->
-<!--   setwd(count_dir) -->
-<!--   sce_list <- sce_list_raw -->
+if(file.exists("preprocess2.RData"))
+{
+  load("preprocess2.RData")}else
+{
+  getwd()
+  setwd(count_dir)
+  sce_list <- sce_list_raw
+  
+  
+  ## run 1
+  fs <- paste0('muci_', samps_id[run1], '_count/outs/molecule_info.h5')
+  run1 <- swappedDrops(samples=fs)
 
-
-<!--   ## run 1 -->
-<!--   fs <- paste0('muci_', samps_id[run1], '_count/outs/molecule_info.h5') -->
-<!--   run1 <- swappedDrops(samples=fs) -->
-
-<!-- ## run 2 -->
-
-<!--   fs <- paste0('muci_', samps_id[run2], '_count/outs/molecule_info.h5') -->
-<!--   run2 <- swappedDrops(fs) -->
-
-
-<!--   # create a empty list to save the data that have Removed swapped drops -->
-<!--   cleaned <- list() -->
-
-<!--   for (i in 1:run1_n) { -->
-<!--       cleaned[[i]] <- run1[[1]][[i]] -->
-<!--   } -->
-<!--   for (i in (run1_n+1) : ( (run1_n) + run2_n)) { -->
-<!--       cleaned[[i]] <- run2[[1]][[i-run1_n]] -->
-<!--   } -->
-<!--   # add -1 for each droplet barcode  -->
-<!--   for(i in 1:length(cleaned)){ -->
-<!--     colnames(cleaned[[i]]) <- paste0(colnames(cleaned[[i]]), '-1') -->
-<!--   } -->
-
-<!--   # lapply(sce_list, dim) -->
-<!--   save.image(file = paste0(work_dir,'preprocess2.RData')) -->
-<!--   # evaluate how much droplets are removed in this step -->
-
-<!-- } -->
+## run 2
+  
+  fs <- paste0('muci_', samps_id[run2], '_count/outs/molecule_info.h5')
+  run2 <- swappedDrops(fs)
 
 
-<!-- for (i in 1:run1_n)  -->
-<!-- { -->
-<!--   print(names(sce_list)[i]) -->
-<!--   print(sum(colSums(run1$cleaned[[i]]))/sum(colSums(counts(sce_list[[i]])))) -->
-<!-- } -->
+  # create a empty list to save the data that have Removed swapped drops
+  cleaned <- list()
+  
+  for (i in 1:run1_n) {
+      cleaned[[i]] <- run1[[1]][[i]]
+  }
+  for (i in (run1_n+1) : ( (run1_n) + run2_n)) {
+      cleaned[[i]] <- run2[[1]][[i-run1_n]]
+  }
+  # add -1 for each droplet barcode 
+  for(i in 1:length(cleaned)){
+    colnames(cleaned[[i]]) <- paste0(colnames(cleaned[[i]]), '-1')
+  }
+  
+  # lapply(sce_list, dim)
+  save.image(file = paste0(work_dir,'preprocess2.RData'))
+  # evaluate how much droplets are removed in this step
 
-<!-- for (i in 1:run2_n)  -->
-<!-- { -->
-<!--   print(names(sce_list)[i+run1_n]) -->
-<!--   print(sum(colSums(run2$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+run1_n]])))) -->
-<!-- } -->
+}
 
-<!-- # replace original data with clean data that have Removed swapped drops -->
-<!-- for(i in 1:length(sce_list)){ -->
-<!--   counts(sce_list[[i]])[, colnames(cleaned[[i]])] <- cleaned[[i]] -->
-<!--     # take long to run this step -->
-<!-- } -->
-<!-- # head(counts(sce_list[[i]])) -->
-<!-- # head(colnames(cleaned[[i]])) -->
 
-<!-- rm(cleaned, run1, run2)   -->
+for (i in 1:run1_n) 
+{
+  print(names(sce_list)[i])
+  print(sum(colSums(run1$cleaned[[i]]))/sum(colSums(counts(sce_list[[i]]))))
+}
 
-<!-- ``` -->
+for (i in 1:run2_n) 
+{
+  print(names(sce_list)[i+run1_n])
+  print(sum(colSums(run2$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+run1_n]]))))
+}
+
+# replace original data with clean data that have Removed swapped drops
+for(i in 1:length(sce_list)){
+  counts(sce_list[[i]])[, colnames(cleaned[[i]])] <- cleaned[[i]]
+    # take long to run this step
+}
+# head(counts(sce_list[[i]]))
+# head(colnames(cleaned[[i]]))
+
+rm(cleaned, run1, run2)  
+
+```
 
 Swapping was extremely minimal (< 0.01). We've removed the swapped reads anyways, but it was hardly consequential.
 
