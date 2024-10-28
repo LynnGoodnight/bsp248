@@ -119,7 +119,7 @@ table(sce_run_x_corrected_clust)
 sce_run_x_corrected$cluster <- sce_run_x_corrected_clust
 sce_run_x$cluster <- sce_run_x_corrected_clust
 
-save.image('clustering_run_all_k20_test.RData')
+
 
 ```
 
@@ -174,7 +174,7 @@ selected_sce <- sce_corrected
 
 ```{r randomly pick one point among points overlap at same position in UMAP, draw UMAP plot to compare conditions, fig.width=10}
 # since r shiny use sce to plot UMAP, to make figure consistent, i change the input file to sce, and don't use sce_corrected with HGV 5000 as input
-
+save.image('clustering_debug.RData')
 # when there is multiple points with different colour locate at same position in the plot, below code will randomly pick one point among them and show its colour on the plot. can reflect the distribution more authentically
 library(dplyr)
 library(scater)
@@ -182,11 +182,12 @@ library(scater)
 # Get UMAP coordinates and sample information
 
 umap_coords <- as.data.frame(reducedDim(selected_sce, "UMAP"))
+
 umap_coords$Sample <- selected_sce$Sample
 umap_coords$condition <- selected_sce$condition
 umap_coords$sum_counts_level <- selected_sce$sum_counts_level
-umap_coords$sum_counts_level <- selected_sce$run
-
+umap_coords$run <- selected_sce$run
+head(sce_run_x_corrected$run)
 
 # Group by UMAP coordinates and sample one point from each group
 umap_sampled <- umap_coords %>%
