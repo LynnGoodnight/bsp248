@@ -1,5 +1,5 @@
 ---
-title: "uniform preprocessing script for scRNA data "
+title: "uniform preprocessing script for scRNA data analysis"
 author: "lily yang"
 date: "`r Sys.Date()`"
 output: html_document
@@ -24,6 +24,7 @@ current_run <- samples_set
 
 run1_n <- as.numeric(Sys.getenv("run1_n"))
 run2_n <- as.numeric(Sys.getenv("run2_n"))  
+run3_n <- as.numeric(Sys.getenv("run3_n")) 
 seperate_run_value <- as.numeric(Sys.getenv("seperate_run_value"))
 n_niters <- as.numeric(Sys.getenv("n_niters"))
 limit <- as.numeric(Sys.getenv("limit"))  
@@ -33,7 +34,8 @@ sum_counts_up <- as.numeric(Sys.getenv("sum_counts_up"))
 
 run1 <- 1:run1_n
 run2 <- (run1_n+1 ):(run1_n+run2_n)
-sampNums <- (run1_n+run2_n)
+run3 <- (run1_n+run2_n+1):(run1_n+run2_n+run3_n)
+sampNums <- (run1_n+run2_n+run3_n)
 print(paste('work_dir', work_dir, 'samples_set', samples_set, bsp_num))              
 
 ## set to 100 because this is the default for emptyDrops used above
@@ -244,23 +246,37 @@ if(file.exists("preprocess2.RData"))
   
   ## run 1
   fs <- paste0('muci_', samps_id[run1], '_count/outs/molecule_info.h5')
-  run1 <- swappedDrops(samples=fs)
+  run1_filter_swapped <- swappedDrops(samples=fs)
 
-## run 2
+  ## run 2
   
   fs <- paste0('muci_', samps_id[run2], '_count/outs/molecule_info.h5')
-  run2 <- swappedDrops(fs)
+  run2_filter_swapped <- swappedDrops(fs)
+  
+  if(bsp_num == "bsp_248") 
+  {
+  fs <- paste0('muci_', samps_id[run3], '_count/outs/molecule_info.h5')
+  run3_filter_swapped <- swappedDrops(fs)    
+  }
+
 
 
   # create a empty list to save the data that have Removed swapped drops
   cleaned <- list()
   
   for (i in 1:run1_n) {
-      cleaned[[i]] <- run1[[1]][[i]]
+      cleaned[[i]] <- run1_filter_swapped[[1]][[i]]
   }
-  for (i in (run1_n+1) : ( (run1_n) + run2_n)) {
-      cleaned[[i]] <- run2[[1]][[i-run1_n]]
+  for (i in (run1_n+1) : ( run1_n + run2_n) ) {
+      cleaned[[i]] <- run2_filter_swapped[[1]][[i-run1_n]]
   }
+  if(bsp_num == "bsp_248") 
+  {
+  for (i in (run1_n + run2_n +1) : ( run1_n + run2_n + run3_n)) {
+      cleaned[[i]] <- run3_filter_swapped[[1]][[i-run1_n-run2_n]]
+  }    
+  }
+  
   # add -1 for each droplet barcode 
   for(i in 1:length(cleaned)){
     colnames(cleaned[[i]]) <- paste0(colnames(cleaned[[i]]), '-1')
@@ -276,13 +292,24 @@ if(file.exists("preprocess2.RData"))
 for (i in 1:run1_n) 
 {
   print(names(sce_list)[i])
-  print(sum(colSums(run1$cleaned[[i]]))/sum(colSums(counts(sce_list[[i]]))))
+  print(sum(colSums(run1_filter_swapped$cleaned[[i]]))/sum(colSums(counts(sce_list[[i]]))))
 }
 
 for (i in 1:run2_n) 
 {
   print(names(sce_list)[i+run1_n])
-  print(sum(colSums(run2$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+run1_n]]))))
+  print(sum(colSums(run1_filter_swapped$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+run1_n]]))))
+}
+if(bsp_num == "bsp_248") 
+{
+  for (i in 1:run3_n) 
+  {
+    print(names(sce_list)[i+run1_n+run2_n])
+    print(sum(colSums(run1_filter_swapped$cleaned[[i]]))/sum(colSums(counts(sce_list[[i+run1_n+run2_n]]))))
+
+  }
+
+  
 }
 
 # replace original data with clean data that have Removed swapped drops
@@ -293,8 +320,11 @@ for(i in 1:length(sce_list)){
 # head(counts(sce_list[[i]]))
 # head(colnames(cleaned[[i]]))
 
-rm(cleaned, run1, run2)  
-
+rm(cleaned, run1_filter_swapped, run2_filter_swapped)  
+if(bsp_num == "bsp_248") 
+{
+  rm(run3_filter_swapped)
+}
 ```
 
 Swapping was extremely minimal (< 0.01). We've removed the swapped reads anyways, but it was hardly consequential.
