@@ -323,7 +323,7 @@ for(i in 1:length(sce_list)){
 rm(cleaned, run1_filter_swapped, run2_filter_swapped)  
 if(bsp_num == "bsp_248") 
 {
-  rm(run3_filter_swapped)
+  rm(run1_filter_swapped)
 }
 ```
 
@@ -413,7 +413,8 @@ Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter
 # use before_filter_brs to store the value of knee and inflection points derived from sce_list before filtering  empty droplets
 before_filter_brs <- Count_by_rank_plot(sce_list, calculate_brs = TRUE)
 
-
+# sce_list[[13]] <- NULL
+# sampNums <- length(sce_list)
 
 ```
 
@@ -906,9 +907,9 @@ if(file.exists("preprocess6.1.RData"))
   sce_list <- lapply(sce_list, function(x) {return(x[-undetected,])})
   rm(detected, undetected)
   # lapply(sce_list, dim)
-  if(file.exists("references/ensembl_map.csv") && file.exists('references/ensembl_ENTREZ_symbol_map.csv'))
+  if(file.exists("references/ensembl_map_v108.csv") && file.exists('references/ensembl_ENTREZ_symbol_map_v108.csv.csv'))
   {
-    map <- read.csv("references/ensembl_map.csv", row.names = 1)
+    map <- read.csv("references/ensembl_map_v108.csv", row.names = 1)
     # head(map)
   }else
   {
@@ -978,12 +979,12 @@ print(paste('total number of ensembl_gene_id', length(rownames(sce_list[[1]]))))
 ```{r second map genes symbols method and examine map quality of second method}}
 
 ################################## merge symbols which have same ensembl id
-if(file.exists("references/ensembl_ENTREZ_symbol_map.csv"))
+if(file.exists("references/ensembl_ENTREZ_symbol_map_v108.csv.csv"))
 {
-  hgnc_symbol_new <- read.csv("references/ensembl_ENTREZ_symbol_map.csv", row.names = 1)
+  hgnc_symbol_new <- read.csv("references/ensembl_ENTREZ_symbol_map_v108.csv.csv", row.names = 1)
 }else
 {
-  print("fail to find references/ensembl_ENTREZ_symbol_map.csv")
+  print("fail to find references/ensembl_ENTREZ_symbol_map_v108.csv.csv")
 }
 
 # head(hgnc_symbol_new)

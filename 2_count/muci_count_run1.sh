@@ -27,7 +27,9 @@ cd stages/count
 export PATH=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/local/bin/:$PATH
 # make sure /mnt/lustre/RDS-live/angelopoulos/local/bin/bcl2fastq is in your path
 
-reference_transcriptome=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/local/scriptome/Sus_scrofa.Sscrofa11.1-filt-cellr
+# reference_transcriptome=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/local/scriptome/Sus_scrofa.Sscrofa11.1-filt-cellr
+reference_transcriptome=/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/scriptome/Sus_scrofa.Sscrofa11.1.113/Sus_scrofa.Sscrofa11.1.113-filt-cellr
+
 fastqs_path=/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/demux/run_1_demux/outs/fastq_path/2222W7FNX
 
 # run 1
