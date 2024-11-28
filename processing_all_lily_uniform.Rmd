@@ -413,8 +413,7 @@ Count_by_rank_plot <- function(sce_list, calculate_brs = TRUE, use_before_filter
 # use before_filter_brs to store the value of knee and inflection points derived from sce_list before filtering  empty droplets
 before_filter_brs <- Count_by_rank_plot(sce_list, calculate_brs = TRUE)
 
-# sce_list[[13]] <- NULL
-# sampNums <- length(sce_list)
+
 
 ```
 
