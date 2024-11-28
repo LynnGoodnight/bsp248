@@ -27,6 +27,7 @@ export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bs
 
 export run1_n="9"
 export run2_n="9"
+export run2_n="6"
 export seperate_run_value="9.5"
 export n_niters="100000"
 export limit="100"
