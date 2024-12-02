@@ -909,7 +909,7 @@ if(file.exists("preprocess6.1.RData"))
   # lapply(sce_list, dim)
   if(file.exists("references/ensembl_map_v108.csv") && file.exists('references/ensembl_ENTREZ_symbol_map_v108.csv'))
   {
-    map <- read.csv("references/ensembl_map_v108.csv", row.names = 1)
+    map <- read.csv("references/ensembl_map_v108.csv", row.names = TRUE)
     # head(map)
   }else
   {
