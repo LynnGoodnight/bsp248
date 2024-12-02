@@ -907,7 +907,7 @@ if(file.exists("preprocess6.1.RData"))
   sce_list <- lapply(sce_list, function(x) {return(x[-undetected,])})
   rm(detected, undetected)
   # lapply(sce_list, dim)
-  if(file.exists("references/ensembl_map_v108.csv") && file.exists('references/ensembl_ENTREZ_symbol_map_v108.csv.csv'))
+  if(file.exists("references/ensembl_map_v108.csv") && file.exists('references/ensembl_ENTREZ_symbol_map_v108.csv'))
   {
     map <- read.csv("references/ensembl_map_v108.csv", row.names = 1)
     # head(map)
@@ -979,12 +979,12 @@ print(paste('total number of ensembl_gene_id', length(rownames(sce_list[[1]]))))
 ```{r second map genes symbols method and examine map quality of second method}}
 
 ################################## merge symbols which have same ensembl id
-if(file.exists("references/ensembl_ENTREZ_symbol_map_v108.csv.csv"))
+if(file.exists("references/ensembl_ENTREZ_symbol_map_v108.csv"))
 {
-  hgnc_symbol_new <- read.csv("references/ensembl_ENTREZ_symbol_map_v108.csv.csv", row.names = 1)
+  hgnc_symbol_new <- read.csv("references/ensembl_ENTREZ_symbol_map_v108.csv", row.names = 1)
 }else
 {
-  print("fail to find references/ensembl_ENTREZ_symbol_map_v108.csv.csv")
+  print("fail to find references/ensembl_ENTREZ_symbol_map_v108.csv")
 }
 
 # head(hgnc_symbol_new)
