@@ -13,6 +13,7 @@ work_dir <- Sys.getenv("work_dir")
 bsp_num <- Sys.getenv("bsp_num")
 samples_set <- Sys.getenv("sampSet")
 
+
 knitr::opts_knit$set(root.dir = work_dir)
 
 count_dir <- paste0('/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/', bsp_num, '/lily/stages/count')
@@ -21,7 +22,7 @@ count_dir <- paste0('/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/pro
 current_run <- samples_set
 
 
-
+ENTREZ_symbol_flag <- Sys.getenv("ENTREZ_symbol_flag")
 run1_n <- as.numeric(Sys.getenv("run1_n"))
 run2_n <- as.numeric(Sys.getenv("run2_n"))  
 run3_n <- as.numeric(Sys.getenv("run3_n")) 
@@ -909,7 +910,7 @@ if(file.exists("preprocess6.1.RData"))
   # lapply(sce_list, dim)
   if(file.exists("references/ensembl_map_v108.csv") && file.exists('references/ensembl_ENTREZ_symbol_map_v108.csv'))
   {
-    map <- read.csv("references/ensembl_map_v108.csv", row.names = TRUE)
+    map <- read.csv("references/ensembl_map_v108.csv", row.names = 1)
     # head(map)
   }else
   {
@@ -977,23 +978,26 @@ print(paste('total number of ensembl_gene_id', length(rownames(sce_list[[1]]))))
 ```
 
 ```{r second map genes symbols method and examine map quality of second method}}
+if(ENTREZ_symbol_flag == "yes")
+{
+  ################################## merge symbols which have same ensembl id
+  if(file.exists("references/ensembl_ENTREZ_symbol_map_v108.csv"))
+  {
+    hgnc_symbol_new <- read.csv("references/ensembl_ENTREZ_symbol_map_v108.csv", row.names = 1)
+  }else
+  {
+    print("fail to find references/ensembl_ENTREZ_symbol_map_v108.csv")
+  }
+  
+  # head(hgnc_symbol_new)
+  ################################## add new map symbols in sce_list
+  sce_list <- lapply(sce_list, function(x){
+    rowData(x)$ENTREZ_symbol <- hgnc_symbol_new[rownames(x), 'ENTREZ_symbol']
+    return(x)})
 
-################################## merge symbols which have same ensembl id
-if(file.exists("references/ensembl_ENTREZ_symbol_map_v108.csv"))
-{
-  hgnc_symbol_new <- read.csv("references/ensembl_ENTREZ_symbol_map_v108.csv", row.names = 1)
-}else
-{
-  print("fail to find references/ensembl_ENTREZ_symbol_map_v108.csv")
 }
 
-# head(hgnc_symbol_new)
-################################## add new map symbols in sce_list
-sce_list <- lapply(sce_list, function(x){
-  rowData(x)$ENTREZ_symbol <- hgnc_symbol_new[rownames(x), 'ENTREZ_symbol']
-  return(x)})
-
-
+ 
 ```
 
 
