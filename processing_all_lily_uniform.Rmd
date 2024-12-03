@@ -1200,9 +1200,22 @@ if(file.exists("preprocess6.4.RData"))
     clust <- quickCluster(sce_list[[i]])
 
     sce_list[[i]] <- computeSumFactors(sce_list[[i]], cluster=clust)
-    sce_list[[i]] <- logNormCounts(sce_list[[i]])
+     
+    zero_flag <- (sizeFactors(sce_list[[i]]) == 0)
+    negative_flag <- (sizeFactors(sce_list[[i]]) < 0)
 
-    sce_list[[i]] <- fixedPCA(sce_list[[i]], subset.row=NULL) ## note intentionally not using HVGs here as this is a rough visualization to see all effects on droplets
+    if(sum(zero_flag) > 0 || sum(negative_flag) > 0 )
+    {
+      sizeFactors(sce_list[[i]])[zero_flag] <- 1
+      sizeFactors(sce_list[[i]])[negative_flag] <- 1
+      print("warning: non positive estimates generated due to low quality cells with few expressed features or low-abundance genes exist, need increase the stringency of the filtering.")
+      print(paste("sample", i))
+      
+    }
+    sce_list[[i]] <- logNormCounts(sce_list[[i]])
+    
+    sce_list[[i]] <- fixedPCA(sce_list[[i]], subset.row=NULL) 
+    ## note intentionally not using HVGs here as this is a rough visualization to see all effects on droplets
     sce_list[[i]] <- runUMAP(sce_list[[i]], dimred='PCA')
   }
 
