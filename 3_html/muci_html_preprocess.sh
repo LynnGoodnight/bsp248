@@ -11,10 +11,10 @@
 ## %j is job number, %x is the job name above
 #SBATCH --output=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/logs/%x-%j-logs_preprocess.txt
 ## 10 hours
-#SBATCH --time=1-10:00:00
+#SBATCH --time=10:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=10
-#SBATCH --mem-per-cpu=256G
+#SBATCH --mem-per-cpu=128G
 
 ## Job Steps
 echo "Starting: in sbatch we asked for 10 thread and 256G mem"
@@ -25,6 +25,8 @@ export bsp_num="bsp_248"
 export sampSet="all"
 export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/"
 
+export reference_genome_version="113"
+export ENTREZ_symbol_flag="yes"
 export run1_n="9"
 export run2_n="9"
 export run3_n="6"
