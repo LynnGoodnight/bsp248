@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 work_dir <- Sys.getenv("work_dir")
 bsp_num <- Sys.getenv("bsp_num")
 samples_set <- Sys.getenv("sampSet")
+reference_genome_version <- Sys.getenv("reference_genome_version")
 sampSet <- samples_set
 
 knitr::opts_knit$set(root.dir = work_dir)
@@ -1044,7 +1045,13 @@ for(i in unique(names(marker.info.perbatch))){
   # if(i %in% c('8a', '8b', '8c', '14a', '14b','14c' , '9a', '9b', '11a', '11b','12a', '12b','12c'))
   # {
     ord <- marker.info.perbatch[[i]][order(marker.info.perbatch[[i]]$mean.logFC.cohen, decreasing=TRUE),]
-    ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']
+    if(reference_genome_version == "108")
+    {
+      ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']      
+    }else if(reference_genome_version == "113")
+    {
+      ord$symbol <- rowData(sce)[rownames(ord), 'gene_symbol_ensembl']      
+    }
 
     pfx <- paste0(work_dir,"/markers_",sampSet,'_k',clustK)
     dir.create(pfx, showWarnings = FALSE)
@@ -1080,7 +1087,15 @@ for(i in unique(names(marker.info.perbatch)))
 {
   print(i)
   ord <- marker.info.corrected[[i]][order(marker.info.corrected[[i]]$mean.logFC.cohen, decreasing=TRUE),]
-  ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']
+  
+    if(reference_genome_version == "108")
+    {
+      ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']      
+    }else if(reference_genome_version == "113")
+    {
+      ord$symbol <- rowData(sce)[rownames(ord), 'gene_symbol_ensembl']      
+    }  
+
 
   pfx <- paste0(work_dir,"markers_",sampSet,'_k',clustK)
   dir.create(pfx, showWarnings = FALSE)

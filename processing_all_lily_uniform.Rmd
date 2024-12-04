@@ -1550,10 +1550,13 @@ for(i in 1:length(sce_list)){
   cols <- rep('black', length(sce_list[[i]]$query_doublet))
   cols[sce_list[[i]]$query_doublet] <- 'red'
 
+  print(names(sce_list)[i])
+  print(table(sce_list[[i]]$query_doublet))
+  p1 <- plot(sce_list[[i]]$cxds_score, sce_list[[i]]$sum_counts, main=paste0('sample', i,', cxds_score versus total UMI count'), col=cols, xlab='cxds_score per droplet', ylab='total UMI counts of a droplet')
+  print(p1)
+    
+# sce_list[[i]] <- sce_list[[i]][ , !sce_list[[i]]$query_doublet]    
 
-    p1 <- plot(sce_list[[i]]$cxds_score, sce_list[[i]]$sum_counts, main=paste0('sample', i,', cxds_score versus total UMI count'), col=cols, xlab='cxds_score per droplet', ylab='total UMI counts of a droplet')
-
-    print(p1)
 }
 
 ```

@@ -25,6 +25,7 @@ module load tools
 export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/"
 export bsp_num="bsp_248"
 export sampSet="all"
+export reference_genome_version="113"
 
 export clustK=15
 echo "clustK" $clustK
