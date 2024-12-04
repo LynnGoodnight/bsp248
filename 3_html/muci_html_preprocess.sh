@@ -26,7 +26,7 @@ export sampSet="all"
 export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/"
 
 export reference_genome_version="113"
-export ENTREZ_symbol_flag="yes"
+export ENTREZ_symbol_flag="no"
 export run1_n="9"
 export run2_n="9"
 export run3_n="6"
