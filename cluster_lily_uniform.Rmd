@@ -57,7 +57,7 @@ library(ggbeeswarm)
 
 Load the data.
 
-```{r load processed data and overview cell number}
+```{r load processed data and overview cell number, fig.width=10}
 
 
 sce_run_x <- readRDS(paste0("sce_", sampSet, ".rds"))
@@ -168,67 +168,75 @@ table(colnames(sce_corrected) == colnames(sce))
 assays(sce_corrected)$counts <- assays(sce)$counts[rownames(sce_corrected),]
 assays(sce_corrected)$logcounts <- assays(sce)$logcounts[rownames(sce_corrected),]
 
-selected_sce <- sce_corrected
+
 
 ```
 
 
-```{r randomly pick one point among points overlap at same position in UMAP, draw UMAP plot to compare conditions, fig.width=10}
+```{r randomly pick one point among points overlap at same position in UMAP, draw UMAP plot to compare conditions, fig.width=12}
 # since r shiny use sce to plot UMAP, to make figure consistent, i change the input file to sce, and don't use sce_corrected with HGV 5000 as input
-save.image('clustering_debug.RData')
+# save.image('clustering_debug.RData')
 # when there is multiple points with different colour locate at same position in the plot, below code will randomly pick one point among them and show its colour on the plot. can reflect the distribution more authentically
 library(dplyr)
 library(scater)
+selected_sce <- sce_corrected
 
-# Get UMAP coordinates and sample information
+draw_UMAP_after_sampling <- function(selected_sce, title_flag = "batch effect corrected")
+{
 
-umap_coords <- as.data.frame(reducedDim(selected_sce, "UMAP"))
+  # Get UMAP coordinates and sample information
+  
+  umap_coords <- as.data.frame(reducedDim(selected_sce, "UMAP"))
+  
+  umap_coords$Sample <- selected_sce$Sample
+  umap_coords$condition <- selected_sce$condition
+  umap_coords$sum_counts_level <- selected_sce$sum_counts_level
+  umap_coords$run <- selected_sce$run
+  head(sce_run_x_corrected$run)
+  
+  # Group by UMAP coordinates and sample one point from each group
+  umap_sampled <- umap_coords %>%
+    group_by(UMAP1, UMAP2) %>%
+    sample_n(1)
+  
+  # Plot the UMAP with sampled points
+  umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = Sample)) +
+    geom_point(size = 0.1) +
+    ggtitle(paste(sampSet, title_flag)) +
+    guides(colour = guide_legend(override.aes = list(size = 6)))
+  
+  # Print the plot
+  print(umap_plot)
+  
+  
+  # Plot the UMAP with sampled points
+  umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = condition)) +
+    geom_point(size = 0.1) +
+    ggtitle(paste(sampSet, title_flag)) +
+    guides(colour = guide_legend(override.aes = list(size = 6)))
+  
+  # Print the plot
+  print(umap_plot)
+  
+  umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = sum_counts_level)) +
+    geom_point(size = 0.1) +
+    ggtitle(paste(sampSet, title_flag)) +
+    guides(colour = guide_legend(override.aes = list(size = 6)))
+  
+  # Print the plot
+  print(umap_plot)
+  
+  umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = run)) +
+    geom_point(size = 0.1) +
+    ggtitle(paste(sampSet, title_flag)) +
+    guides(colour = guide_legend(override.aes = list(size = 6)))
+  
+  # Print the plot
+  print(umap_plot)  
+}
+draw_UMAP_after_sampling(sce_corrected, "batch effect corrected" )
 
-umap_coords$Sample <- selected_sce$Sample
-umap_coords$condition <- selected_sce$condition
-umap_coords$sum_counts_level <- selected_sce$sum_counts_level
-umap_coords$run <- selected_sce$run
-head(sce_run_x_corrected$run)
-
-# Group by UMAP coordinates and sample one point from each group
-umap_sampled <- umap_coords %>%
-  group_by(UMAP1, UMAP2) %>%
-  sample_n(1)
-
-# Plot the UMAP with sampled points
-umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = Sample)) +
-  geom_point(size = 0.1) +
-  ggtitle(paste(sampSet)) +
-  guides(colour = guide_legend(override.aes = list(size = 6)))
-
-# Print the plot
-print(umap_plot)
-
-
-# Plot the UMAP with sampled points
-umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = condition)) +
-  geom_point(size = 0.1) +
-  ggtitle(paste(sampSet)) +
-  guides(colour = guide_legend(override.aes = list(size = 6)))
-
-# Print the plot
-print(umap_plot)
-
-umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = sum_counts_level)) +
-  geom_point(size = 0.1) +
-  ggtitle(paste(sampSet)) +
-  guides(colour = guide_legend(override.aes = list(size = 6)))
-
-# Print the plot
-print(umap_plot)
-
-umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = run)) +
-  geom_point(size = 0.1) +
-  ggtitle(paste(sampSet)) +
-  guides(colour = guide_legend(override.aes = list(size = 6)))
-
-# Print the plot
-print(umap_plot)
+draw_UMAP_after_sampling(sce, "original, no batch effect correction")
 ```
 
 ### colour cluster plot by condition, also sub-dividing controls to bal/lung
@@ -551,7 +559,7 @@ shall we exclude cluster 18?
 
 It may be the case that our suspected doublets, which fell in a particular region of the UMAP, have formed their own cluster. This is a convenient means of removing them as we can get rid of the whole cluster and don't have to rationalist a threshold for suspected doublet value.
 
-```{r check Doublet distribution across clusters}
+```{r check Doublet distribution across clusters, fig.width=10}
 # print the proportion of estimated Doublet in each cluster
 prop.table(table(sce_corrected$cluster, sce_corrected$query_doublet), margin=1)
 
@@ -1041,7 +1049,7 @@ marker.info.perbatch <- scoreMarkers(sce_corrected,
 
 
 for(i in unique(names(marker.info.perbatch))){
-  print(i)
+  # print(i)
   # if(i %in% c('8a', '8b', '8c', '14a', '14b','14c' , '9a', '9b', '11a', '11b','12a', '12b','12c'))
   # {
     ord <- marker.info.perbatch[[i]][order(marker.info.perbatch[[i]]$mean.logFC.cohen, decreasing=TRUE),]
@@ -1085,7 +1093,7 @@ wb <- createWorkbook()
 
 for(i in unique(names(marker.info.perbatch)))
 {
-  print(i)
+  # print(i)
   ord <- marker.info.corrected[[i]][order(marker.info.corrected[[i]]$mean.logFC.cohen, decreasing=TRUE),]
   
     if(reference_genome_version == "108")
@@ -1135,8 +1143,8 @@ setwd(work_dir)
 
 # save.image(file = paste0(sampSet, "_", "k", clustK, "_with_subcluster.RData"))
 
-saveRDS(sce_corrected, file = paste0('sce_',sampSet,'_corrected_with_subcluster.rds'))
-saveRDS(sce, file = paste0('sce_',sampSet,'_with_subcluster.rds'))
+# saveRDS(sce_corrected, file = paste0('sce_',sampSet,'_corrected_with_subcluster.rds'))
+# saveRDS(sce, file = paste0('sce_',sampSet,'_with_subcluster.rds'))
 sessionInfo()
 
 ```

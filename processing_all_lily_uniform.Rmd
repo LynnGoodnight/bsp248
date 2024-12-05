@@ -1633,7 +1633,7 @@ Now we look at the data to determine whether there are batch effects that ought 
 
 
 ## 8.2 Normalization gene expression counts, conduct batch effect correction
-```{r perform quick clustering and normalization for run 1 samples and plot qc metrics before and after batch effect correction}
+```{r perform quick clustering and normalization for run 1 samples and plot qc metrics before and after batch effect correction, fig.width=10}
 
 
 normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects = FALSE)
@@ -1695,8 +1695,8 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   set.seed(100)
   ord <- sample.int(ncol(sce_all), ncol(sce_all), replace=FALSE)
 
-  pl <- plotUMAP(sce_all[,ord], colour_by="run") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
-  print(pl)    
+  # pl <- plotUMAP(sce_all[,ord], colour_by="run") + ggtitle(paste(current_run,'UMAP uncorrected', title_suffix_1))
+  # print(pl)    
   if(bsp_num == "bsp_248")
   {
       pl <- plotReducedDim(sce_all, 'UMAP', colour_by=rownames(sce_all)[which(rowData(sce_all)$Symbol == 'HNMT')]) + ggtitle(paste(current_run,'myeloid highlighted (HMNT)','UMAP uncorrected', title_suffix_1)) ## myeloid
@@ -1780,8 +1780,8 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   pl <- plotUMAP(sce_all_corrected[,ord], colour_by="cxds_score") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
 
-  pl <- plotUMAP(sce_all_corrected[,ord], colour_by="run") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
-  print(pl)  
+  # pl <- plotUMAP(sce_all_corrected[,ord], colour_by="run") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
+  # print(pl)  
   
   pl <- plotUMAP(sce_all_corrected[,ord], colour_by="query_doublet") + ggtitle(paste(current_run,'UMAP corrected',title_suffix_2))
   print(pl)
