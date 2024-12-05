@@ -328,10 +328,10 @@ foreach(i = 1:length(sce_list), .packages = c("SingleCellExperiment")) %dopar% {
 
 
 # replace original data with clean data that have Removed swapped drops
-for(i in 1:length(sce_list)){
-  counts(sce_list[[i]])[, colnames(cleaned[[i]])] <- cleaned[[i]]
-    # take long to run this step
-}
+# for(i in 1:length(sce_list)){
+#   counts(sce_list[[i]])[, colnames(cleaned[[i]])] <- cleaned[[i]]
+#     # take long to run this step
+# }
 # head(counts(sce_list[[i]]))
 # head(colnames(cleaned[[i]]))
 
