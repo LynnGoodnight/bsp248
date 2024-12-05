@@ -132,16 +132,22 @@ sce_corrected <- sce_run_x_corrected
 sce <- sce_run_x
 selected_sce <- sce_corrected
 
-set.seed(55698)
-umap_plot <- plotUMAP(selected_sce, colour_by="cluster", point_size=0.3,text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6)))+ ggtitle(paste(sampSet))
-# Adjust the legend text and title size
+UMAP_color_by_cluster <- function(selected_sce, title_flag = "batch effect corrected" )
+{
+  set.seed(55698)
+  umap_plot <- plotUMAP(selected_sce, colour_by="cluster", point_size=0.3,text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6))) + ggtitle(paste(sampSet, title_flag))
+  # Adjust the legend text and title size
+  
+  # Print the plot
+  print(umap_plot)
+  
+  
+  TSNE_plot <- plotTSNE(selected_sce, colour_by="cluster", point_size=0.3,text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6))) + ggtitle(paste(sampSet, title_flag))
+  print(TSNE_plot)  
+}
 
-# Print the plot
-print(umap_plot)
-
-
-TSNE_plot <- plotTSNE(selected_sce, colour_by="cluster", point_size=0.3,text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6)))
-print(TSNE_plot)
+UMAP_color_by_cluster(sce_corrected, "batch effect corrected" )
+UMAP_color_by_cluster(sce, "original, no batch effect correction")
 
 
 

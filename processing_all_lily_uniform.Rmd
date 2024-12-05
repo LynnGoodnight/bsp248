@@ -1762,8 +1762,8 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   sce_all_corrected$sum_counts_level <- sce_all$sum_counts_level
 
   # rowData(sce_all) store the ENTREZ_symbol, char, start etc information for each gene (ensemble id)
-  # rowData(sce_all_corrected) store only the score of each genes in the first 50 PC
-  # so we add the ENTREZ_symbol, char, start etc information of each gene into rowData(sce_all_corrected) again
+  # rowData(sce_all_corrected) store only the score of each top 5000 HVG genes in the first 50 PC
+  # so we add the ENTREZ_symbol, char, start etc information of each those gene into rowData(sce_all_corrected) again
   rowdat <- rowData(sce_all_corrected)
   rowdat <- cbind(rowData(sce_all)[rownames(sce_all_corrected),], rowdat )
   rowData(sce_all_corrected) <- rowdat
