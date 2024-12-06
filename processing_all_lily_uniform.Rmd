@@ -284,8 +284,8 @@ if(file.exists("preprocess2.RData"))
   }
   
   # lapply(sce_list, dim)
-  save.image(file = paste0(work_dir,'preprocess2.RData'))
-  # save(cleaned, run1_filter_swapped, run2_filter_swapped, file = paste0(work_dir,'preprocess2.RData'))
+  # save.image(file = paste0(work_dir,'preprocess2.RData'))
+  save(cleaned, run1_filter_swapped, run2_filter_swapped, run3_filter_swapped, file = paste0(work_dir,'preprocess2.RData'))
   # evaluate how much droplets are removed in this step
 
 }

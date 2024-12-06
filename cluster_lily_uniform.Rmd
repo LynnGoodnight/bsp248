@@ -137,7 +137,8 @@ UMAP_color_by_cluster <- function(selected_sce, title_flag = "batch effect corre
   set.seed(55698)
   umap_plot <- plotUMAP(selected_sce, colour_by="cluster", point_size=0.3,text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6))) + ggtitle(paste(sampSet, title_flag))
   # Adjust the legend text and title size
-  
+
+
   # Print the plot
   print(umap_plot)
   
@@ -181,7 +182,7 @@ assays(sce_corrected)$logcounts <- assays(sce)$logcounts[rownames(sce_corrected)
 
 ```{r randomly pick one point among points overlap at same position in UMAP, draw UMAP plot to compare conditions, fig.width=12}
 # since r shiny use sce to plot UMAP, to make figure consistent, i change the input file to sce, and don't use sce_corrected with HGV 5000 as input
-# save.image('clustering_debug.RData')
+
 # when there is multiple points with different colour locate at same position in the plot, below code will randomly pick one point among them and show its colour on the plot. can reflect the distribution more authentically
 library(dplyr)
 library(scater)
@@ -1138,7 +1139,7 @@ saveWorkbook(wb, file = paste0(pfx,'/', sampSet, "_DE_per_cluster.xlsx"), overwr
 
 
 
-
+save.image('clustering_develop_code.RData')
 ```
 
 
