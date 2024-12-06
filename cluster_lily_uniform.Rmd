@@ -1065,7 +1065,7 @@ for(i in unique(names(marker.info.perbatch))){
       ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']      
     }else if(reference_genome_version == "113")
     {
-      ord$symbol <- rowData(sce)[rownames(ord), 'gene_symbol_ensembl']      
+      ord$symbol <- rowData(sce)[rownames(ord), 'Symbol']      
     }
 
     pfx <- paste0(work_dir,"/markers_",sampSet,'_k',clustK)
@@ -1108,7 +1108,7 @@ for(i in unique(names(marker.info.perbatch)))
       ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']      
     }else if(reference_genome_version == "113")
     {
-      ord$symbol <- rowData(sce)[rownames(ord), 'gene_symbol_ensembl']      
+      ord$symbol <- rowData(sce)[rownames(ord), 'Symbol']      
     }  
 
 
@@ -1141,6 +1141,91 @@ saveWorkbook(wb, file = paste0(pfx,'/', sampSet, "_DE_per_cluster.xlsx"), overwr
 
 save.image('clustering_develop_code.RData')
 ```
+
+```{r draw heatmap for selected markers across clusters}
+n_cluster <-  length(levels(sce_run_x_corrected_clust))
+
+defining_genes_185 <- c("CD163", "FLT3", "CD14", "CD4", "CADM1", "CSF1R", "FCGR1A", "BCL6", "CCL17", "IRF8", "ADAM8", "PRDM1", "IRF4", "JCHAIN" , "TNFRSF17", "TNFRSF13B", "CD19", "PAX5", "EBF1", "MS4A1", "CD79B", "IRF8", "CD28", "CD5", "CD3D", "CD3E", "CD8A", "CD8B", "FOXP3", "E2F1", "E2F2", "KLRK1", "KLRB1", "KIT", "NCR1", "TBX21", "EOMES", "GATA3", "IL1RL1", "IL7R", "ID3", "ACTG1", "GPR37", "NAPSA", "SFTPA1", "RPS3A", "RPS26", "RPS11", "RPL37")
+
+defining_genes_external <- c(
+  "CD2", "CD3E", "CD4", "CD8A", "CCR7", "GZMH", "NCR1", "NKG7", "SOX13", "CD69",
+  "CXCR3", "CXCR6", "KCNQ5", "LRRC43", "RUNX2", "ST6GALNAC3", "CD19", "CD40", "CXCR5",
+  "PAX5", "SLA-DQB1", "TBX21", "DUT", "IRF4", "JCHAIN", "PRDM1", "XBP1", "BATF3",
+  "CXCR4", "FLT3", "ID2", "IDO1", "IL4I1", "IRAK2", "LY75", "NAV1", "C2", "C3", "CD93",
+  "IRF8", "NRP1", "TNF", "APOE", "ARG1", "CCL2", "CCL8", "CCR2", "CD14", "CD163",
+  "CX3CR1", "FCN1", "IL1B", "IL4R", "LAMP1", "TNFRSF1B", "MSR1", "PPARG", "SIGLEC1",
+  "CD24", "CXCL8", "IL18", "S100A8", "FCER1A", "GATA2", "HDC", "KIT", "LTC4S", "MS4A2",
+  "ACTA2", "ACTG2", "CAV1", "CAVIN2", "CCDC80", "CCL11", "CD34", "CD9", "CNN1",
+  "COL3A1", "MYH11", "PECAM1", "TIMP3")
+added_markers  <- !(defining_genes_185 %in% defining_genes_external)
+defining_genes_final <- c(defining_genes_external, defining_genes_185[added_markers])
+length(defining_genes_final)
+
+
+
+selected_markers_flag <- (rowData(sce)$Symbol %in% defining_genes_final)
+table(selected_marker)
+selected_markers <- as.data.frame(rowData(sce)[selected_markers_flag , ])
+
+
+print('maker genes not found in sce:')
+print(defining_genes_final[!(defining_genes_final %in% selected_markers$Symbol)])
+# length(unique(selected_markers$Symbol))
+
+defining_genes_final <-  defining_genes_final[(defining_genes_final %in% selected_markers$Symbol)]
+
+
+sce_selected_markers <- sce
+rownames(sce_selected_markers) <- rowData(sce)$Symbol
+rowData(sce_selected_markers) <- rowData(sce_selected_markers)[, c("ID", "Symbol")]
+#subset to defining genes and calculate mean logcounts
+sce_selected_markers <- sce_selected_markers[rownames(sce_selected_markers) %in% defining_genes_final, ]
+selected_markers_matrix_average_expression <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics='mean', use.assay.type='logcounts')))
+selected_markers_matrix_average_expression$gene_symbol <- rownames(selected_markers_matrix_average_expression)
+
+library(tidyr)
+average_expression_df <- gather(selected_markers_matrix_average_expression, Cluster,  AverageExpression, 
+                    1:n_cluster )
+
+
+selected_markers_matrix_percent_expressed <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics="prop.detected", use.assay.type='logcounts')))
+selected_markers_matrix_percent_expressed$gene_symbol <- rownames(selected_markers_matrix_percent_expressed)
+
+percent_expressed_df <- gather(selected_markers_matrix_percent_expressed, Cluster,  PercentExpressed, 
+                                1:n_cluster )
+
+# Merge both data frames by Gene and Cluster
+plot_data <- merge(average_expression_df, percent_expressed_df, by = c("gene_symbol", "Cluster"))
+plot_data$Cluster <- factor(plot_data$Cluster, levels = sort(as.numeric(unique(plot_data$Cluster))))
+
+plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = rev(defining_genes_final))
+
+
+png(filename='markers_clusters_heatmap.png', height=1500, width=1000)
+# Draw the dot plot using ggplot2
+ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
+  geom_point(aes(size = PercentExpressed, color = AverageExpression)) +
+  scale_size_continuous(range = c(0.5, 6)) + # Adjust the size range as needed
+  scale_color_gradient(low = "white", high = "red") + # Set gradient colors for average expression
+  labs(
+    x = "Cluster",
+    y = "gene_symbol",
+    color = "Average Expression",
+    size = "Percent Expressed"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank()   # Remove minor grid lines
+  )
+dev.off()
+
+
+
+
+```
+
 
 
 # save workspace image
