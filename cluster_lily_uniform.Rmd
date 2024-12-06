@@ -1164,7 +1164,7 @@ length(defining_genes_final)
 
 
 selected_markers_flag <- (rowData(sce)$Symbol %in% defining_genes_final)
-table(selected_marker)
+# table(selected_markers_flag)
 selected_markers <- as.data.frame(rowData(sce)[selected_markers_flag , ])
 
 
