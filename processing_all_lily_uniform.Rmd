@@ -1724,7 +1724,10 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   {
     library(batchelor)
     set.seed(100)
-    sce_all_corrected <- fastMNN(sce_all, batch=sce_all$run, subset.row = vargenes, get.variance = TRUE)
+    # sce_all_corrected <- fastMNN(sce_all, batch=sce_all$run, subset.row = vargenes, get.variance = TRUE)
+    sce_all_corrected <- fastMNN(sce_all, batch=sce_all$run, get.variance = TRUE)
+    # batch correct all genes
+    
     sce_all_corrected
     
   }else
@@ -1736,8 +1739,14 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   }
 
   set.seed(100)
-  sce_all_corrected <- runUMAP(sce_all_corrected, dimred="corrected")
-  sce_all_corrected <- runTSNE(sce_all_corrected, dimred="corrected")
+  HVGs <- getTopHVGs(sce_all_corrected, n=5000) 
+  sce_all_corrected <- fixedPCA(sce_all_corrected, subset.row=HVGs, assay.type = "corrected") 
+  #running PCA on batch corrected expression values and just HVGs 
+  sce_all_corrected <- runUMAP(sce_all_corrected, dimred="PCA")
+  sce_all_corrected <- runTSNE(sce_all_corrected, dimred="PCA")
+  
+  # sce_all_corrected <- runUMAP(sce_all_corrected, dimred="corrected")
+  # sce_all_corrected <- runTSNE(sce_all_corrected, dimred="corrected")
 
   sce_all_corrected$Sample <- sce_all$Sample
   sce_all_corrected$condition <- sce_all$condition
