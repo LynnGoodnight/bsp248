@@ -234,7 +234,7 @@ correlation_plot(quality_metrics, "Median.UMI.Counts.per.Cell")
 Now we want to look for any droplets that have swapped cell barcodes due to use of patterned flow cell sequencing. 8 samples were sequenced in each run, and so swapping could occur anywhere within the sequencing run but not outside of it.
 
 ```{r Removing swapped transcript molecules}
-
+sce_list <- sce_list_raw
 if(file.exists("preprocess2.RData"))
 {
   load("preprocess2.RData")
@@ -242,7 +242,7 @@ if(file.exists("preprocess2.RData"))
 {
   getwd()
   setwd(count_dir)
-  sce_list <- sce_list_raw
+
   
   
   ## run 1
