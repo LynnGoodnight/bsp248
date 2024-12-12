@@ -1582,7 +1582,7 @@ Now we will properly normalize the data and merge all of the samples together.
 ```{r exclude catastrophic samples if any and merge samples }
 if(bsp_num == "bsp_248")
 {
-  for(sample_id in c(c("sample_03", "sample_05", "sample_10" )))
+  for(sample_id in c(c("sample_03", "sample_05", "sample_10", "sample_20" )))
   {
    sce_list[[sample_id]] <- NULL
   
@@ -1646,19 +1646,6 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   sce_all <- logNormCounts(sce_all, size_factors=size_factors)
   print(sce_all)
 
-  # get the Top 5000 High Variable Genes
-  varmod <- modelGeneVar(sce_all, block=sce_all$Sample)
-  # Model the variance of the log-expression profiles for each gene, decomposing it into technical and biological components based on a fitted mean-variance trend.
-  vargenes <- getTopHVGs(varmod, n=5000)
-  length(vargenes)
-
-  sce_all <- fixedPCA(sce_all, subset.row=vargenes)
-  set.seed(100)
-  sce_all <- runUMAP(sce_all, dimred='PCA')
-  set.seed(100)
-  sce_all <- runTSNE(sce_all, dimred='PCA')
-  
-  head(sce_all$Sample)
 
  
   
@@ -1688,6 +1675,20 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
 
   saveRDS(sce_all, file = paste0('sce_',current_run,'.rds'))
 
+  # get the Top 5000 High Variable Genes
+  varmod <- modelGeneVar(sce_all, block=sce_all$run)
+  # Model the variance of the log-expression profiles for each gene, decomposing it into technical and biological components based on a fitted mean-variance trend.
+  vargenes <- getTopHVGs(varmod, n=5000)
+  length(vargenes)
+
+  sce_all <- fixedPCA(sce_all, subset.row=vargenes)
+  set.seed(100)
+  sce_all <- runUMAP(sce_all, dimred='PCA')
+  set.seed(100)
+  sce_all <- runTSNE(sce_all, dimred='PCA')
+  
+  head(sce_all$Sample)
+  
 
 
   ###################### plot
@@ -1725,9 +1726,8 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
     library(batchelor)
     set.seed(100)
     # sce_all_corrected <- fastMNN(sce_all, batch=sce_all$run, subset.row = vargenes, get.variance = TRUE)
-    sce_all_corrected <- fastMNN(sce_all, batch=sce_all$run, get.variance = TRUE)
+    sce_all_corrected <- fastMNN(sce_all, batch=sce_all$run, subset.row = NULL, get.variance = TRUE)
     # batch correct all genes
-    
     sce_all_corrected
     
   }else
@@ -1738,15 +1738,6 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   # sce_all_corrected
   }
 
-  set.seed(100)
-  HVGs <- getTopHVGs(sce_all_corrected, n=5000) 
-  sce_all_corrected <- fixedPCA(sce_all_corrected, subset.row=HVGs, assay.type = "corrected") 
-  #running PCA on batch corrected expression values and just HVGs 
-  sce_all_corrected <- runUMAP(sce_all_corrected, dimred="PCA")
-  sce_all_corrected <- runTSNE(sce_all_corrected, dimred="PCA")
-  
-  # sce_all_corrected <- runUMAP(sce_all_corrected, dimred="corrected")
-  # sce_all_corrected <- runTSNE(sce_all_corrected, dimred="corrected")
 
   sce_all_corrected$Sample <- sce_all$Sample
   sce_all_corrected$condition <- sce_all$condition
@@ -1776,10 +1767,25 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   rowdat <- rowData(sce_all_corrected)
   rowdat <- cbind(rowData(sce_all)[rownames(sce_all_corrected),], rowdat )
   rowData(sce_all_corrected) <- rowdat
-
-
+  
+  
+  set.seed(100)
+  # varmod <- modelGeneVar(sce_all_corrected)
+  # HVGs <- getTopHVGs(sce_all_corrected, n=5000) 
+  # sce_all_corrected <- fixedPCA(sce_all_corrected, subset.row=HVGs, assay.type = "corrected") 
+  # 
+  # #running PCA on batch corrected expression values and just HVGs 
+  # sce_all_corrected <- runUMAP(sce_all_corrected, dimred="PCA")
+  # sce_all_corrected <- runTSNE(sce_all_corrected, dimred="PCA")
+  
+  
+  # •	A corrected matrix in the reducedDims slot, containing corrected low-dimensional coordinates for each cell. This has number of columns equal to d and number of rows equal to the total number of cells in ....
+  sce_all_corrected <- runUMAP(sce_all_corrected, dimred="corrected")
+  sce_all_corrected <- runTSNE(sce_all_corrected, dimred="corrected")
   saveRDS(sce_all_corrected, file = paste0('sce_',current_run,'_corrected.rds'))
   print(sce_all_corrected)
+  
+  
   ###################### plot
   set.seed(100)
   ord <- sample.int(ncol(sce_all_corrected), ncol(sce_all_corrected), replace=FALSE)
