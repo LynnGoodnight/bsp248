@@ -322,9 +322,14 @@ cl <- makeCluster(num_cores)
 registerDoParallel(cl)
 
 # Replace original data with cleaned data that has removed swapped drops (parallelized)
-foreach(i = 1:length(sce_list), .packages = c("SingleCellExperiment")) %dopar% {
-  counts(sce_list[[i]])[, colnames(cleaned[[i]])] <- cleaned[[i]]
-}
+# foreach(i = 1:length(sce_list), .packages = c("SingleCellExperiment")) %dopar% {
+#   counts(sce_list[[i]])[, colnames(cleaned[[i]])] <- cleaned[[i]]
+# }
+invisible(
+  foreach(i = 1:length(sce_list), .packages = c("SingleCellExperiment")) %dopar% {
+    counts(sce_list[[i]])[, colnames(cleaned[[i]])] <- cleaned[[i]]
+  }
+)
 
 
 # replace original data with clean data that have Removed swapped drops
@@ -1771,10 +1776,10 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   
   set.seed(100)
   # varmod <- modelGeneVar(sce_all_corrected)
-  # HVGs <- getTopHVGs(sce_all_corrected, n=5000) 
-  # sce_all_corrected <- fixedPCA(sce_all_corrected, subset.row=HVGs, assay.type = "corrected") 
+  # HVGs <- getTopHVGs(sce_all_corrected, n=5000)
+  # sce_all_corrected <- fixedPCA(sce_all_corrected, subset.row=HVGs, assay.type = "corrected")
   # 
-  # #running PCA on batch corrected expression values and just HVGs 
+  # #running PCA on batch corrected expression values and just HVGs
   # sce_all_corrected <- runUMAP(sce_all_corrected, dimred="PCA")
   # sce_all_corrected <- runTSNE(sce_all_corrected, dimred="PCA")
   
