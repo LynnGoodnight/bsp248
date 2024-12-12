@@ -107,12 +107,10 @@ sce_run_x_corrected
 # they are combined data now, contain only 1 list 
 # parameters were carefully chose
 set.seed(200)
-sce_run_x_corrected_clust <- clusterCells(sce_run_x_corrected, 
-                                          use.dimred="PCA", 
+
+sce_run_x_corrected_clust <- clusterCells(sce_run_x_corrected,
+                                          use.dimred="corrected",
                                           BLUSPARAM=SNNGraphParam(k=clustK, type="jaccard",cluster.fun="louvain"))
-# sce_run_x_corrected_clust <- clusterCells(sce_run_x_corrected, 
-#                                           use.dimred="corrected", 
-#                                           BLUSPARAM=SNNGraphParam(k=clustK, type="jaccard",cluster.fun="louvain"))
   	
 # k An integer scalar specifying the number of nearest neighbors to consider during graph construction.                                                          
 

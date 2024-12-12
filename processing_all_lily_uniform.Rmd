@@ -1845,12 +1845,12 @@ figure 12.2 visualize the droplets in UMAP and color the droplets based on sampl
 
 
 figure 12.3 visualize the droplets in UMAP and color the droplets based on sample;  condition; marker gene expression level of B cells, T cells, CD4;  cxds scores; suspected doublet for sequencing run 3
-<!-- # 9 save image and show session Info -->
-<!-- ```{r sessionInfo} -->
-<!-- save.image(file = "preprocess9.RData") -->
-<!-- sessionInfo() -->
+# 9 save image and show session Info
+```{r sessionInfo}
+# save.image(file = "preprocess9.RData")
+sessionInfo()
 
-<!-- ``` -->
+```
 
 
 
