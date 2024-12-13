@@ -1678,7 +1678,7 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   sce_all$cull_date <- as.factor(sce_all$cull_date)  
   sce_all$run <- as.factor(sce_all$run)
 
-  saveRDS(sce_all, file = paste0('sce_',current_run,'.rds'))
+
 
   # get the Top 5000 High Variable Genes
   varmod <- modelGeneVar(sce_all, block=sce_all$run)
@@ -1694,7 +1694,7 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   
   head(sce_all$Sample)
   
-
+  saveRDS(sce_all, file = paste0('sce_',current_run,'.rds'))
 
   ###################### plot
   title_suffix_1 = '\n based on PCA componets calculated using top 5000 highly variable genes'
@@ -1787,6 +1787,7 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   # •	A corrected matrix in the reducedDims slot, containing corrected low-dimensional coordinates for each cell. This has number of columns equal to d and number of rows equal to the total number of cells in ....
   sce_all_corrected <- runUMAP(sce_all_corrected, dimred="corrected")
   sce_all_corrected <- runTSNE(sce_all_corrected, dimred="corrected")
+  
   saveRDS(sce_all_corrected, file = paste0('sce_',current_run,'_corrected.rds'))
   print(sce_all_corrected)
   
