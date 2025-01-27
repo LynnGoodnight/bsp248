@@ -243,14 +243,11 @@ if(file.exists("preprocess2.RData"))
   getwd()
   setwd(count_dir)
 
-  
-  
   ## run 1
   fs <- paste0('muci_', samps_id[run1], '_count/outs/molecule_info.h5')
   run1_filter_swapped <- swappedDrops(samples=fs)
 
   ## run 2
-  
   fs <- paste0('muci_', samps_id[run2], '_count/outs/molecule_info.h5')
   run2_filter_swapped <- swappedDrops(fs)
   
@@ -285,7 +282,14 @@ if(file.exists("preprocess2.RData"))
   
   # lapply(sce_list, dim)
   # save.image(file = paste0(work_dir,'preprocess2.RData'))
-  save(cleaned, run1_filter_swapped, run2_filter_swapped, run3_filter_swapped, file = paste0(work_dir,'preprocess2.RData'))
+    if(bsp_num == "bsp_248") 
+    {
+      save(cleaned, run1_filter_swapped, run2_filter_swapped, run3_filter_swapped, file = paste0(work_dir,'preprocess2.RData'))      
+    }
+    if(bsp_num == "bsp_247")
+    {
+      save(cleaned, run1_filter_swapped, run2_filter_swapped, file = paste0(work_dir,'preprocess2.RData'))        
+    }
   # evaluate how much droplets are removed in this step
 
 }
@@ -1687,6 +1691,12 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   length(vargenes)
 
   sce_all <- fixedPCA(sce_all, subset.row=vargenes)
+  #   attr(reducedDim(sce), "percentVar")
+  # sum(attr(reducedDim(sce), "percentVar"))
+  print(paste("percentage of variance explained after PAC", sum(attr(reducedDim(sce_all), "percentVar"))))
+  # check the variance explained and the percentage of variance explained.
+
+
   set.seed(100)
   sce_all <- runUMAP(sce_all, dimred='PCA')
   set.seed(100)
@@ -1733,7 +1743,13 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
     # sce_all_corrected <- fastMNN(sce_all, batch=sce_all$run, subset.row = vargenes, get.variance = TRUE)
     sce_all_corrected <- fastMNN(sce_all, batch=sce_all$run, subset.row = NULL, get.variance = TRUE)
     # batch correct all genes
-    sce_all_corrected
+    # variance explained by multiBatchPCA
+    
+    print(paste("variance explained after multiBatchPCA within fastMNN", sce_all_corrected@metadata[["pca.info"]]$var.total))
+    # metadata(sce_all_corrected)$merge.info$lost.var
+    # check ‘percentage of variance that is lost from each batch during orthogonalization’at each batch merge step
+
+    # print(sce_all_corrected@metadata[["pca.info"]]$var.explained)
     
   }else
   {
