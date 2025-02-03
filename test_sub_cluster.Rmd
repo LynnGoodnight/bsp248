@@ -1,0 +1,210 @@
+---
+title: "test_sub-cluster"
+author: "lily"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r }
+getwd()
+# setwd("/mnt/rstudio/lily/bsp248")
+setwd("/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages")
+
+load('clustering_develop_code.RData')
+
+
+library(SingleCellExperiment)
+library(DropletUtils)
+library(scran)
+library(scater)
+library(uwot)
+library(biomaRt)
+library(scds)
+library(batchelor)
+library(ggplot2)
+library(ggbeeswarm)
+library(scater)
+
+sce_corrected = readRDS(file = paste0('sce_',sampSet,'_corrected_initial_cluster.rds'))
+
+sce = readRDS(file = paste0('sce_',sampSet,'_initial_cluster.rds'))
+
+selected_sce <- sce_corrected
+
+UMAP_color_by_cluster <- function(selected_sce, title_flag = "batch effect corrected" )
+{
+  set.seed(55698)
+  umap_plot <- plotUMAP(selected_sce, colour_by="cluster", point_size=0.3,text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6))) + ggtitle(paste(sampSet, title_flag))
+  # Adjust the legend text and title size
+  
+  
+  # Print the plot
+  print(umap_plot)
+  
+  
+  TSNE_plot <- plotTSNE(selected_sce, colour_by="cluster", point_size=0.3,text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6))) + ggtitle(paste(sampSet, title_flag))
+  # print(TSNE_plot)  
+}
+
+
+UMAP_color_by_cluster(sce_corrected, "batch effect corrected" )
+
+cluster_n <- c("5", "14", "16", "15") 
+n_HVG = 5000
+guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_value = 20)
+{
+  selected_cells <- (sce$cluster %in% cluster_n)
+  head(sce$cluster)
+  table(sce$cluster)
+  table(selected_cells)
+  CD4 <- counts(sce)['ENSSSCG00000000687',selected_cells]
+  # the CD4 gene counts of all cells in cluster 8
+  CD8 <- counts(sce)['ENSSSCG00000008213',selected_cells]
+  # the CD8B gene counts of all cells in cluster 8
+  library(scran)
+  # extract all cells in cluster 8, and get the top 1000 (n_HVG) HVG in these cells
+  varmod8 <- modelGeneVar(sce[,selected_cells], block=sce[,selected_cells]$run)
+  vargenes8 <- getTopHVGs(varmod8, n=n_HVG)
+  
+  CD4corr <- vector('numeric', length(vargenes8))
+  CD8corr <- CD4corr
+  KLRK1_corr <- CD4corr
+  KLRB1_corr <- CD4corr
+  
+  # BiocManager::install("scHOT")
+  library(scHOT)
+  # file_path1 = paste0('CD4 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds')
+  # file_path2 = paste0('CD8 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds')
+  # if(file.exists(file_path1) && file.exists(file_path2))
+  # {
+  #   CD4corr = readRDS(file = file_path1)
+  #   CD8corr = readRDS(file = file_path2)
+  # }else
+  # {
+    for(i in 1:length(vargenes8)){
+      
+      # the weightedZIKendall function calculates weighted Tau*, where Tau* is described in Pimentel et al (2015). This association measure is defined for zero-inflated, non-negative random variables.
+      CD4corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000000687', selected_cells],
+                                      logcounts(sce)[vargenes8[i], selected_cells])
+      # # calculate numeric weighted Tau* association value between gene CD4 and each HVG
+      # 
+      # #   ‘exprs(sce)['ENSSSCG00000000687', selected_cells]’ is the log counts of gene CD4 in selected cells.
+      # # ‘exprs(sce)[vargenes8[i], selected_cells]’ is the log counts of one of the HVG gene in selected cells.
+      # 
+      # 
+      CD8corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000008213', selected_cells],
+                                      logcounts(sce)[vargenes8[i], selected_cells])
+      # calculate numeric weighted Tau* association value between gene CD8 and each HVG
+      
+      KLRK1_corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000040465', selected_cells],
+                                         logcounts(sce)[vargenes8[i], selected_cells])
+      KLRB1_corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000039708', selected_cells],
+                                         logcounts(sce)[vargenes8[i], selected_cells])
+      
+      
+    }
+    saveRDS(CD8corr, file = "CD8corr.rds")
+    saveRDS(CD4corr, file = "CD4corr.rds")
+    saveRDS(KLRK1_corr, file = "KLRK1_corr.rds")
+    saveRDS(KLRB1_corr, file = "KLRB1_corr.rds")    
+    
+  # }
+  
+  
+  
+  # select HVGs who positively co-expressed with CD4 and CD8  or have little to no monotonic association with CD4 and CD8 in cells in cluster 8
+  
+  # select HVGs whose association value with CD4 and CD8 both higher than 0.1
+  # A value close to 1 indicates a strong positive association, meaning that as the expression of CD4 increases, the expression of the HVG also tends to increase across the selected cells
+  # - **Value Close to Zero**: Indicates little to no monotonic association between the expression levels of the two genes.
+  related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1),
+                            which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1),)) 
+  top <- vargenes8[related_genes]
+  print(length(top))
+  if (length(top) < 5)
+  {
+    print('too few related genes, not appropriate for guided strategy ')
+    return(sce)
+  }
+  top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213',
+           "ENSSSCG00000039708", 'ENSSSCG00000040465' )
+  top <- unique(top)
+  
+  # we don't batch correct there, but only use fastMNN to reduce the genes we use for downstream sub-cluster
+  # BiocManager::install("batchelor")
+  
+  library(batchelor)
+  set.seed(100)
+  sce_8_fastMNN <- fastMNN(sce[,selected_cells], batch=sce[,selected_cells]$run, 
+                           subset.row = top, get.variance = TRUE)
+  
+  table(sce_8_fastMNN$cluster)
+  # BiocManager::install("scran")
+  library(bluster)
+  library(scran)
+  library(scater)
+  set.seed(200)
+  k_value = 100
+  sce_8_fastMNN_clust <- clusterCells(sce_8_fastMNN,use.dimred="corrected",
+                                      BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy"))
+  
+  # check the number of cells in each sub cluster, and add this annotation
+  
+  print(table(sce_8_fastMNN_clust))
+  sce_8_fastMNN$cluster <- sce_8_fastMNN_clust
+  sce_8_fastMNN <- runUMAP(sce_8_fastMNN, dimred="corrected")
+  sce_8_fastMNN <- runTSNE(sce_8_fastMNN, dimred="corrected")
+  
+  p <- plotUMAP(sce_8_fastMNN, colour_by="cluster", point_size=1) + ggtitle(' cluster')
+  p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
+  print(p)  
+  
+  assays(sce_8_fastMNN)$logcounts <- assays(sce)$logcounts[rownames(sce_8_fastMNN), selected_cells]
+  
+  selected_gene <- rownames(sce)[rowData(sce)$Symbol == 'KLRB1']
+  plotUMAP(sce_8_fastMNN, colour_by=selected_gene, by_exprs_values='logcounts') 
+  # 
+  # 
+  # 
+  # 
+  # # draw the violin plots of the gene expression of CD4 CD8 in each cluster
+  # CD4CD8 <- rownames(sce)[rowData(sce)$hgnc_symbol %in% c('CD4', 'CD8B')]
+  # library(scater)
+  # p <- plotExpression(sce_8_fastMNN, features=CD4CD8, x='cluster', exprs_values='logcounts')
+  # print(p)
+  # 
+  # 
+  # # Ensure sce_8_fastMNN_clust  is a character vector
+  # sce_8_fastMNN_clust  <- as.character(sce_8_fastMNN_clust )
+  # 
+  # ################################################
+  # # # add new sub cluster annotation to sce
+  # 
+  # # Loop through the numbers and assign labels
+  # subcluster_vector <- NULL
+  # for (i in 1:length(unique(sce_8_fastMNN_clust ))) {
+  #   sce_8_fastMNN_clust [sce_8_fastMNN_clust  == as.character(i)] <- paste0(cluster_n, letters[i])
+  #   subcluster_vector <- c(subcluster_vector,paste0(cluster_n, letters[i]))
+  # }
+  # 
+  # # This will assign new sub-cluster '1' as '12a', '2' with '12b', ..., '5' with '12e', ...
+  # 
+  # 
+  # cs <- as.character(sce$cluster)
+  # cs[selected_cells] <- sce_8_fastMNN_clust
+  # sce$cluster <- cs
+  # check_sample_contribution_location_for_selected_subcluster(sce,subcluster_vector)
+  # 
+  
+  return(sce)
+}
+
+sce_test <- guided_unsupervised_recluster(sce,'8',n_HVG = 5000, k_value = 30)
+
+
+```
