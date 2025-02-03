@@ -80,12 +80,15 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   library(scHOT)
   # file_path1 = paste0('CD4 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds')
   # file_path2 = paste0('CD8 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds')
-  # if(file.exists(file_path1) && file.exists(file_path2))
-  # {
-  #   CD4corr = readRDS(file = file_path1)
-  #   CD8corr = readRDS(file = file_path2)
-  # }else
-  # {
+  
+  if(file.exists("KLRB1_corr.rds") && file.exists("KLRK1_corr.rds"))
+  {
+    CD4corr = readRDS(file = "CD4corr.rds")
+    CD8corr = readRDS(file = "CD8corr.rds")
+    KLRK1_corr = readRDS(file = "KLRK1_corr.rds")
+    KLRB1_corr = readRDS(file = "KLRB1_corr.rds")    
+  }else
+  {
     for(i in 1:length(vargenes8)){
       
       # the weightedZIKendall function calculates weighted Tau*, where Tau* is described in Pimentel et al (2015). This association measure is defined for zero-inflated, non-negative random variables.
@@ -113,7 +116,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
     saveRDS(KLRK1_corr, file = "KLRK1_corr.rds")
     saveRDS(KLRB1_corr, file = "KLRB1_corr.rds")    
     
-  # }
+  }
   
   
   
@@ -123,7 +126,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   # A value close to 1 indicates a strong positive association, meaning that as the expression of CD4 increases, the expression of the HVG also tends to increase across the selected cells
   # - **Value Close to Zero**: Indicates little to no monotonic association between the expression levels of the two genes.
   related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1),
-                            which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1),)) 
+                            which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1))) 
   top <- vargenes8[related_genes]
   print(length(top))
   if (length(top) < 5)
@@ -140,10 +143,10 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   
   library(batchelor)
   set.seed(100)
-  sce_8_fastMNN <- fastMNN(sce[,selected_cells], batch=sce[,selected_cells]$run, 
+  sce_8_fastMNN <- fastMNN(sce[,selected_cells], batch=sce[,selected_cells]$run,
                            subset.row = top, get.variance = TRUE)
   
-  table(sce_8_fastMNN$cluster)
+
   # BiocManager::install("scran")
   library(bluster)
   library(scran)
@@ -167,7 +170,8 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   assays(sce_8_fastMNN)$logcounts <- assays(sce)$logcounts[rownames(sce_8_fastMNN), selected_cells]
   
   selected_gene <- rownames(sce)[rowData(sce)$Symbol == 'KLRB1']
-  plotUMAP(sce_8_fastMNN, colour_by=selected_gene, by_exprs_values='logcounts') 
+  plotUMAP(sce_8_fastMNN, colour_by=selected_gene, by_exprs_values='logcounts')
+  save.image("clustering_develop_code2.RData")
   # 
   # 
   # 

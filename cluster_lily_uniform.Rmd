@@ -246,7 +246,7 @@ draw_UMAP_after_sampling(sce_corrected, "batch effect corrected" )
 draw_UMAP_after_sampling(sce, "original, no batch effect correction")
 ```
 
-### colour cluster plot by condition, also sub-dividing controls to bal/lung
+### colour cluster plot by condition
 ```{r draw a bar plot to visulize the composition of each virus within each cluster}
 # sce_corrected <- sce_run_x_corrected
 
@@ -281,16 +281,6 @@ ggplot(sil.data, aes(x=cluster, y=width, colour=closest)) +
 
 ```
 
-#### for run 1:
-This shows some potential issues particularly with clusters 3, 12 and 14.
-
-#### for run 2:
-This shows some potential issues particularly with clusters 1, 15, 19 and 20.
-moderate issues for clusters: 3 4 8 9
-
-#### for run 3:
-This shows some potential issues particularly with clusters  3 8  16.
-1 12 15
 ### check cluster purity:
 To better separate the factors that contribute to this metric, we'll divide out purity and heterogeneity, first looking at cluster purity. Here again cells are coloured according to their nearest cluster if their purity is particularly low.
 
@@ -348,33 +338,6 @@ print(paste(sum(summary_purity_df$misclassifed_counts),sum(summary_purity_df$mis
 
 
 from the table and UMAP, we can see the cells with low purity values always locate at the interface area with adjacent clusters
-
-#### for run 1:
-Here it looks like the lowest purity is in clusters 2, 3, 8.
-
-5, 9, 14, 17 is somewhat un-pure, which may have contributed to the silhouette width results
-
-observe the location of these clusters in UMAP plot, we can find these clusters locate quiet close to other clusters, some cells classified as one cluster actually locate closer to adjacent clusters. which indicate some cells might get mis-classified.
-
-while cluster 12 looks extremely pure, suggesting its issue is more likely within cluster heterogeneity.
-
-
-#### for run 2:
-Here it looks like the lowest purity is in clusters 1 3 4 8 19.
-
-9 is somewhat un-pure, which may have contributed to the silhouette width results
-
-in UMAP plot, we can find these clusters  locate quiet close to other clusters, some cells classified as one cluster actually locate closer to adjacent clusters. which indicate some cells might get mis-classified.
-
-while cluster 15, 20 looks extremely pure, suggesting its issue is more likely within cluster heterogeneity.
-
-
-#### for run 3:
-Here it looks like the lowest purity is in clusters 5 16.
-
-3 8 9 is somewhat un-pure, which may have contributed to the silhouette width results
-
-while cluster 1 12 15 looks extremely pure, suggesting its issue is more likely within cluster heterogeneity.
 
 in UMAP plot, we can find some clusters locate quiet close to other clusters, some cells classified as one cluster actually locate closer to adjacent clusters. which indicate some cells might get mis-classified.
 
@@ -588,106 +551,106 @@ cluster 14 has a little percentage of suspected doublets. Let's look at this clu
 
 we also check cluster 12 to explore if it contain doublets or cells from multiple cell types since it has high heterogeneity and very pure.
 
-<!-- ```{r check doublets distribution and marker gene expression of suspicious clusters, fig.width=12} -->
-<!-- library(patchwork) -->
-<!-- visulize_doublets_markers <- function(selected_sce,selected_cluster = '14')  -->
-<!-- { -->
-<!--   p1 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by="Sample", point_size=1)+ggtitle(paste('cluster', selected_cluster)) -->
-<!--   # print(p) -->
-<!--   p2 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by="query_doublet", point_size=1)+ggtitle(paste('cluster', selected_cluster)) -->
+```{r check doublets distribution and marker gene expression of suspicious clusters, fig.width=12}
+# library(patchwork)
+# visulize_doublets_markers <- function(selected_sce,selected_cluster = '14')
+# {
+#   p1 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by="Sample", point_size=1)+ggtitle(paste('cluster', selected_cluster))
+#   # print(p)
+#   p2 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by="query_doublet", point_size=1)+ggtitle(paste('cluster', selected_cluster))
+# 
+# 
+#   ## PAX5
+#   PAX5 <- rownames(sce)[rowData(sce)$Symbol == 'PAX5']
+#   p3 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=PAX5, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'B cells (PAX5)', 'uncorrected'))
+# 
+#   p1 <- p1 + coord_fixed() +
+#     theme(legend.position = "right", aspect.ratio = 1)
+# 
+#   p2 <- p2 + coord_fixed() +
+#     theme(legend.position = "right", aspect.ratio = 1)
+# 
+#   p3 <- p3 + coord_fixed() +
+#     theme(legend.position = "right", aspect.ratio = 1)
+# 
+# 
+#   p_combined <- (p1 | p2 | p3) &
+#     plot_layout( guides = "collect")
+# 
+#   # Print the combined plot
+#   print(p_combined)
+# 
+# 
+#   ## CD163
+#   CD163 <- rownames(sce)[rowData(sce)$Symbol == 'CD163']
+#   p1 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=CD163, by_exprs_values='logcounts') + ggtitle(paste(sampSet,'cluster', selected_cluster, 'macrophage (CD163)', 'uncorrected'))
+#   # print(p)
+# 
+# 
+#   ## HNMT
+#   HNMT <- rownames(sce)[rowData(sce)$Symbol == 'HNMT']
+#   p2 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=HNMT, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'myeloid (HNMT)', 'uncorrected'))
+#   # print(p)
+# 
+#   ## CD3E
+#   CD3E <- rownames(sce)[rowData(sce)$Symbol == 'CD3E']
+#   p3 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=CD3E, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'T cells (CD3E)', 'uncorrected'))
+#   # print(p)
+#   color_set <- c("blue", "green", "yellow")
+# 
+#   p1 <- p1 + coord_fixed() +
+#     scale_color_gradientn(colors = color_set) +
+#     theme(legend.position = "right", aspect.ratio = 1)
+# 
+#   p2 <- p2 + coord_fixed() +
+#     scale_color_gradientn( colors = color_set) +
+#     theme(legend.position = "right", aspect.ratio = 1)
+# 
+#   p3 <- p3 + coord_fixed() +
+#     scale_color_gradientn( colors = color_set) +
+#     theme(legend.position = "right", aspect.ratio = 1)
+# 
+#   # Combine plots with patchwork side by side
+#   p_combined <- (p1 | p2 | p3) &
+#     plot_layout( guides = "collect")
+# 
+#   # Print the combined plot
+#   print(p_combined)
+# 
+# 
+# 
+# 
+# }
+# if(sampSet == 'run_1' )
+# {
+#     visulize_doublets_markers(selected_sce,'8')
+#     visulize_doublets_markers(selected_sce,'12')
+#     visulize_doublets_markers(selected_sce,'14')
+#     visulize_doublets_markers(selected_sce,'18')
+#     visulize_doublets_markers(selected_sce,'19')
+# 
+# }
+# 
+# if(sampSet == 'run_2' )
+# {
+#   visulize_doublets_markers(selected_sce,'1')
+#   visulize_doublets_markers(selected_sce,'15')
+#   visulize_doublets_markers(selected_sce,'19')
+# 
+# }
+```
+#### for run 1:
+it's hard to observe these suspected doublets in cluster 14 express 2 marker genes at same time apparently. cluster 14 might be fine.
+
+cluster 12 only has a few predicted doublets, and cluster 12 express CD163 clearly.
 
 
-<!--   ## PAX5  -->
-<!--   PAX5 <- rownames(sce)[rowData(sce)$Symbol == 'PAX5'] -->
-<!--   p3 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=PAX5, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'B cells (PAX5)', 'uncorrected')) -->
-
-<!--   p1 <- p1 + coord_fixed() + -->
-<!--     theme(legend.position = "right", aspect.ratio = 1)  -->
-
-<!--   p2 <- p2 + coord_fixed() + -->
-<!--     theme(legend.position = "right", aspect.ratio = 1) -->
-
-<!--   p3 <- p3 + coord_fixed() + -->
-<!--     theme(legend.position = "right", aspect.ratio = 1) -->
-
-
-<!--   p_combined <- (p1 | p2 | p3) & -->
-<!--     plot_layout( guides = "collect")  -->
-
-<!--   # Print the combined plot -->
-<!--   print(p_combined) -->
-
-
-<!--   ## CD163 -->
-<!--   CD163 <- rownames(sce)[rowData(sce)$Symbol == 'CD163'] -->
-<!--   p1 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=CD163, by_exprs_values='logcounts') + ggtitle(paste(sampSet,'cluster', selected_cluster, 'macrophage (CD163)', 'uncorrected')) -->
-<!--   # print(p)  -->
-
-
-<!--   ## HNMT  -->
-<!--   HNMT <- rownames(sce)[rowData(sce)$Symbol == 'HNMT'] -->
-<!--   p2 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=HNMT, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'myeloid (HNMT)', 'uncorrected')) -->
-<!--   # print(p) -->
-
-<!--   ## CD3E  -->
-<!--   CD3E <- rownames(sce)[rowData(sce)$Symbol == 'CD3E'] -->
-<!--   p3 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=CD3E, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'T cells (CD3E)', 'uncorrected')) -->
-<!--   # print(p) -->
-<!--   color_set <- c("blue", "green", "yellow") -->
-
-<!--   p1 <- p1 + coord_fixed() + -->
-<!--     scale_color_gradientn(colors = color_set) +  -->
-<!--     theme(legend.position = "right", aspect.ratio = 1)  -->
-
-<!--   p2 <- p2 + coord_fixed() + -->
-<!--     scale_color_gradientn( colors = color_set) + -->
-<!--     theme(legend.position = "right", aspect.ratio = 1) -->
-
-<!--   p3 <- p3 + coord_fixed() + -->
-<!--     scale_color_gradientn( colors = color_set) + -->
-<!--     theme(legend.position = "right", aspect.ratio = 1) -->
-
-<!--   # Combine plots with patchwork side by side -->
-<!--   p_combined <- (p1 | p2 | p3) & -->
-<!--     plot_layout( guides = "collect")  -->
-
-<!--   # Print the combined plot -->
-<!--   print(p_combined) -->
+```{r draw heatmap to compare the suspicious clusters with other clusters}
+### make some heatmaps of macrophages, B cells, and cluster 11, selecting marker genes from each subset to examine within cluster 11
 
 
 
-
-<!-- } -->
-<!-- if(sampSet == 'run_1' ) -->
-<!-- { -->
-<!--     visulize_doublets_markers(selected_sce,'8') -->
-<!--     visulize_doublets_markers(selected_sce,'12') -->
-<!--     visulize_doublets_markers(selected_sce,'14') -->
-<!--     visulize_doublets_markers(selected_sce,'18') -->
-<!--     visulize_doublets_markers(selected_sce,'19') -->
-
-<!-- } -->
-
-<!-- if(sampSet == 'run_2' ) -->
-<!-- { -->
-<!--   visulize_doublets_markers(selected_sce,'1') -->
-<!--   visulize_doublets_markers(selected_sce,'15') -->
-<!--   visulize_doublets_markers(selected_sce,'19') -->
-
-<!-- } -->
-<!-- ``` -->
-<!-- #### for run 1: -->
-<!-- it's hard to observe these suspected doublets in cluster 14 express 2 marker genes at same time apparently. cluster 14 might be fine. -->
-
-<!-- cluster 12 only has a few predicted doublets, and cluster 12 express CD163 clearly.  -->
-
-
-<!-- ```{r draw heatmap to compare the suspicious clusters with other clusters} -->
-<!-- ### make some heatmaps of macrophages, B cells, and cluster 11, selecting marker genes from each subset to examine within cluster 11 -->
-
-
-
-<!-- ``` -->
+```
 
 # save workspace image
 ```{r save workspace image after first time clustering}
@@ -702,303 +665,295 @@ saveRDS(sce, file = paste0('sce_',sampSet,'_initial_cluster.rds'))
 
 ```
 
-<!-- # sub cluster certain clusters -->
-<!-- Upon closer inspection and attempted annotation, we discovered that there are a couple of clusters that might benefit from subclustering. -->
-<!-- #### for run 1: -->
-<!-- Specifically, clusters 8,9,11,12 are composed of a mixture of CD4, NK, cDC, Monocytes,  CD8 T cells, and to run differential abundance analyses according to sorted cell types we'll need to separate these. -->
+# sub cluster certain clusters
+Upon closer inspection and attempted annotation, we discovered that there are a couple of clusters that might benefit from subclustering.
+#### for run 1:
+Specifically, clusters 8,9,11,12 are composed of a mixture of CD4, NK, cDC, Monocytes,  CD8 T cells, and to run differential abundance analyses according to sorted cell types we'll need to separate these.
 
 
 
-<!-- ### unsupervised CD4 CD8 guided sub-clustering -->
-<!-- #### for run 1: -->
-<!-- In an ideal world, for example, CD4 and CD8 T cell-associated genes would dominate the highly variable genes and enable unsupervised sub-clustering to separate the cell types. -->
-<!-- ```{r create a function to visulize sub clusters in UMAP} -->
+### unsupervised CD4 CD8 guided sub-clustering
+#### for run 1:
+In an ideal world, for example, CD4 and CD8 T cell-associated genes would dominate the highly variable genes and enable unsupervised sub-clustering to separate the cell types.
+```{r create a function to visulize sub clusters in UMAP}
 
 
-<!-- # check the location of these 4 sub clusters in UMAP -->
+# check the location of these 4 sub clusters in UMAP
 
-<!-- check_sample_contribution_location_for_selected_subcluster <- function(selected_sce,cluster_n = c('8a','8b','8c')) -->
-<!--   { -->
-<!--   # check the sample contribution for cluster -->
-<!--   the_cluster <- prop.table(table(selected_sce$cluster, selected_sce$Sample), margin=1)[cluster_n,] -->
+check_sample_contribution_location_for_selected_subcluster <- function(selected_sce,cluster_n = c('8a','8b','8c'))
+  {
+  # check the sample contribution for cluster
+  the_cluster <- prop.table(table(selected_sce$cluster, selected_sce$Sample), margin=1)[cluster_n,]
 
 
-<!--   the_cluster <- as.data.frame(the_cluster) -->
-<!--   colnames(the_cluster) <- c('sub_cluster','sample','contribution' ) -->
+  the_cluster <- as.data.frame(the_cluster)
+  colnames(the_cluster) <- c('sub_cluster','sample','contribution' )
 
 
-<!--   p <-   ggplot(data=the_cluster, aes(x = sub_cluster , y=contribution, fill=sample)) + -->
-<!--     geom_bar(stat="identity")  + ggtitle('sample contribution in sub_cluster') -->
+  p <-   ggplot(data=the_cluster, aes(x = sub_cluster , y=contribution, fill=sample)) +
+    geom_bar(stat="identity")  + ggtitle('sample contribution in sub_cluster')
 
-<!--   print(p) -->
+  print(p)
 
-<!--   p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="Sample", point_size=1) + ggtitle('sub cluster') -->
-<!--   print(p) -->
+  p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="Sample", point_size=1) + ggtitle('sub cluster')
+  print(p)
 
-<!--   p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="condition", point_size=1) + ggtitle('sub cluster') -->
-<!--   print(p) -->
+  p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="condition", point_size=1) + ggtitle('sub cluster')
+  print(p)
 
-<!--   p <- plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="cluster", point_size=1) + ggtitle('sub cluster') -->
-<!--   p <- p + guides(colour = guide_legend(override.aes = list(size=6))) -->
-<!--   print(p) -->
+  p <- plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="cluster", point_size=1) + ggtitle('sub cluster')
+  p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
+  print(p)
 
-<!--   } -->
+  }
 
 
 
-<!-- ``` -->
+```
 
 
 
-<!-- ```{r CD4 CD8 guided unsupervised subcluster } -->
-<!-- guided_unsupervised_subcluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_value = 20) -->
-<!--   { -->
-<!--   c8 <- sce$cluster == cluster_n -->
+```{r CD4 CD8 guided unsupervised subcluster }
+guided_unsupervised_subcluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_value = 20)
+  {
+  c8 <- sce$cluster == cluster_n
 
-<!--   CD4 <- counts(sce)['ENSSSCG00000000687',c8] -->
-<!--   # the CD4 gene counts of all cells in cluster 8 -->
-<!--   CD8 <- counts(sce)['ENSSSCG00000008213',c8] -->
-<!--   # the CD8B gene counts of all cells in cluster 8 -->
-<!--   library(scran) -->
-<!--   # extract all cells in cluster 8, and get the top 1000 (n_HVG) HVG in these cells -->
-<!--   varmod8 <- modelGeneVar(sce[,c8], block=sce[,c8]$run) -->
-<!--   vargenes8 <- getTopHVGs(varmod8, n=n_HVG) -->
+  CD4 <- counts(sce)['ENSSSCG00000000687',c8]
+  # the CD4 gene counts of all cells in cluster 8
+  CD8 <- counts(sce)['ENSSSCG00000008213',c8]
+  # the CD8B gene counts of all cells in cluster 8
+  library(scran)
+  # extract all cells in cluster 8, and get the top 1000 (n_HVG) HVG in these cells
+  varmod8 <- modelGeneVar(sce[,c8], block=sce[,c8]$run)
+  vargenes8 <- getTopHVGs(varmod8, n=n_HVG)
 
-<!--   CD4corr <- vector('numeric', length(vargenes8)) -->
-<!--   CD8corr <- CD4corr -->
+  CD4corr <- vector('numeric', length(vargenes8))
+  CD8corr <- CD4corr
 
-<!--   # BiocManager::install("scHOT") -->
-<!--   library(scHOT) -->
-<!--   file_path1 = paste0('CD4 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds') -->
-<!--   file_path2 = paste0('CD8 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds') -->
-<!--   if(file.exists(file_path1) && file.exists(file_path2)) -->
-<!--   { -->
-<!--     CD4corr = readRDS(file = file_path1) -->
-<!--     CD8corr = readRDS(file = file_path2) -->
-<!--   }else -->
-<!--   { -->
-<!--     for(i in 1:length(vargenes8)){ -->
+  # BiocManager::install("scHOT")
+  library(scHOT)
+  file_path1 = paste0('CD4 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds')
+  file_path2 = paste0('CD8 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds')
+  if(file.exists(file_path1) && file.exists(file_path2))
+  {
+    CD4corr = readRDS(file = file_path1)
+    CD8corr = readRDS(file = file_path2)
+  }else
+  {
+    for(i in 1:length(vargenes8)){
 
-<!--       # the weightedZIKendall function calculates weighted Tau*, where Tau* is described in Pimentel et al (2015). This association measure is defined for zero-inflated, non-negative random variables. -->
-<!--       CD4corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000000687', c8], -->
-<!--                                    logcounts(sce)[vargenes8[i], c8]) -->
-<!--     # calculate numeric weighted Tau* association value between gene CD4 and each HVG -->
+      # the weightedZIKendall function calculates weighted Tau*, where Tau* is described in Pimentel et al (2015). This association measure is defined for zero-inflated, non-negative random variables.
+      CD4corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000000687', c8],
+                                   logcounts(sce)[vargenes8[i], c8])
+    # calculate numeric weighted Tau* association value between gene CD4 and each HVG
 
-<!--     #   ‘exprs(sce)['ENSSSCG00000000687', c8]’ is the log counts of gene CD4 in selected cells. -->
-<!--     # ‘exprs(sce)[vargenes8[i], c8]’ is the log counts of one of the HVG gene in selected cells. -->
+    #   ‘exprs(sce)['ENSSSCG00000000687', c8]’ is the log counts of gene CD4 in selected cells.
+    # ‘exprs(sce)[vargenes8[i], c8]’ is the log counts of one of the HVG gene in selected cells.
 
 
-<!--       CD8corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000008213', c8], -->
-<!--                                    logcounts(sce)[vargenes8[i], c8]) -->
-<!--       # calculate numeric weighted Tau* association value between gene CD8 and each HVG -->
-<!--     } -->
-<!--     saveRDS(CD8corr, file = file_path2) -->
-<!--     saveRDS(CD4corr, file = file_path1) -->
+      CD8corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000008213', c8],
+                                   logcounts(sce)[vargenes8[i], c8])
+      # calculate numeric weighted Tau* association value between gene CD8 and each HVG
+    }
+    saveRDS(CD8corr, file = file_path2)
+    saveRDS(CD4corr, file = file_path1)
 
-<!--   } -->
+  }
 
 
 
-<!--   # select HVGs who positively co-expressed with CD4 and CD8  or have little to no monotonic association with CD4 and CD8 in cells in cluster 8 -->
+  # select HVGs who positively co-expressed with CD4 and CD8  or have little to no monotonic association with CD4 and CD8 in cells in cluster 8
 
-<!--   # select HVGs whose association value with CD4 and CD8 both higher than 0.1 -->
-<!--   # A value close to 1 indicates a strong positive association, meaning that as the expression of CD4 increases, the expression of the HVG also tends to increase across the selected cells -->
-<!--   # - **Value Close to Zero**: Indicates little to no monotonic association between the expression levels of the two genes. -->
-
-<!--   top <- vargenes8[c(which(CD4corr > 0.1), which(CD8corr > 0.1))] -->
-<!--   print(length(top)) -->
-<!--   if (length(top) < 5) -->
-<!--   { -->
-<!--     print('too few related genes, not appropriate for guided strategy ') -->
-<!--     return(sce) -->
-<!--   } -->
-<!--   top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213') -->
-<!--   top <- top[!duplicated(top)] -->
-
-<!--   # we don't batch correct there, but only reduce the genes we use for downstream sub-cluster -->
-<!--   # BiocManager::install("batchelor") -->
-
-<!--   library(batchelor) -->
-<!--   set.seed(100) -->
-<!--   sce_8_fastMNN <- fastMNN(sce[,c8], batch=sce[,c8]$run, subset.row = top, get.variance = TRUE) -->
-
-
-<!--   # BiocManager::install("scran") -->
-<!--   library(scran) -->
-<!--   set.seed(200) -->
-<!--   sce_8_fastMNN_clust <- clusterCells(sce_8_fastMNN,use.dimred="corrected", -->
-<!--                                       BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy")) -->
-
-<!--   # check the number of cells in each sub cluster, and add this annotation -->
-
-<!--   print(table(sce_8_fastMNN_clust)) -->
-<!--   sce_8_fastMNN$cluster <- sce_8_fastMNN_clust -->
-<!--   assays(sce_8_fastMNN)$logcounts <- assays(sce)$logcounts[rownames(sce_8_fastMNN), c8] -->
-
-<!--   # draw the violin plots of the gene expression of CD4 CD8 in each cluster -->
-<!--   CD4CD8 <- rownames(sce)[rowData(sce)$hgnc_symbol %in% c('CD4', 'CD8B')] -->
-<!--   library(scater) -->
-<!--   p <- plotExpression(sce_8_fastMNN, features=CD4CD8, x='cluster', exprs_values='logcounts') -->
-<!--   print(p) -->
-
-<!--     ################################# -->
-<!--     # Ensure sce_8_fastMNN_clust  is a character vector -->
-<!--   sce_8_fastMNN_clust  <- as.character(sce_8_fastMNN_clust ) -->
-
-<!--   # Loop through the numbers and assign labels -->
-<!--   subcluster_vector <- NULL -->
-<!--   for (i in 1:length(unique(sce_8_fastMNN_clust ))) { -->
-<!--     sce_8_fastMNN_clust [sce_8_fastMNN_clust  == as.character(i)] <- paste0(cluster_n, letters[i]) -->
-<!--     subcluster_vector <- c(subcluster_vector,paste0(cluster_n, letters[i])) -->
-<!--   } -->
-
-<!--   # This will assign '1' with '12a', '2' with '12b', ..., '5' with '12e', ... -->
-
-
-<!--     cs <- as.character(sce$cluster) -->
-<!--     cs[c8] <- sce_8_fastMNN_clust -->
-<!--     sce$cluster <- cs -->
-<!--     check_sample_contribution_location_for_selected_subcluster(sce,subcluster_vector) -->
-
-<!--   ################################################ -->
-<!--   # # add new sub cluster annotation to sce -->
-<!--   # sce_8_fastMNN_clust <- as.character(sce_8_fastMNN_clust) -->
-<!--   # sce_8_fastMNN_clust[sce_8_fastMNN_clust == '1'] <- '8a' -->
-<!--   # sce_8_fastMNN_clust[sce_8_fastMNN_clust == '2'] <- '8b' -->
-<!--   # sce_8_fastMNN_clust[sce_8_fastMNN_clust == '3'] <- '8c' -->
-<!--   # cs <- as.character(sce$cluster) -->
-<!--   # cs[c8] <- sce_8_fastMNN_clust -->
-<!--   # sce$cluster <- cs -->
-<!--     return(sce) -->
-<!--   } -->
-<!-- if(sampSet == 'run_1' ) -->
-<!-- { -->
-<!--   sce <- guided_unsupervised_subcluster(sce,'8',n_HVG = 1000, k_value = 30) -->
-<!--   sce <- guided_unsupervised_subcluster(sce,'14',n_HVG = 1000, k_value = 20) -->
-<!-- } -->
-<!-- if(sampSet == 'run_2' ) -->
-<!-- { -->
-<!--   sce <- guided_unsupervised_subcluster(sce,'9', n_HVG = 1000, k_value = 30) -->
-<!-- } -->
-
-<!-- ``` -->
-
-<!-- #### for run 1: -->
-<!-- This subclusters nicely. So let's change cluster 8 labels to 8a, 8b, 8c to reflect the sub-setting. -->
-
-
-<!-- ### unsupervised no guided gene sub-clustering -->
-
-<!-- ```{r no guided gene unsupervised subcluster } -->
-<!-- unguided_unsupervised_subcluster <- function(sce, cluster_n = '12',n_HVG = 2000, k_value = 20) -->
-<!-- { -->
-<!-- # try cluster 12 run 1 -->
-<!--   c12 <- (sce$cluster == cluster_n) -->
-<!--   varmod12 <- modelGeneVar(sce[,c12], block=sce[,c12]$run) -->
-<!--   vargenes12 <- getTopHVGs(varmod12, n=n_HVG) -->
-
-<!--   set.seed(100) -->
-<!--   sce_12 <- fastMNN(sce[,c12], batch=sce[,c12]$run, subset.row = vargenes12, get.variance = TRUE) -->
-<!--   library(scran) -->
-<!--   set.seed(200) -->
-<!--   sce_12_clust <- clusterCells(sce_12, use.dimred="corrected", -->
-<!-- BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy" )) -->
-
-<!--   print(table(sce_12_clust)) -->
-
-
-<!--   # Ensure sce_12_clust is a character vector -->
-<!--   sce_12_clust <- as.character(sce_12_clust) -->
-
-<!--   # Loop through the numbers and assign labels -->
-<!--   subcluster_vector <- NULL -->
-<!--   for (i in 1:length(unique(sce_12_clust))) { -->
-<!--     sce_12_clust[sce_12_clust == as.character(i)] <- paste0(cluster_n, letters[i]) -->
-<!--     subcluster_vector <- c(subcluster_vector,paste0(cluster_n, letters[i])) -->
-<!--   } -->
-<!--   # This will assign '1' with '12a', '2' with '12b', ..., '5' with '12e', ... -->
-
-
-<!--   cs <- as.character(sce$cluster) -->
-<!--   cs[c12] <- sce_12_clust -->
-<!--   sce$cluster <- cs -->
-<!--   check_sample_contribution_location_for_selected_subcluster(sce,subcluster_vector) -->
-
-
-<!--   return(sce) -->
-<!-- } -->
-<!-- if(sampSet == 'run_1') -->
-<!-- { -->
-<!--   sce <- unguided_unsupervised_subcluster(sce,'3',n_HVG = 2000, k_value = 20) -->
-<!--   sce <- unguided_unsupervised_subcluster(sce,'9',n_HVG = 2000, k_value = 40) -->
-<!--   sce <- unguided_unsupervised_subcluster(sce,'11', n_HVG = 1000, k_value = 50) -->
-<!--   sce <- unguided_unsupervised_subcluster(sce,'12',n_HVG = 2000, k_value = 50) -->
-<!-- } -->
-
-<!-- if(sampSet == 'run_2') -->
-<!-- { -->
-<!--   sce <- unguided_unsupervised_subcluster(sce,'2',n_HVG = 1000, k_value = 50) -->
-<!--   sce <- unguided_unsupervised_subcluster(sce,'4',n_HVG = 2000, k_value = 40) -->
-<!--   sce <- unguided_unsupervised_subcluster(sce,'15', n_HVG = 2000, k_value = 50) -->
-<!--   sce <- unguided_unsupervised_subcluster(sce, '19',n_HVG = 2000, k_value = 30) -->
-
-<!-- } -->
-
-<!-- ``` -->
-
-
-
-<!-- ```{r check the subclusters QC metrics } -->
-<!-- visulize_QC_doublets_RMDS <- function(sce_corrected) -->
-<!--   { -->
-<!--   rmsd <- clusterRMSD(reducedDim(sce_corrected, "corrected"), sce_corrected$cluster) -->
-
-<!--   df <- as.data.frame(rmsd) -->
-<!--   df$cluster <- as.factor(unique(sce_corrected$cluster)) -->
-
-<!--   library(ggplot2) -->
-<!--   # Basic barplot -->
-<!--   p  <- ggplot(data=df, aes(x=cluster, y=rmsd)) + -->
-<!--     geom_bar(stat="identity")+ -->
-<!--     geom_text(aes(label=cluster), vjust=-0.3, size=3.5) + -->
-<!--     ggtitle("examine heterogeneity within each cluster") -->
-<!--   print(p) -->
-
-<!--   ######################## -->
-<!--   QC.tab <- data.frame(colData(sce_corrected)[,c('cluster', 'sum_counts', 'mito_proportion', 'genes_detected')]) -->
-
-<!--   p <-  ggplot(QC.tab, aes(x=cluster, y=log2(sum_counts) )) + -->
-<!--     ggbeeswarm::geom_quasirandom(method="smiley") -->
-<!--   print(p) -->
-
-
-<!--   p <-  ggplot(QC.tab, aes(x=cluster, y=log2(genes_detected) )) + -->
-<!--     ggbeeswarm::geom_quasirandom(method="smiley") -->
-<!--   print(p) -->
-
-<!--   p <-  ggplot(QC.tab, aes(x=cluster, y=mito_proportion)) + -->
-<!--     ggbeeswarm::geom_quasirandom(method="smiley") -->
-<!--   print(p) -->
-
-<!--   ######################## -->
-
-<!--   # visualize cxds_score and estimated Doublet in each cluster -->
-
-<!--   doublet.tab <- data.frame(colData(sce_corrected)[,c('cxds_score', 'cluster', 'query_doublet', 'sum_counts')]) -->
-
-<!--   p <-  ggplot(doublet.tab, aes(x=cluster, y=cxds_score, colour=query_doublet)) + -->
-<!--       ggbeeswarm::geom_quasirandom(method="smiley") -->
-<!--   print(p) -->
-<!--   p <-  ggplot(doublet.tab, aes(x=cluster, y=sum_counts, colour=query_doublet)) + -->
-<!--       ggbeeswarm::geom_quasirandom(method="smiley") -->
-<!--   print(p) -->
-
-<!--   } -->
-<!-- sce_corrected$cluster <- sce$cluster -->
-<!-- visulize_QC_doublets_RMDS(sce_corrected) -->
-
-
-<!-- ``` -->
+  # select HVGs whose association value with CD4 and CD8 both higher than 0.1
+  # A value close to 1 indicates a strong positive association, meaning that as the expression of CD4 increases, the expression of the HVG also tends to increase across the selected cells
+  # - **Value Close to Zero**: Indicates little to no monotonic association between the expression levels of the two genes.
+
+  top <- vargenes8[c(which(CD4corr > 0.1), which(CD8corr > 0.1))]
+  print(length(top))
+  if (length(top) < 5)
+  {
+    print('too few related genes, not appropriate for guided strategy ')
+    return(sce)
+  }
+  top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213')
+  top <- top[!duplicated(top)]
+
+  # we don't batch correct there, but only reduce the genes we use for downstream sub-cluster
+  # BiocManager::install("batchelor")
+
+  library(batchelor)
+  set.seed(100)
+  sce_8_fastMNN <- fastMNN(sce[,c8], batch=sce[,c8]$run, subset.row = top, get.variance = TRUE)
+
+
+  # BiocManager::install("scran")
+  library(scran)
+  set.seed(200)
+  sce_8_fastMNN_clust <- clusterCells(sce_8_fastMNN,use.dimred="corrected",
+                                      BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy"))
+
+  # check the number of cells in each sub cluster, and add this annotation
+
+  print(table(sce_8_fastMNN_clust))
+  sce_8_fastMNN$cluster <- sce_8_fastMNN_clust
+  assays(sce_8_fastMNN)$logcounts <- assays(sce)$logcounts[rownames(sce_8_fastMNN), c8]
+
+  # draw the violin plots of the gene expression of CD4 CD8 in each cluster
+  CD4CD8 <- rownames(sce)[rowData(sce)$hgnc_symbol %in% c('CD4', 'CD8B')]
+  library(scater)
+  p <- plotExpression(sce_8_fastMNN, features=CD4CD8, x='cluster', exprs_values='logcounts')
+  print(p)
+
+    #################################
+    # Ensure sce_8_fastMNN_clust  is a character vector
+  sce_8_fastMNN_clust  <- as.character(sce_8_fastMNN_clust )
+
+  # Loop through the numbers and assign labels
+  subcluster_vector <- NULL
+  for (i in 1:length(unique(sce_8_fastMNN_clust ))) {
+    sce_8_fastMNN_clust [sce_8_fastMNN_clust  == as.character(i)] <- paste0(cluster_n, letters[i])
+    subcluster_vector <- c(subcluster_vector,paste0(cluster_n, letters[i]))
+  }
+
+  # This will assign '1' with '12a', '2' with '12b', ..., '5' with '12e', ...
+
+
+    cs <- as.character(sce$cluster)
+    cs[c8] <- sce_8_fastMNN_clust
+    sce$cluster <- cs
+    check_sample_contribution_location_for_selected_subcluster(sce,subcluster_vector)
+
+
+    return(sce)
+  }
+if(sampSet == 'run_1' )
+{
+  sce <- guided_unsupervised_subcluster(sce,'8',n_HVG = 1000, k_value = 30)
+  sce <- guided_unsupervised_subcluster(sce,'14',n_HVG = 1000, k_value = 20)
+}
+if(sampSet == 'run_2' )
+{
+  sce <- guided_unsupervised_subcluster(sce,'9', n_HVG = 1000, k_value = 30)
+}
+
+```
+
+#### for run 1:
+This subclusters nicely. So let's change cluster 8 labels to 8a, 8b, 8c to reflect the sub-setting.
+
+
+### unsupervised no guided gene sub-clustering
+
+```{r no guided gene unsupervised subcluster }
+unguided_unsupervised_subcluster <- function(sce, cluster_n = '12',n_HVG = 2000, k_value = 20)
+{
+# try cluster 12 run 1
+  c12 <- (sce$cluster == cluster_n)
+  varmod12 <- modelGeneVar(sce[,c12], block=sce[,c12]$run)
+  vargenes12 <- getTopHVGs(varmod12, n=n_HVG)
+
+  set.seed(100)
+  sce_12 <- fastMNN(sce[,c12], batch=sce[,c12]$run, subset.row = vargenes12, get.variance = TRUE)
+  library(scran)
+  set.seed(200)
+  sce_12_clust <- clusterCells(sce_12, use.dimred="corrected",
+BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy" ))
+
+  print(table(sce_12_clust))
+
+
+  # Ensure sce_12_clust is a character vector
+  sce_12_clust <- as.character(sce_12_clust)
+
+  # Loop through the numbers and assign labels
+  subcluster_vector <- NULL
+  for (i in 1:length(unique(sce_12_clust))) {
+    sce_12_clust[sce_12_clust == as.character(i)] <- paste0(cluster_n, letters[i])
+    subcluster_vector <- c(subcluster_vector,paste0(cluster_n, letters[i]))
+  }
+  # This will assign '1' with '12a', '2' with '12b', ..., '5' with '12e', ...
+
+
+  cs <- as.character(sce$cluster)
+  cs[c12] <- sce_12_clust
+  sce$cluster <- cs
+  check_sample_contribution_location_for_selected_subcluster(sce,subcluster_vector)
+
+
+  return(sce)
+}
+if(sampSet == 'run_1')
+{
+  sce <- unguided_unsupervised_subcluster(sce,'3',n_HVG = 2000, k_value = 20)
+  sce <- unguided_unsupervised_subcluster(sce,'9',n_HVG = 2000, k_value = 40)
+  sce <- unguided_unsupervised_subcluster(sce,'11', n_HVG = 1000, k_value = 50)
+  sce <- unguided_unsupervised_subcluster(sce,'12',n_HVG = 2000, k_value = 50)
+}
+
+if(sampSet == 'run_2')
+{
+  sce <- unguided_unsupervised_subcluster(sce,'2',n_HVG = 1000, k_value = 50)
+  sce <- unguided_unsupervised_subcluster(sce,'4',n_HVG = 2000, k_value = 40)
+  sce <- unguided_unsupervised_subcluster(sce,'15', n_HVG = 2000, k_value = 50)
+  sce <- unguided_unsupervised_subcluster(sce, '19',n_HVG = 2000, k_value = 30)
+
+}
+
+```
+
+
+
+```{r check the subclusters QC metrics }
+visulize_QC_doublets_RMDS <- function(sce_corrected)
+  {
+  rmsd <- clusterRMSD(reducedDim(sce_corrected, "corrected"), sce_corrected$cluster)
+
+  df <- as.data.frame(rmsd)
+  df$cluster <- as.factor(unique(sce_corrected$cluster))
+
+  library(ggplot2)
+  # Basic barplot
+  p  <- ggplot(data=df, aes(x=cluster, y=rmsd)) +
+    geom_bar(stat="identity")+
+    geom_text(aes(label=cluster), vjust=-0.3, size=3.5) +
+    ggtitle("examine heterogeneity within each cluster")
+  print(p)
+
+  ########################
+  QC.tab <- data.frame(colData(sce_corrected)[,c('cluster', 'sum_counts', 'mito_proportion', 'genes_detected')])
+
+  p <-  ggplot(QC.tab, aes(x=cluster, y=log2(sum_counts) )) +
+    ggbeeswarm::geom_quasirandom(method="smiley")
+  print(p)
+
+
+  p <-  ggplot(QC.tab, aes(x=cluster, y=log2(genes_detected) )) +
+    ggbeeswarm::geom_quasirandom(method="smiley")
+  print(p)
+
+  p <-  ggplot(QC.tab, aes(x=cluster, y=mito_proportion)) +
+    ggbeeswarm::geom_quasirandom(method="smiley")
+  print(p)
+
+  ########################
+
+  # visualize cxds_score and estimated Doublet in each cluster
+
+  doublet.tab <- data.frame(colData(sce_corrected)[,c('cxds_score', 'cluster', 'query_doublet', 'sum_counts')])
+
+  p <-  ggplot(doublet.tab, aes(x=cluster, y=cxds_score, colour=query_doublet)) +
+      ggbeeswarm::geom_quasirandom(method="smiley")
+  print(p)
+  p <-  ggplot(doublet.tab, aes(x=cluster, y=sum_counts, colour=query_doublet)) +
+      ggbeeswarm::geom_quasirandom(method="smiley")
+  print(p)
+
+  }
+sce_corrected$cluster <- sce$cluster
+visulize_QC_doublets_RMDS(sce_corrected)
+
+
+```
 
 <!-- # remove tiny subclusters and low-quality clusters -->
 <!-- ```{r remove tiny subclusters and low-quality clusters and combine some subclusters and plot UMAP} -->
