@@ -552,92 +552,80 @@ cluster 14 has a little percentage of suspected doublets. Let's look at this clu
 we also check cluster 12 to explore if it contain doublets or cells from multiple cell types since it has high heterogeneity and very pure.
 
 ```{r check doublets distribution and marker gene expression of suspicious clusters, fig.width=12}
-# library(patchwork)
-# visulize_doublets_markers <- function(selected_sce,selected_cluster = '14')
-# {
-#   p1 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by="Sample", point_size=1)+ggtitle(paste('cluster', selected_cluster))
-#   # print(p)
-#   p2 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by="query_doublet", point_size=1)+ggtitle(paste('cluster', selected_cluster))
-# 
-# 
-#   ## PAX5
-#   PAX5 <- rownames(sce)[rowData(sce)$Symbol == 'PAX5']
-#   p3 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=PAX5, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'B cells (PAX5)', 'uncorrected'))
-# 
-#   p1 <- p1 + coord_fixed() +
-#     theme(legend.position = "right", aspect.ratio = 1)
-# 
-#   p2 <- p2 + coord_fixed() +
-#     theme(legend.position = "right", aspect.ratio = 1)
-# 
-#   p3 <- p3 + coord_fixed() +
-#     theme(legend.position = "right", aspect.ratio = 1)
-# 
-# 
-#   p_combined <- (p1 | p2 | p3) &
-#     plot_layout( guides = "collect")
-# 
-#   # Print the combined plot
-#   print(p_combined)
-# 
-# 
-#   ## CD163
-#   CD163 <- rownames(sce)[rowData(sce)$Symbol == 'CD163']
-#   p1 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=CD163, by_exprs_values='logcounts') + ggtitle(paste(sampSet,'cluster', selected_cluster, 'macrophage (CD163)', 'uncorrected'))
-#   # print(p)
-# 
-# 
-#   ## HNMT
-#   HNMT <- rownames(sce)[rowData(sce)$Symbol == 'HNMT']
-#   p2 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=HNMT, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'myeloid (HNMT)', 'uncorrected'))
-#   # print(p)
-# 
-#   ## CD3E
-#   CD3E <- rownames(sce)[rowData(sce)$Symbol == 'CD3E']
-#   p3 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=CD3E, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'T cells (CD3E)', 'uncorrected'))
-#   # print(p)
-#   color_set <- c("blue", "green", "yellow")
-# 
-#   p1 <- p1 + coord_fixed() +
-#     scale_color_gradientn(colors = color_set) +
-#     theme(legend.position = "right", aspect.ratio = 1)
-# 
-#   p2 <- p2 + coord_fixed() +
-#     scale_color_gradientn( colors = color_set) +
-#     theme(legend.position = "right", aspect.ratio = 1)
-# 
-#   p3 <- p3 + coord_fixed() +
-#     scale_color_gradientn( colors = color_set) +
-#     theme(legend.position = "right", aspect.ratio = 1)
-# 
-#   # Combine plots with patchwork side by side
-#   p_combined <- (p1 | p2 | p3) &
-#     plot_layout( guides = "collect")
-# 
-#   # Print the combined plot
-#   print(p_combined)
-# 
-# 
-# 
-# 
-# }
-# if(sampSet == 'run_1' )
-# {
-#     visulize_doublets_markers(selected_sce,'8')
-#     visulize_doublets_markers(selected_sce,'12')
-#     visulize_doublets_markers(selected_sce,'14')
-#     visulize_doublets_markers(selected_sce,'18')
-#     visulize_doublets_markers(selected_sce,'19')
-# 
-# }
-# 
-# if(sampSet == 'run_2' )
-# {
-#   visulize_doublets_markers(selected_sce,'1')
-#   visulize_doublets_markers(selected_sce,'15')
-#   visulize_doublets_markers(selected_sce,'19')
-# 
-# }
+library(patchwork)
+visulize_doublets_markers <- function(selected_sce,selected_cluster = '22')
+{
+  p1 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by="Sample", point_size=1)+ggtitle(paste('cluster', selected_cluster))
+  # print(p)
+  p2 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by="query_doublet", point_size=1)+ggtitle(paste('cluster', selected_cluster))
+
+
+  ## PAX5
+  PAX5 <- rownames(sce)[rowData(sce)$Symbol == 'PAX5']
+  p3 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=PAX5, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'B cells (PAX5)', 'uncorrected'))
+
+  p1 <- p1 + coord_fixed() +
+    theme(legend.position = "right", aspect.ratio = 1)
+
+  p2 <- p2 + coord_fixed() +
+    theme(legend.position = "right", aspect.ratio = 1)
+
+  p3 <- p3 + coord_fixed() +
+    theme(legend.position = "right", aspect.ratio = 1)
+
+
+  p_combined <- (p1 | p2 | p3) &
+    plot_layout( guides = "collect")
+
+  # Print the combined plot
+  print(p_combined)
+
+
+  ## CD163
+  CD163 <- rownames(sce)[rowData(sce)$Symbol == 'CD163']
+  p1 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=CD163, by_exprs_values='logcounts') + ggtitle(paste(sampSet,'cluster', selected_cluster, 'macrophage (CD163)', 'uncorrected'))
+  # print(p)
+
+
+  ## HNMT
+  HNMT <- rownames(sce)[rowData(sce)$Symbol == 'HNMT']
+  p2 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=HNMT, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'myeloid (HNMT)', 'uncorrected'))
+  # print(p)
+
+  ## CD3E
+  CD3E <- rownames(sce)[rowData(sce)$Symbol == 'CD3E']
+  p3 <- plotUMAP(selected_sce[,selected_sce$cluster==selected_cluster], colour_by=CD3E, by_exprs_values='logcounts') + ggtitle(paste(sampSet, 'cluster', selected_cluster, 'T cells (CD3E)', 'uncorrected'))
+  # print(p)
+  color_set <- c("blue", "green", "yellow")
+
+  p1 <- p1 + coord_fixed() +
+    scale_color_gradientn(colors = color_set) +
+    theme(legend.position = "right", aspect.ratio = 1)
+
+  p2 <- p2 + coord_fixed() +
+    scale_color_gradientn( colors = color_set) +
+    theme(legend.position = "right", aspect.ratio = 1)
+
+  p3 <- p3 + coord_fixed() +
+    scale_color_gradientn( colors = color_set) +
+    theme(legend.position = "right", aspect.ratio = 1)
+
+  # Combine plots with patchwork side by side
+  p_combined <- (p1 | p2 | p3) &
+    plot_layout( guides = "collect")
+
+  # Print the combined plot
+  print(p_combined)
+
+
+
+
+}
+if(bsp_num == "bsp_248")
+{
+  visulize_doublets_markers(selected_sce,'22')
+}
+
 ```
 #### for run 1:
 it's hard to observe these suspected doublets in cluster 14 express 2 marker genes at same time apparently. cluster 14 might be fine.
@@ -646,7 +634,7 @@ cluster 12 only has a few predicted doublets, and cluster 12 express CD163 clear
 
 
 ```{r draw heatmap to compare the suspicious clusters with other clusters}
-### make some heatmaps of macrophages, B cells, and cluster 11, selecting marker genes from each subset to examine within cluster 11
+### make some heatmaps of macrophages, B cells, and cluster 11, selecting marker genes from each subset to examine cluster 11
 
 
 
@@ -825,16 +813,20 @@ guided_unsupervised_subcluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_
 
 
     return(sce)
-  }
-if(sampSet == 'run_1' )
-{
-  sce <- guided_unsupervised_subcluster(sce,'8',n_HVG = 1000, k_value = 30)
-  sce <- guided_unsupervised_subcluster(sce,'14',n_HVG = 1000, k_value = 20)
 }
-if(sampSet == 'run_2' )
+if(bsp_num == "bsp_185")
 {
-  sce <- guided_unsupervised_subcluster(sce,'9', n_HVG = 1000, k_value = 30)
+    if(sampSet == 'run_1' )
+    {
+      sce <- guided_unsupervised_subcluster(sce,'8',n_HVG = 1000, k_value = 30)
+      sce <- guided_unsupervised_subcluster(sce,'14',n_HVG = 1000, k_value = 20)
+    }
+    if(sampSet == 'run_2' )
+    {
+      sce <- guided_unsupervised_subcluster(sce,'9', n_HVG = 1000, k_value = 30)
+    }  
 }
+
 
 ```
 
@@ -882,21 +874,25 @@ BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy" ))
 
   return(sce)
 }
-if(sampSet == 'run_1')
+if(bsp_num == "bsp_185")
 {
-  sce <- unguided_unsupervised_subcluster(sce,'3',n_HVG = 2000, k_value = 20)
-  sce <- unguided_unsupervised_subcluster(sce,'9',n_HVG = 2000, k_value = 40)
-  sce <- unguided_unsupervised_subcluster(sce,'11', n_HVG = 1000, k_value = 50)
-  sce <- unguided_unsupervised_subcluster(sce,'12',n_HVG = 2000, k_value = 50)
-}
-
-if(sampSet == 'run_2')
-{
-  sce <- unguided_unsupervised_subcluster(sce,'2',n_HVG = 1000, k_value = 50)
-  sce <- unguided_unsupervised_subcluster(sce,'4',n_HVG = 2000, k_value = 40)
-  sce <- unguided_unsupervised_subcluster(sce,'15', n_HVG = 2000, k_value = 50)
-  sce <- unguided_unsupervised_subcluster(sce, '19',n_HVG = 2000, k_value = 30)
-
+  if(sampSet == 'run_1')
+  {
+    sce <- unguided_unsupervised_subcluster(sce,'3',n_HVG = 2000, k_value = 20)
+    sce <- unguided_unsupervised_subcluster(sce,'9',n_HVG = 2000, k_value = 40)
+    sce <- unguided_unsupervised_subcluster(sce,'11', n_HVG = 1000, k_value = 50)
+    sce <- unguided_unsupervised_subcluster(sce,'12',n_HVG = 2000, k_value = 50)
+  }
+  
+  if(sampSet == 'run_2')
+  {
+    sce <- unguided_unsupervised_subcluster(sce,'2',n_HVG = 1000, k_value = 50)
+    sce <- unguided_unsupervised_subcluster(sce,'4',n_HVG = 2000, k_value = 40)
+    sce <- unguided_unsupervised_subcluster(sce,'15', n_HVG = 2000, k_value = 50)
+    sce <- unguided_unsupervised_subcluster(sce, '19',n_HVG = 2000, k_value = 30)
+  
+  }
+  
 }
 
 ```

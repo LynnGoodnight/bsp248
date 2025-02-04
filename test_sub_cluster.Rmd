@@ -161,7 +161,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   print(table(sce_8_fastMNN_clust))
   sce_8_fastMNN$cluster <- sce_8_fastMNN_clust
   sce_8_fastMNN <- runUMAP(sce_8_fastMNN, dimred="corrected")
-  sce_8_fastMNN <- runTSNE(sce_8_fastMNN, dimred="corrected")
+
   
   p <- plotUMAP(sce_8_fastMNN, colour_by="cluster", point_size=1) + ggtitle(' cluster')
   p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
@@ -169,8 +169,20 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   
   assays(sce_8_fastMNN)$logcounts <- assays(sce)$logcounts[rownames(sce_8_fastMNN), selected_cells]
   
-  selected_gene <- rownames(sce)[rowData(sce)$Symbol == 'KLRB1']
-  plotUMAP(sce_8_fastMNN, colour_by=selected_gene, by_exprs_values='logcounts')
+
+  for(selected_gene in c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E"))
+  {
+    print(selected_gene)
+      selected_gene_id <- rownames(sce)[rowData(sce)$Symbol == selected_gene]
+      p <- plotUMAP(sce_8_fastMNN, colour_by=selected_gene_id, by_exprs_values='logcounts') + 
+        ggtitle(selected_gene) 
+      print(p)
+  # 'CD4', 'CD8B'  'KLRB1' KLRK1 CD3E
+  
+  }
+
+  
+  
   save.image("clustering_develop_code2.RData")
   # 
   # 
