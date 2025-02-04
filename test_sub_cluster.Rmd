@@ -56,39 +56,44 @@ UMAP_color_by_cluster(sce_corrected, "batch effect corrected" )
 
 cluster_n <- c("5", "14", "16", "15") 
 n_HVG = 5000
+
+  library(scran)
 guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_value = 20)
 {
   selected_cells <- (sce$cluster %in% cluster_n)
-  head(sce$cluster)
-  table(sce$cluster)
-  table(selected_cells)
+  print(table(selected_cells))
+  
   CD4 <- counts(sce)['ENSSSCG00000000687',selected_cells]
-  # the CD4 gene counts of all cells in cluster 8
+  # the CD4 gene counts of all cells in selected cluster 
   CD8 <- counts(sce)['ENSSSCG00000008213',selected_cells]
-  # the CD8B gene counts of all cells in cluster 8
-  library(scran)
+  # the CD8B gene counts of all cells in selected cluster 
+
   # extract all cells in cluster 8, and get the top 1000 (n_HVG) HVG in these cells
   varmod8 <- modelGeneVar(sce[,selected_cells], block=sce[,selected_cells]$run)
-  vargenes8 <- getTopHVGs(varmod8, n=n_HVG)
   
-  CD4corr <- vector('numeric', length(vargenes8))
-  CD8corr <- CD4corr
-  KLRK1_corr <- CD4corr
-  KLRB1_corr <- CD4corr
+  CD4corr <- vector('numeric', 1000)
+  CD8corr <- vector('numeric', 1000)
+  KLRK1_corr <- vector('numeric', 5000)
+  KLRB1_corr <- vector('numeric', 5000)
   
   # BiocManager::install("scHOT")
   library(scHOT)
   # file_path1 = paste0('CD4 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds')
   # file_path2 = paste0('CD8 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds')
   
-  if(file.exists("KLRB1_corr.rds") && file.exists("KLRK1_corr.rds"))
+  if(file.exists("recluster_CD4corr.rds") & 
+     file.exists("recluster_CD8corr.rds") & 
+     file.exists("recluster_KLRK1_corr.rds") &
+     file.exists("recluster_KLRB1_corr.rds"))
   {
-    CD4corr = readRDS(file = "CD4corr.rds")
-    CD8corr = readRDS(file = "CD8corr.rds")
-    KLRK1_corr = readRDS(file = "KLRK1_corr.rds")
-    KLRB1_corr = readRDS(file = "KLRB1_corr.rds")    
+    CD4corr = readRDS(file = "recluster_CD4corr.rds")
+    CD8corr = readRDS(file = "recluster_CD8corr.rds")
+    KLRK1_corr = readRDS(file = "recluster_KLRK1_corr.rds")
+    KLRB1_corr = readRDS(file = "recluster_KLRB1_corr.rds") 
+    vargenes8 <- getTopHVGs(varmod8, n=5000)
   }else
-  {
+  {  
+    vargenes8 <- getTopHVGs(varmod8, n=1000)
     for(i in 1:length(vargenes8)){
       
       # the weightedZIKendall function calculates weighted Tau*, where Tau* is described in Pimentel et al (2015). This association measure is defined for zero-inflated, non-negative random variables.
@@ -97,46 +102,47 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
       # # calculate numeric weighted Tau* association value between gene CD4 and each HVG
       # 
       # #   ‘exprs(sce)['ENSSSCG00000000687', selected_cells]’ is the log counts of gene CD4 in selected cells.
-      # # ‘exprs(sce)[vargenes8[i], selected_cells]’ is the log counts of one of the HVG gene in selected cells.
-      # 
-      # 
+      # # ‘exprs(sce)[vargenes8[i], selected_cells]’ is the log counts of one of the HVG gene in selected cells
       CD8corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000008213', selected_cells],
                                       logcounts(sce)[vargenes8[i], selected_cells])
       # calculate numeric weighted Tau* association value between gene CD8 and each HVG
-      
+    }
+    
+    vargenes8 <- getTopHVGs(varmod8, n=5000)
+    for(i in 1:length(vargenes8)){
       KLRK1_corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000040465', selected_cells],
                                          logcounts(sce)[vargenes8[i], selected_cells])
       KLRB1_corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000039708', selected_cells],
                                          logcounts(sce)[vargenes8[i], selected_cells])
       
-      
-    }
+    }    
+    
     saveRDS(CD8corr, file = "CD8corr.rds")
     saveRDS(CD4corr, file = "CD4corr.rds")
     saveRDS(KLRK1_corr, file = "KLRK1_corr.rds")
     saveRDS(KLRB1_corr, file = "KLRB1_corr.rds")    
     
   }
-  
-  
-  
+
   # select HVGs who positively co-expressed with CD4 and CD8  or have little to no monotonic association with CD4 and CD8 in cells in cluster 8
   
   # select HVGs whose association value with CD4 and CD8 both higher than 0.1
   # A value close to 1 indicates a strong positive association, meaning that as the expression of CD4 increases, the expression of the HVG also tends to increase across the selected cells
   # - **Value Close to Zero**: Indicates little to no monotonic association between the expression levels of the two genes.
   related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1),
-                            which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1))) 
+                            which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1)))
+
   top <- vargenes8[related_genes]
   print(length(top))
+  top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213',
+           "ENSSSCG00000039708", 'ENSSSCG00000040465' )
+  top <- unique(top)  
   if (length(top) < 5)
   {
     print('too few related genes, not appropriate for guided strategy ')
     return(sce)
   }
-  top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213',
-           "ENSSSCG00000039708", 'ENSSSCG00000040465' )
-  top <- unique(top)
+
   
   # we don't batch correct there, but only use fastMNN to reduce the genes we use for downstream sub-cluster
   # BiocManager::install("batchelor")
@@ -216,11 +222,11 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   # sce$cluster <- cs
   # check_sample_contribution_location_for_selected_subcluster(sce,subcluster_vector)
   # 
-  
-  return(sce)
+      saveRDS(sce_8_fastMNN, file = "sce_8_fastMNN.rds") 
+  return(sce_8_fastMNN)
 }
 
-sce_test <- guided_unsupervised_recluster(sce, cluster_n, n_HVG = 5000, k_value = 30)
+sce_test <- guided_unsupervised_recluster(sce, cluster_n, n_HVG = 5000, k_value = 100)
 
 
 ```
