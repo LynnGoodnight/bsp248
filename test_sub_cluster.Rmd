@@ -130,6 +130,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   # A value close to 1 indicates a strong positive association, meaning that as the expression of CD4 increases, the expression of the HVG also tends to increase across the selected cells
   # - **Value Close to Zero**: Indicates little to no monotonic association between the expression levels of the two genes.
 
+  KLRK1_corr <- KLRK1_corr[1:790]
   related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1),
                             which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1)))
   top <- vargenes8[related_genes]
@@ -137,7 +138,9 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   print(which(CD4corr > 0.1) )
   print("which(CD8corr > 0.1)")
   print(which(CD8corr > 0.1) )  
+  print("which(KLRK1_corr > 0.1)")  
   print(which(KLRK1_corr > 0.1) )
+  print("which(KLRB1_corr > 0.1)")
   print(which(KLRB1_corr > 0.1) )  
   
 
