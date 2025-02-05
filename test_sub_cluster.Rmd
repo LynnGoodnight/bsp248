@@ -182,8 +182,8 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
 
   assays(sce_8_fastMNN)$logcounts <- assays(sce)$logcounts[rownames(sce_8_fastMNN), selected_cells]
   
-
-  for(selected_gene in c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E"))
+# , "CD3E"
+  for(selected_gene in c("CD4", "CD8B",  "KLRB1", "KLRK1"))
   {
     print(selected_gene)
       selected_gene_id <- rownames(sce)[rowData(sce)$Symbol == selected_gene]
