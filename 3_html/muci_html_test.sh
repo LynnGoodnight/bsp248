@@ -13,11 +13,11 @@
 ## 10 hours
 #SBATCH --time=1-10:00:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=10
-#SBATCH --mem-per-cpu=128G
+#SBATCH --cpus-per-task=12
+#SBATCH --mem-per-cpu=50G
 
 ## Job Steps
-echo "Starting: in sbatch we asked for 10 thread and 128G mem"
+echo "Starting: in sbatch we asked for 10 thread and 50G mem"
 echo `date`
 
 module load tools
@@ -27,8 +27,6 @@ export bsp_num="bsp_248"
 export sampSet="all"
 export reference_genome_version="113"
 
-export clustK=15
-echo "clustK" $clustK
 
 
 echo "here: " `pwd`
@@ -38,9 +36,47 @@ cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code/bsp
 
 export sampSet="all"
 echo "sampSet" $sampSet
-## sleep 10
+
+# export clustK=15
+# echo "clustK" $clustK
+# ## sleep 10
+# cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
+# /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"
+
+
+
+
+export clustK=15
+sleep 2
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
+
+export clustK=20
+sleep 2
+cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
+
+export clustK=30
+sleep 2
+cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
+
+
+export clustK=50
+sleep 2
+cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
+
+export clustK=100
+sleep 2
+cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
+
+export clustK=120
+sleep 2
+cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
+
 
 
 echo `date`
