@@ -77,8 +77,9 @@ sleep 2
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
 /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
 
-
-
+# Wait for all parallel jobs to complete
+wait
+echo "All R processes have completed"
 echo `date`
 sleep 10
 echo "The End"
