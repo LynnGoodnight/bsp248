@@ -10,20 +10,20 @@ knitr::opts_chunk$set(echo = TRUE)
 
 work_dir <- Sys.getenv("work_dir")
 bsp_num <- Sys.getenv("bsp_num")
-samples_set <- Sys.getenv("sampSet")
+sampSet <- Sys.getenv("sampSet")
+clustK <- Sys.getenv("clustK")
 reference_genome_version <- Sys.getenv("reference_genome_version")
-sampSet <- samples_set
 
 knitr::opts_knit$set(root.dir = work_dir)
 
-clustK <- Sys.getenv("clustK")
+
 if (clustK == "") {
    clustK <- 20          # defaulty
 }
 print(clustK)
 
-current_run <- samples_set
-print(paste('work_dir', work_dir, 'samples_set', samples_set, bsp_num))              
+current_run <- sampSet
+print(paste('work_dir', work_dir, 'sampSet', sampSet, bsp_num))              
 
 ```
 
@@ -951,50 +951,55 @@ visulize_QC_doublets_RMDS(sce_corrected)
 
 ```
 
-<!-- # remove tiny subclusters and low-quality clusters -->
-<!-- ```{r remove tiny subclusters and low-quality clusters and combine some subclusters and plot UMAP} -->
-<!-- if(sampSet == 'run_1' ) -->
-<!-- { -->
-<!--   # remove tiny subclusters 8a and low-quality clusters 18, combine subclusters 3a, 3b, 3c -->
-<!--   sce <- sce[,!sce$cluster %in% c('18', '8a')] -->
-<!--   sce_corrected <- sce_corrected[,!sce_corrected$cluster %in% c('18', '8a') ] -->
+# remove tiny subclusters and low-quality clusters
+```{r remove tiny subclusters and low-quality clusters and combine some subclusters and plot UMAP}
+if(bsp_num == "bsp_185")
+{
+if(sampSet == 'run_1' )
+{
+  # remove tiny subclusters 8a and low-quality clusters 18, combine subclusters 3a, 3b, 3c
+  sce <- sce[,!sce$cluster %in% c('18', '8a')]
+  sce_corrected <- sce_corrected[,!sce_corrected$cluster %in% c('18', '8a') ]
 
-<!--   sce$cluster[sce$cluster == "3b"] = "3a" -->
-<!--   sce$cluster[sce$cluster == "3c"] = "3a" -->
-<!--   sce_corrected$cluster <- sce$cluster -->
-<!-- } -->
-<!-- if(sampSet == 'run_2' ) -->
-<!-- { -->
-<!--   # remove tiny subclusters 2c, 9b, 19a, combine subclusters 4a, 4c -->
-<!--   sce <- sce[,!sce$cluster %in% c('2c', '9b', '19a', '11')] -->
-<!--   sce_corrected <- sce_corrected[,!sce_corrected$cluster %in% c('2c', '9b', '19a', '11') ] -->
-<!--   sce$cluster[sce$cluster == "4c"] = "4a" -->
-<!--   sce_corrected$cluster <- sce$cluster -->
+  sce$cluster[sce$cluster == "3b"] = "3a"
+  sce$cluster[sce$cluster == "3c"] = "3a"
+  sce_corrected$cluster <- sce$cluster
+}
+if(sampSet == 'run_2' )
+{
+  # remove tiny subclusters 2c, 9b, 19a, combine subclusters 4a, 4c
+  sce <- sce[,!sce$cluster %in% c('2c', '9b', '19a', '11')]
+  sce_corrected <- sce_corrected[,!sce_corrected$cluster %in% c('2c', '9b', '19a', '11') ]
+  sce$cluster[sce$cluster == "4c"] = "4a"
+  sce_corrected$cluster <- sce$cluster
 
-<!-- } -->
-
-<!-- umap_plot <- plotUMAP(sce, colour_by="cluster", point_size=0.3,text_by = "cluster") -->
-
-<!-- # Adjust the legend text and title size -->
-<!-- umap_plot <- umap_plot + guides(colour = guide_legend(override.aes = list(size=6)))+ ggtitle(paste(sampSet)) -->
-
-<!-- # Print the plot -->
-<!-- print(umap_plot) -->
-
-<!-- dat <- as.data.frame(table(sce$cluster, sce$Sample)) -->
-<!-- colnames(dat) <- c('cluster', 'sample', 'n_cells') -->
-
-<!-- scTkn <- paste0(sampSet,"_k",clustK, 'after sub clustering') -->
-
-<!-- ggplot(dat, aes(fill=sample, y=n_cells, x=cluster)) + -->
-<!--   geom_bar(position='stack', stat='identity') -->
+}  
+}
 
 
-<!-- # ggplot(data=dat, aes(x=cluster, y=cell_number,fill = cluster)) + -->
-<!-- #   geom_bar(stat="identity")+ -->
-<!-- #   geom_text(aes(label=cell_number), vjust=-0.3, size=3.5) + -->
-<!-- #   ggtitle(paste0("cell number summary per cluster in",sampSet)) -->
-<!-- ``` -->
+umap_plot <- plotUMAP(sce, colour_by="cluster", point_size=0.3, text_by = "cluster")
+
+# Adjust the legend text and title size
+umap_plot <- umap_plot + guides(colour = guide_legend(override.aes = list(size=6)))+ ggtitle(paste(sampSet))
+
+# Print the plot
+print(umap_plot)
+
+dat <- as.data.frame(table(sce$cluster, sce$Sample))
+colnames(dat) <- c('cluster', 'sample', 'n_cells')
+
+scTkn <- paste0(sampSet,"_k",clustK, 'after sub clustering')
+
+# draw stack bar plots to display sample composition for each cluster
+ggplot(dat, aes(fill=sample, y=n_cells, x=cluster)) +
+  geom_bar(position='stack', stat='identity')
+
+
+ggplot(data=dat, aes(x=cluster, y=cell_number, fill = cluster)) +
+  geom_bar(stat="identity")+
+  geom_text(aes(label=cell_number), vjust=-0.3, size=3.5) +
+  ggtitle(paste0("cell number summary per cluster in",sampSet))
+```
 
 # output DE genes for all clusters
 Finally, we need to re-run our marker scoring because we have added some clusters. For this, we will only write to file the scores for the clusters we have added.

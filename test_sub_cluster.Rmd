@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-```{r }
+```{r reclustering certain clusters}
 getwd()
 # setwd("/mnt/rstudio/lily/bsp248")
 setwd("/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages")
@@ -135,7 +135,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   top <- vargenes8[related_genes]
   print(length(top))
   top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213',
-           "ENSSSCG00000039708", 'ENSSSCG00000040465' )
+           "ENSSSCG00000039708", 'ENSSSCG00000040465', 'ENSSSCG00000040140' )
   top <- unique(top)  
   if (length(top) < 5)
   {
