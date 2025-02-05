@@ -90,7 +90,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
     CD8corr = readRDS(file = "recluster_CD8corr.rds")
     KLRK1_corr = readRDS(file = "recluster_KLRK1_corr.rds")
     KLRB1_corr = readRDS(file = "recluster_KLRB1_corr.rds") 
-    vargenes8 <- getTopHVGs(varmod8, n=1000)
+    vargenes8 <- getTopHVGs(varmod8, n=5000)
   }else
   {  
     vargenes8 <- getTopHVGs(varmod8, n=1000)
@@ -158,7 +158,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   library(scran)
   library(scater)
   set.seed(200)
-  k_value = 100
+  k_value = 15
   sce_8_fastMNN_clust <- clusterCells(sce_8_fastMNN,use.dimred="corrected",
                                       BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy"))
   
