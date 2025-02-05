@@ -161,7 +161,6 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   p <- plotUMAP(sce_8_fastMNN, colour_by="batch", point_size=1) 
   print(p)  
 
-  BiocManager::install("scran")
   library(bluster)
   library(scran)
   library(scater)
