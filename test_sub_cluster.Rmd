@@ -133,7 +133,9 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
                             which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1)))
 
   top <- vargenes8[related_genes]
-  print(length(top))
+  print(paste("which(CD4corr > 0.1)", which(CD4corr > 0.1) ))
+  print(paste("which(CD8corr > 0.1)", which(CD8corr > 0.1) ))
+  print(paste("length(top)", length(top)))
   top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213',
            "ENSSSCG00000039708", 'ENSSSCG00000040465' )
   # , 'ENSSSCG00000040140'
@@ -156,29 +158,29 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   sce_8_fastMNN <- runUMAP(sce_8_fastMNN, dimred="corrected")
 
   
-  p <- plotUMAP(sce_8_fastMNN, colour_by="run", point_size=1) 
+  p <- plotUMAP(sce_8_fastMNN, colour_by="batch", point_size=1) 
   print(p)  
 
-  # BiocManager::install("scran")
-  # library(bluster)
-  # library(scran)
-  # library(scater)
-  # set.seed(200)
-  # k_value = 100
-  # sce_8_fastMNN_clust <- clusterCells(sce_8_fastMNN,use.dimred="corrected",
-  #                                     BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy"))
-  # 
-  # # check the number of cells in each sub cluster, and add this annotation
-  # 
-  # print(table(sce_8_fastMNN_clust))
-  # sce_8_fastMNN$cluster <- sce_8_fastMNN_clust
-  # sce_8_fastMNN <- runUMAP(sce_8_fastMNN, dimred="corrected")
-  # 
-  # 
-  # p <- plotUMAP(sce_8_fastMNN, colour_by="cluster", point_size=1) + ggtitle(' cluster')
-  # p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
-  # print(p)  
-  # 
+  BiocManager::install("scran")
+  library(bluster)
+  library(scran)
+  library(scater)
+  set.seed(200)
+  k_value = 50
+  sce_8_fastMNN_clust <- clusterCells(sce_8_fastMNN,use.dimred="corrected",
+                                      BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy"))
+
+  # check the number of cells in each sub cluster, and add this annotation
+
+  print(table(sce_8_fastMNN_clust))
+  sce_8_fastMNN$cluster <- sce_8_fastMNN_clust
+  sce_8_fastMNN <- runUMAP(sce_8_fastMNN, dimred="corrected")
+
+
+  p <- plotUMAP(sce_8_fastMNN, colour_by="cluster", point_size=1) + ggtitle(' cluster')
+  p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
+  print(p)
+
   assays(sce_8_fastMNN)$logcounts <- assays(sce)$logcounts[rownames(sce_8_fastMNN), selected_cells]
   
 
