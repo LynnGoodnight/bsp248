@@ -7,6 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+bsp_num <- Sys.getenv("bsp_num")
+clustK <- Sys.getenv("clustK")
+sampSet <- Sys.getenv("sampSet")
+
 ```
 
 
@@ -174,9 +179,10 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   library(scran)
   library(scater)
   set.seed(200)
-  k_value = 50
+
   sce_8_fastMNN_clust <- clusterCells(sce_8_fastMNN,use.dimred="corrected",
-                                      BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy"))
+                                      BLUSPARAM=SNNGraphParam(k = k_value, type="jaccard",
+                                                              cluster.fun="fast_greedy"))
 
   # check the number of cells in each sub cluster, and add this annotation
 
@@ -242,7 +248,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   return(sce_8_fastMNN)
 }
 
-sce_test <- guided_unsupervised_recluster(sce, cluster_n, n_HVG = 5000, k_value = 100)
+sce_test <- guided_unsupervised_recluster(sce, cluster_n, n_HVG = 5000, k_value = clustK)
 
 
 ```
