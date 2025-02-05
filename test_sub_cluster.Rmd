@@ -55,7 +55,6 @@ UMAP_color_by_cluster <- function(selected_sce, title_flag = "batch effect corre
 UMAP_color_by_cluster(sce_corrected, "batch effect corrected" )
 
 cluster_n <- c("5", "14", "16", "15") 
-n_HVG = 5000
 
   library(scran)
 guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_value = 20)
@@ -63,10 +62,10 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   selected_cells <- (sce$cluster %in% cluster_n)
   print(table(selected_cells))
   
-  CD4 <- counts(sce)['ENSSSCG00000000687',selected_cells]
-  # the CD4 gene counts of all cells in selected cluster 
-  CD8 <- counts(sce)['ENSSSCG00000008213',selected_cells]
-  # the CD8B gene counts of all cells in selected cluster 
+  # CD4 <- counts(sce)['ENSSSCG00000000687',selected_cells]
+  # # the CD4 gene counts of all cells in selected cluster 
+  # CD8 <- counts(sce)['ENSSSCG00000008213',selected_cells]
+  # # the CD8B gene counts of all cells in selected cluster 
 
   # extract all cells in cluster 8, and get the top 1000 (n_HVG) HVG in these cells
   varmod8 <- modelGeneVar(sce[,selected_cells], block=sce[,selected_cells]$run)
@@ -88,6 +87,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   {
     CD4corr = readRDS(file = "recluster_CD4corr.rds")
     CD8corr = readRDS(file = "recluster_CD8corr.rds")
+    print(length(CD8corr))
     KLRK1_corr = readRDS(file = "recluster_KLRK1_corr.rds")
     KLRB1_corr = readRDS(file = "recluster_KLRB1_corr.rds") 
     vargenes8 <- getTopHVGs(varmod8, n=5000)
@@ -129,17 +129,23 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   # select HVGs whose association value with CD4 and CD8 both higher than 0.1
   # A value close to 1 indicates a strong positive association, meaning that as the expression of CD4 increases, the expression of the HVG also tends to increase across the selected cells
   # - **Value Close to Zero**: Indicates little to no monotonic association between the expression levels of the two genes.
+
   related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1),
                             which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1)))
-
   top <- vargenes8[related_genes]
-  print(paste("which(CD4corr > 0.1)", which(CD4corr > 0.1) ))
-  print(paste("which(CD8corr > 0.1)", which(CD8corr > 0.1) ))
-  print(paste("length(top)", length(top)))
+  print("which(CD4corr > 0.1)")
+  print(which(CD4corr > 0.1) )
+  print("which(CD8corr > 0.1)")
+  print(which(CD8corr > 0.1) )  
+  print(which(KLRK1_corr > 0.1) )
+  print(which(KLRB1_corr > 0.1) )  
+  
+
   top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213',
-           "ENSSSCG00000039708", 'ENSSSCG00000040465' )
-  # , 'ENSSSCG00000040140'
+           "ENSSSCG00000039708", 'ENSSSCG00000040465' , 'ENSSSCG00000040140')
+  # 
   top <- unique(top)  
+  print(paste("length(top)", length(top)))  
   if (length(top) < 5)
   {
     print('too few related genes, not appropriate for guided strategy ')
@@ -182,8 +188,8 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
 
   assays(sce_8_fastMNN)$logcounts <- assays(sce)$logcounts[rownames(sce_8_fastMNN), selected_cells]
   
-# , "CD3E"
-  for(selected_gene in c("CD4", "CD8B",  "KLRB1", "KLRK1"))
+# 
+  for(selected_gene in c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E"))
   {
     print(selected_gene)
       selected_gene_id <- rownames(sce)[rowData(sce)$Symbol == selected_gene]
