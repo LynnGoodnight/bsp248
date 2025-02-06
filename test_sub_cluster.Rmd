@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = TRUE}
 knitr::opts_chunk$set(echo = TRUE)
 
 bsp_num <- Sys.getenv("bsp_num")
@@ -131,7 +131,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   # A value close to 1 indicates a strong positive association, meaning that as the expression of CD4 increases, the expression of the HVG also tends to increase across the selected cells
   # - **Value Close to Zero**: Indicates little to no monotonic association between the expression levels of the two genes.
 
-  KLRK1_corr <- KLRK1_corr[1:790]
+  KLRK1_corr <- KLRK1_corr[1:1000]
   related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1),
                             which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1)))
   top <- vargenes8[related_genes]
@@ -163,8 +163,13 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   
   
   # we now only select marker genes we're interested as input for the re-clustering
-  top <- c('ENSSSCG00000000687', 'ENSSSCG00000008213',
+  related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1)))
+  top <- vargenes8[related_genes]  
+  
+  top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213',
          "ENSSSCG00000039708", 'ENSSSCG00000040465' , 'ENSSSCG00000040140')
+  print("gene used for re-clustering")
+  print(top)
   if (length(top) < 5)
   {
     print('reminding: less than 5 related genes used for guided unsupervised clustering')
@@ -176,11 +181,12 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   library(scran)
   library(scater)
   set.seed(200)
+  print(k_value)
   sce_8_fastMNN_clust <- clusterCells(sce_8_fastMNN,use.dimred="corrected",
                                       BLUSPARAM=SNNGraphParam(k = k_value, 
                                                               type="jaccard",
                                                               cluster.fun="fast_greedy"))
-
+# k=100 is the final decided value
   # check the number of cells in each new cluster, and add new cluster annotation to sce_8_fastMN_UMAP
   print(table(sce_8_fastMNN_clust))
   
@@ -248,7 +254,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   saveRDS(sce_8_fastMN_UMAP, file = "r_shiny_sce_8_fastMNN.rds") 
   return(sce_8_fastMN_UMAP)
 }
-
+print(clustK)
 sce_test <- guided_unsupervised_recluster(sce, cluster_n, n_HVG = 5000, k_value = clustK)
 
 
