@@ -46,36 +46,37 @@ echo "sampSet" $sampSet
 
 
 
-export clustK=15
-sleep 2
-cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
-
-export clustK=20
-sleep 2
-cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
-
-export clustK=30
-sleep 2
-cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
-
-
-export clustK=50
-sleep 2
-cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
+# export clustK=15
+# sleep 2
+# cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
+# /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
+#
+# export clustK=20
+# sleep 2
+# cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
+# /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
+#
+# export clustK=30
+# sleep 2
+# cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
+# /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
+#
+#
+# export clustK=50
+# sleep 2
+# cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
+# /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
 
 export clustK=100
+echo "clustK" $clustK
 sleep 2
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
 /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
 
-export clustK=120
-sleep 2
-cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
+# export clustK=120
+# sleep 2
+# cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
+# /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
 
 # Wait for all parallel jobs to complete
 wait
