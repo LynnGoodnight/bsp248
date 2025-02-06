@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 bsp_num <- Sys.getenv("bsp_num")
-clustK <- Sys.getenv("clustK")
+
 sampSet <- Sys.getenv("sampSet")
 
 ```
@@ -21,7 +21,7 @@ getwd()
 setwd("/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages")
 
 load('clustering_develop_code.RData')
-
+clustK <- Sys.getenv("clustK")
 
 library(SingleCellExperiment)
 library(DropletUtils)
