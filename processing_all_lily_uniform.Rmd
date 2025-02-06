@@ -1788,7 +1788,7 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   rowdat <- rowData(sce_all_corrected)
   rowdat <- cbind(rowData(sce_all)[rownames(sce_all_corrected),], rowdat )
   rowData(sce_all_corrected) <- rowdat
-  
+  # rowdat@listData[["Symbol"]]
   
   set.seed(100)
   # varmod <- modelGeneVar(sce_all_corrected)
