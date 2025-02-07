@@ -252,6 +252,7 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   # sce$cluster <- cs
   # check_sample_contribution_location_for_selected_subcluster(sce,subcluster_vector)
   # 
+  print(getwd())
   saveRDS(sce_8_fastMN_UMAP, file = "r_shiny_sce_8_fastMNN.rds") 
   return(sce_8_fastMN_UMAP)
 }
