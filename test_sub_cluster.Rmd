@@ -6,8 +6,12 @@ output: html_document
 ---
 
 ```{r setup, include = TRUE}
-knitr::opts_chunk$set(echo = TRUE)
 
+knitr::opts_chunk$set(echo = TRUE)
+work_dir <- "/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages"
+knitr::opts_knit$set(root.dir = work_dir)
+getwd()
+# setwd("/mnt/rstudio/lily/bsp248")
 bsp_num <- Sys.getenv("bsp_num")
 
 sampSet <- Sys.getenv("sampSet")
@@ -16,9 +20,7 @@ sampSet <- Sys.getenv("sampSet")
 
 
 ```{r prepare the environment}
-getwd()
-# setwd("/mnt/rstudio/lily/bsp248")
-setwd("/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages")
+
 
 load('clustering_develop_code.RData')
 clustK <- Sys.getenv("clustK")
