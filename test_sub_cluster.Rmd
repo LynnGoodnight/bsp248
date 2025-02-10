@@ -259,7 +259,78 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   return(sce_8_fastMN_UMAP)
 }
 print(clustK)
-sce_test <- guided_unsupervised_recluster(sce, cluster_n, n_HVG = 5000, k_value = clustK)
+sce_8_fastMN_UMAP <- guided_unsupervised_recluster(sce, cluster_n, n_HVG = 5000, k_value = clustK)
 
 
+```
+
+
+```{r save top DE genes in excel file for new produced sub cluster}
+sce_corrected <- sce_8_fastMN_UMAP
+cell_n_cluster <- table(sce_corrected$cluster)
+
+
+marker.info.corrected <- scoreMarkers(sce_corrected,
+                                      groups=sce_corrected$cluster,
+                                      block=sce_corrected$run,
+                                      assay.type='logcounts',
+                                      full.stats=TRUE)
+
+
+
+library(openxlsx)
+# Create a new workbook
+wb <- createWorkbook()
+
+for(i in unique(names(marker.info.corrected)))
+{
+  # print(i)
+  ord <- marker.info.corrected[[i]][order(marker.info.corrected[[i]]$mean.logFC.cohen, decreasing=TRUE),]
+  
+  if(bsp_num == "bsp_248")
+  {
+    if(reference_genome_version == "108")
+    {
+      ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']      
+    }else if(reference_genome_version == "113")
+    {
+      ord$symbol <- rowData(sce)[rownames(ord), 'Symbol']      
+    }      
+  }
+  if(bsp_num == "bsp_247")
+  {
+      ord$symbol <- rowData(sce)[rownames(ord), 'Symbol']       
+  }
+
+
+  pfx <- paste0(work_dir,"markers_",sampSet,'_k',clustK)
+  dir.create(pfx, showWarnings = FALSE)
+
+
+
+  DE_genes <- cbind(ord$symbol,ord)
+  DE_genes <- as.data.frame(ord)
+  DE_genes <- cbind(rownames(DE_genes), ord$symbol, DE_genes)
+  DE_genes_mid <- DE_genes[ ,c(7,1:6)]
+  DE_genes_mid$'mean.AUC' <- DE_genes[ ,'mean.AUC']
+  DE_genes <- DE_genes_mid
+  colnames(DE_genes)[2:3] <- c('ensemble_id', 'symbols')
+
+  sheet_name <- paste("cluster", i, '#',cell_n_cluster[i])
+
+  # Add a worksheet to the workbook with the created name
+  addWorksheet(wb, sheetName = sheet_name)
+  # Write the data frame to the worksheet
+  writeData(wb, sheet = sheet_name, DE_genes)
+
+}
+
+file_name <- paste0(pfx,'/', sampSet, "_Markers_re_cluster.xlsx")
+print(file_name)
+# Save the workbook to a file
+saveWorkbook(wb, file = file_name, overwrite = TRUE)
+
+
+
+# save.image('clustering_develop_code.RData')
 ```
