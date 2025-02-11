@@ -1,0 +1,1464 @@
+---
+title: "Differential adundance & expression edgeR Analyses"
+author: "lily yang"
+date: "`r Sys.Date()`"
+output: html_document
+---
+# set up enrivonment and load data
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+work_dir <- Sys.getenv("work_dir")
+bsp_num <- Sys.getenv("bsp_num")
+clustK <- Sys.getenv("clustK")
+sampSet <- Sys.getenv("sampSet")
+sampDPI <- Sys.getenv("sampDPI")
+
+
+knitr::opts_knit$set(root.dir = work_dir)
+
+
+if (clustK == "") {
+   clustK <- 20          # defaulty
+}
+print(clustK)
+
+current_run <- sampSet
+print(paste('work_dir', work_dir, 'sampSet', sampSet, bsp_num))              
+if (sampSet == "") {
+   sampSet <- "error, sampSet not provided"
+   # sampSet  <- run_1
+   }
+print(sampSet)
+pfx <- paste0(work_dir,"Results/")
+dir.create(pfx, showWarnings = FALSE)
+```
+
+
+This script is usually run on the hpc, see "lily code/html/html_differential.sh".
+
+```{r load input data }
+
+sce_all <- readRDS(paste0('sce_',sampSet,'_with_subcluster.rds'))
+sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_with_subcluster.rds'))
+
+
+```
+
+
+This script picks up where "cluster_lily.Rmd" left off. 
+
+We will start by labelling the clusters 
+We will then run differential analyses between conditions. 
+
+Specifically, we will be looking for differential abundance of 'cells within each cluster', as well as differential expression of 'cells within each cluster', according to treatment condition. 
+
+There are 2 conditions: virus1 vs virus1 vs control, 2 time point: DPI 1 vs DPI 12
+
+
+
+# Loading the packages
+
+```{r load packages}
+library(SingleCellExperiment)
+library(DropletUtils)
+library(edgeR)
+library(bluster)
+library(scran)
+library(scater)
+library(uwot)
+library(biomaRt)
+library(scds)
+library(batchelor)
+library(gridExtra)
+library(ggplot2)
+library(ggrepel)
+
+```
+
+
+
+# Cluster annotation, remove clusters from downstream analysis 
+
+Based on manual annotation from the clustered data using the generated marker gene tables and our shiny app, we'll give the clusters more intuitive names that can be transposed into figures. As a quick check in this script, we look at particular marker genes first.
+
+```{r double check by look at marker genes expression used in cell sorting}
+## first look at marker genes for sorting
+
+
+sce_all_corrected$cluster <- sce_all$cluster
+
+# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD4'], x='cluster', exprs_values='logcounts')
+plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD4'], x='cluster')
+
+# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD8B'], x='cluster', exprs_values='logcounts')
+plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD8B'], x='cluster')
+
+# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD163'], x='cluster', exprs_values='logcounts')
+plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD163'], x='cluster')
+
+# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD14'], x='cluster', exprs_values='logcounts')
+plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD14'], x='cluster')
+ 
+# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD3D'], x='cluster', exprs_values='logcounts')
+plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD3D'], x='cluster')
+
+# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD3E'], x='cluster', exprs_values='logcounts')
+plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD3E'], x='cluster')
+
+```
+
+
+
+Note that we are maintaining 2 separate datasets here: 
+sce_filt (from sce_all_corrected), which contains all detected genes and reconstructed gene expression values after sequencing run batch correction
+
+sce_all_filt (from sce_all), which contains all detected genes with normalised (but not batch corrected) log-count values and original counts. 
+
+sce_all_filt is important for count-based differential analyses and seeing expression values that aren't interpolated after batch correction.
+
+
+Next we name the good quality clusters. 
+
+```{r name cell types and assign color to the good quality clusters}
+sce_filt <- sce_all_corrected
+sce_all_filt <- sce_all
+print(sce_all)
+## add in cluster names as sce_all_filt$named_cluster
+#Long-form annotated version including cell subtypes
+munual_annotation <- read.csv("munual_annotation.csv", header = FALSE)
+head(munual_annotation)
+colnames(munual_annotation) <- c("cluster", "name")
+
+if(bsp_num == "bsp_248")
+{
+  for (i in unique(sce_all_filt$cluster))
+    {
+    
+    name <- munual_annotation[ i, "name"]
+    long_name <- paste(name, i, sep = ", ")       
+    print(paste(i, name, long_name))
+    sce_all_filt$named_cluster[sce_all_filt$cluster==i] <- name
+    sce_all_filt$long_named_cluster[sce_all_filt$cluster==i] <- long_name
+    }
+}
+head(sce_all_filt$long_named_cluster)
+
+unique(sce_all_filt$long_named_cluster)
+
+# Create label and assign colour for each cluster for convenient annotation later
+
+# label every cell with its tissue type and the cluster it belong to
+sce_all_filt$verbose_cluster <- paste0('lung, ', sce_all_filt$named_cluster, ', ', sce_all_filt$cluster)
+# label every cell with its tissue type 
+sce_all_filt$EXP_celltype <- paste0('lung, ', sce_all_filt$named_cluster)
+
+sce_all_filt
+
+# BAL_colour_list <- vector("list", length(sce_all_filt$EXP_celltype))
+# BAL_colour_list[grep('Macrophages', sce_all_filt$EXP_celltype)] <- '#E31A1C' #red
+# BAL_colour_list[grep('Monocytes', sce_all_filt$EXP_celltype)] <- '#C9C32F' #pink
+# BAL_colour_list[grep('conventional', sce_all_filt$EXP_celltype)] <- '#FB9A99' 
+# BAL_colour_list[grep('pDCs', sce_all_filt$EXP_celltype)] <- '#FDDBC7' 
+# BAL_colour_list[grep('cDCs', sce_all_filt$EXP_celltype)] <- '#6A3D9A' #purple
+# BAL_colour_list[grep('Plasma Cells', sce_all_filt$EXP_celltype)] <- '#1F78B4' #dark blue
+# BAL_colour_list[grep('B Cells', sce_all_filt$EXP_celltype)] <- '#A6CEE3' #pale blue
+# BAL_colour_list[grep('Tregs', sce_all_filt$EXP_celltype)] <- '#CAB2D6' #light purple
+# BAL_colour_list[grep('CD4', sce_all_filt$EXP_celltype)] <- '#B2DF8A' #light green
+# BAL_colour_list[grep('Mitotic CD4 T Cells', sce_all_filt$EXP_celltype)] <- '#FFFF00' 
+# BAL_colour_list[grep('CD8', sce_all_filt$EXP_celltype)] <- '#33A02C' # green
+# BAL_colour_list[grep('Mitotic CD8 T Cells', sce_all_filt$EXP_celltype)] <- '#FF7F00' #orange
+# BAL_colour_list[grep('NK', sce_all_filt$EXP_celltype)] <- '#FDBF6F' 
+# # unknown clusters are colored with brown
+# BAL_colour_list[sapply(BAL_colour_list, is.null)] <- '#B15928' #brown
+# sce_all_filt$colour  <- BAL_colour_list
+
+colData(sce_filt)[,c('named_cluster', 'long_named_cluster', 'verbose_cluster', 'EXP_celltype')] <- colData(sce_all_filt)[, c('named_cluster', 'long_named_cluster', 'verbose_cluster', 'EXP_celltype')]
+unique(sce_filt$long_named_cluster)
+# # Update shiny app with filtered data for easier visualization and identification. For easier visualization in app, pre-convert counts metrics to log scale. 
+saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected_named_with_subcluster.rds'))
+saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_named_subcluster.rds'))
+
+```
+
+And make some UMAPs for visulization.
+
+```{r plot UMAPs to show annotated cell types of clusters, fig.width= 12}
+
+# plot automatic assigned color for each cell type and cluster in UMAP
+sce_filt
+plotUMAP(sce_filt, colour_by="cluster", text_by = "cluster",  point_size=0.3) + guides(colour = guide_legend(override.aes = list(size=8, alpha = 1)))+ theme(text = element_text(size = 20)) + ggtitle(paste('UMAP', sampSet))
+
+ 
+
+p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point_size = 0.3) + guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1), title = 'Cell type')) + ggtitle(paste('UMAP', sampSet))
+  
+print(p1)
+
+
+p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", point_size = 0.3) + guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1), title = 'Cell type')) + ggtitle(paste('UMAP', sampSet))
+print(p1)  
+  
+
+results_dir <- "Results"
+
+dir.create(results_dir)
+
+```
+
+
+```{r plot a UMAP with manually assigned color and legend}
+# legend_colours <- BAL_colour_list
+# names(legend_colours) <- sce_all_filt$long_named_cluster
+# legend_colours <- legend_colours[!duplicated(names(legend_colours))]
+# 
+# # assign the elements' order in list legend_colours to keep them comsistent
+# 
+# # legend_colours <- legend_colours[c("Plasma Cells, 1, 4, 15", "CD8 T Cells, 2, 8c", "CD4 T Cells, 8b, 3, 17", "Macrophages, 5, 10", "Unknown, 6, 9, 11a, 14, 16", "B Cells, 7, 13", "Monocytes, 12c", "cDCs, 12b", "NK cells, 11b, 19")]
+# 
+# # # create a data frame to record color and cell types
+# df_legend_colours <- data.frame(unlist(names(legend_colours)), unlist(legend_colours))
+# names(df_legend_colours) <- c("Cell_Type", "Colour")
+# df_legend_colours$Cell_Type <- factor(df_legend_colours$Cell_Type, levels=c(df_legend_colours$Cell_Type))
+# df_legend_colours$dummy_data <- seq(1, length(df_legend_colours[,1]))
+# 
+# 
+# # plot a UMAP with manually assigned color and size, lable by cluster, aspect.ratio
+# 
+# p1 <- plotUMAP(sce_all_filt, point_size=0, text_by="cluster", text_size=5) +
+#   aes(colour = sce_all_filt$colour) +
+#   geom_point(shape='.', size=1, alpha=0.5) +
+#   geom_text(x=-10, y=14, size=30, label="C", color="black") +
+#   theme(aspect.ratio = 0.5, plot.margin = unit(c(0,0,0,0), "cm"), text = element_text(size = 40))
+# print(p1)
+# png(filename='Results/UMAP_manually_assigned_color.png', height=1080, width=2160)
+# print(p1)
+# dev.off()
+# 
+# 
+# # plot a UMAP with manually assigned color without cluster number label 
+# plotUMAP(sce_all_filt, point_size=0) +
+#   aes(colour = sce_all_filt$colour) +
+#   geom_point(shape='.', size=1, alpha=0.5) +
+#   geom_text(x=-10, y=14, size=30, label="C", color="black") +
+#   theme(aspect.ratio = 0.5, plot.margin = unit(c(0,0,0,0), "cm"), text = element_text(size = 40))
+
+```
+
+```{r plot cell type legend of UMAPs, fig.width= 12, fig.height=12}
+
+# # plot a legend with manually assigned color for each cell type and cluster 
+# ggplot(data=df_legend_colours, aes(x=dummy_data)) +
+# geom_point(aes(y=dummy_data, color=Cell_Type), size=10) +
+# labs(x=NULL, y=NULL, color=NULL) +
+# scale_color_manual(values = legend_colours) +
+# guides(colour = guide_legend(ncol = 1)) + 
+# theme(legend.position.inside=c(0.5,0), legend.direction="vertical", aspect.ratio=0, text = element_text(size = 30),
+#       axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+#       axis.text.y=element_blank(), axis.ticks.y=element_blank())
+
+```
+
+
+add a heatmap of all defining gene markers for our cell types
+```{r add a heatmap of all defining gene markers for our cell types}
+# # install.packages('gplots')
+# library(gplots)
+# library(viridis)
+# 
+# defining_genes <- c("CD163", "FLT3", "CD14", "CD4", "CADM1", "CSF1R", "FCGR1A", "BCL6", "CCL17", "IRF8", "ADAM8", "PRDM1", "IRF4", "JCHAIN" , "TNFRSF17", "TNFRSF13B", "CD19", "PAX5", "EBF1", "MS4A1", "CD79B", "IRF8", "CD28", "CD5", "CD3D", "CD3E", "CD8A", "CD8B", "FOXP3", "E2F1", "E2F2", "KLRK1", "KLRB1", "KIT", "NCR1", "TBX21", "EOMES", "GATA3", "IL1RL1", "IL7R", "ID3", "ACTG1", "GPR37", "NAPSA", "SFTPA1", "RPS3A", "RPS26", "RPS11", "RPL37")
+# 
+# defining_sce <- sce_all_filt
+# rownames(defining_sce) <- rowData(sce_all_filt)$hgnc_symbol
+# # Remove forbidden rowData names (for generation of CompressedGRangesList)
+# names(rowData(defining_sce))[which(names(rowData(defining_sce))=="start")]="gene_start"
+# names(rowData(defining_sce))[which(names(rowData(defining_sce))=="end")]="gene_end"
+# #subset to defining genes and calculate mean logcounts
+# defining_sce <- defining_sce[rownames(defining_sce) %in% defining_genes, ]
+# defining_matrix <- as.matrix(logcounts(aggregateAcrossCells(defining_sce, ids=defining_sce$long_named_cluster, statistics='mean', use.assay.type='logcounts')))
+# 
+# xAxis <- colnames(defining_matrix)
+# #xColours <- ifelse(grepl("BAL", xAxis, fixed=TRUE), "blue", "orange")
+# colour_df <- unique(as.data.frame(colData(defining_sce))[, c("long_named_cluster", "colour")])
+# colour_df <- colour_df[match(xAxis, colour_df$long_named_cluster),]
+# identical(colour_df$long_named_cluster, xAxis)
+# Col_Colours <- as.character(colour_df$colour)
+# # Col_Colours has the length of cluster number 
+# head(Col_Colours)
+# length(Col_Colours)
+# png(filename=paste0("Results/", sampSet,'_heatmap_defining_genes.png'), height=2500, width=1080)
+# heatmap.2(defining_matrix, margins=c(40,20), scale="row", col = bluered(100),
+#           cexRow=4, cexCol=4,  trace="none", key=TRUE, keysize=2, key.title="", key.xlab="row Z-score",
+#           lhei=c(1,20), lwid=c(1,8), ColSideColors=c(Col_Colours), 
+#           main=paste(sampSet,'heatmap of cell type defining genes') )
+# dev.off()
+# 
+# png(filename=paste0("Results/", sampSet,'_heatmap_defining_genes_scale.png'), height=1080, width=1080)
+# heatmap.2(defining_matrix, scale="row", col = bluered(100), 
+#           cexRow=4, cexCol=4,  trace="none", key=TRUE, keysize=2, key.title="", key.xlab="row Z-score",
+#           lhei=c(1,9), lwid=c(1,2), ColSideColors=c(Col_Colours))
+# dev.off()  
+```
+
+
+add a bubbleplot of defining genes
+```{r add a bubbleplot of defining genes, fig.height=12}
+# #reorder axis's using heatmap dendrogram
+# pp <- heatmap.2(defining_matrix, scale="row")
+# rowIndex <- pp$rowInd
+# colIndex <- pp$colInd
+# 
+
+# 
+# 
+# png(filename=paste0('Results/', sampSet, '_bubbleplot_defining_genes.png'), height=3840, width=3840)
+# plotDots(defining_sce, features=rownames(defining_sce), group="named_cluster", color=turbo(256)) +
+#   theme_minimal(base_size = 50) +
+#   theme(aspect.ratio = 6, axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), axis.title.x=element_blank(), axis.title.y=element_blank(), legend.key.size = unit(2, 'cm')) +
+#   scale_y_discrete(limits=rownames(defining_matrix)[rowIndex]) +
+#   scale_x_discrete(limits=colnames(defining_matrix)[colIndex])
+# dev.off()
+```
+
+
+
+
+```{r exclude NK cells and suspicious cluster 19}
+# if(sampSet == 'run_1' )
+# {
+#   sce_all_filt <- sce_all_filt[,!sce_all_filt$cluster %in% c('9b', '14b', '19')]
+#   sce_filt <- sce_filt[,!sce_filt$cluster %in% c('9b', '14b', '19')]
+#     
+# }
+# if(sampSet == 'run_2' )
+# {
+#   sce_all_filt <- sce_all_filt[,!sce_all_filt$cluster %in% c('2a', '16', '19b', '19c')]
+#   sce_filt <- sce_filt[,!sce_filt$cluster %in% c('2a', '16', '19b', '19c')]
+#   
+# }
+```
+
+
+# Differential abundance analysis
+
+For running DA analysis, we looking for differential abundance/ cell type proportion within these groups.
+
+
+```{r divide cells based on sorted population}
+print(table(sce_all_filt$cluster))
+print(table(sce_all_filt$Sample))
+print(table(sce_all_filt$condition))
+
+# load annotation table as meta information need to use later
+if(bsp_num == "bsp_248")
+{
+    annot <- read.csv('/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/references/sample_information.csv')
+    head(annot)
+    samps <- paste("sample", formatC(1:24, width=2, flag="0"), sep="_")
+    annot$sample_id <- samps
+    rownames(annot) <- annot$sample_id
+    head(sce_all_filt$cull_date)
+    DPI_1 <- sce_all_filt[,sce_all_filt$cull_date == 1]
+    DPI_12 <- sce_all_filt[,sce_all_filt$cull_date == 12]
+    subsets <- list(DPI_1=DPI_1, DPI_12=DPI_12)
+
+
+  
+}
+head(colData(sce_all_filt))
+head(annot)
+table(annot$condition)
+```
+
+Our DA analysis will be run using a negative binomial test.
+<!-- Because clusters were computed on the dataset after merging and correcting for differences between runs, we will not include run as a covariate here. Instead, we will account for sex while testing differential abundance between conditions.  -->
+
+We'll consider a change in abundance (proportion of one cluster) with condition 135 vs ISU.
+
+```{r conduct Differential abundance analysis for each sorted population}
+# if(sampSet == 'run_2' )
+# {
+# save.image(file = "differential_lily_develop.RData")
+# }
+conduct_DA <- function(subsets, selected_comparison = 3)
+{
+DA <- lapply(subsets, function(x){
+# print(x)  
+  abundances <- table(x$cluster, x$Sample)
+  abundances <- unclass(abundances)
+  
+  head(abundances)
+  head(colnames(abundances))
+  selected_anno <- annot[colnames(abundances), ]
+  # extract rows of samples used there, s1-8 
+  
+  y.ab <- DGEList(abundances, samples= selected_anno)
+
+  y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('control', 'H1N1', 'PRCV'))
+  
+  design <- model.matrix(~ 0 + condition, y.ab$samples)
+  
+  contrasts <- makeContrasts(conditioncontrol-conditionH1N1, conditioncontrol-conditionPRCV, 
+  conditionH1N1-conditionPRCV, levels=colnames(design))
+  contrasts
+  
+  
+  
+  if(nrow(abundances) > 2)
+  {
+    y.ab <- estimateDisp(y.ab, design, trend="none")
+    # Setting trend="none" disables the fitting of a trend to the dispersion estimates. This means each gene's dispersion is estimated independently of its mean expression level. This can be useful if you believe the dispersion does not depend on the abundance, but it might lead to less stable estimates, especially for lowly expressed genes.
+    # Setting robust=TRUE enables robust estimation methods, which help mitigate the influence of outliers on the model fitting. This is useful if your data contain outliers or if you want to ensure that the results are not unduly affected by a few extreme values.
+    
+    summary(y.ab$common.dispersion)
+    # plotBCV(y.ab, cex=1)
+    fit.ab <- glmQLFit(y.ab, design, robust=TRUE, abundance.trend=FALSE)
+    # Setting abundance.trend=FALSE disables the consideration of a trend in gene abundance during model fitting. This assumes that the quasi-likelihood dispersion does not depend on the average abundance of the genes. , this might be suitable if you believe there is no relationship between dispersion and mean expression.
+      
+  }else
+  {
+    y.ab <- estimateDisp(y.ab, design, trend="none")
+    summary(y.ab$common.dispersion)
+    fit.ab <- glmQLFit(y.ab, design, abundance.trend=FALSE)
+    # print(fit.ab)
+  }
+  summary(fit.ab$var.prior)
+  # summary(fit.ab$df.prior)
+  # plotQLDisp(fit.ab, cex=1)
+  res <- glmQLFTest(fit.ab, contrast=contrasts[, selected_comparison])
+
+  restab <- res$table
+  restab$FDR <- p.adjust(restab$PValue, method='fdr')
+  restab$comparison <- colnames(contrasts)[selected_comparison]  
+  print(head(restab))
+  
+  return(restab)
+})
+return(DA)  
+}
+output_DA_excel <- function(DA, file_name_tag = '')
+{
+   
+  library(openxlsx)
+  wb <- createWorkbook() 
+  
+  for(i in names(DA))
+  {
+    print(i)
+    DA_list_per_element <- DA[[i]]
+    # colnames(DA_list_per_element)
+    DA_list_per_element$cluster <-  paste0('cluster_', rownames(DA_list_per_element))
+    # unique(DA_list_per_element$comparison)
+    # Add a worksheet to the workbook with the created name
+    addWorksheet(wb, sheetName = i)
+    # Write the data frame to the worksheet
+    writeData(wb, sheet = i, DA_list_per_element, rowNames = TRUE)
+    
+  }
+  # Save the workbook to a file
+  saveWorkbook(wb, file = paste0('Results/', sampSet, file_name_tag, "_DA_list_per_element.xlsx"), overwrite = TRUE) 
+  # run_2 table contain the results of run 1+2
+}
+df_cluster_number_name  <- as.data.frame(unique(colData(sce_all_filt)[,c('named_cluster', 'cluster')]))
+rownames(df_cluster_number_name) <- 1:nrow(df_cluster_number_name)
+head(df_cluster_number_name)
+
+
+DA <- conduct_DA(subsets, selected_comparison = 3)
+output_DA_excel(DA, file_name_tag='_t1_t2_')
+
+DA_ctl_t1 <- conduct_DA(subsets, selected_comparison = 1)
+output_DA_excel(DA_ctl_t1, file_name_tag='_ctl_t1_')
+
+DA_ctl_t1 <- conduct_DA(subsets, selected_comparison = 2)
+output_DA_excel(DA_ctl_t1, file_name_tag='_ctl_t2_')
+```
+
+run 1:
+Interestingly, some clusters have differential abundance between 2 conditions.
+CD4: 17
+CD8: 2, 8c
+
+Let's plot box plots of proportions between 2 conditions to have a look.
+
+```{r plot box plots to visulize cell proportion between 2 conditions}
+
+
+
+
+boxplot_cluster_proportion <- function(selected_dataset, selected_cluster = '2',
+                                       flag = 'total', composition = FALSE, annot = annot)
+{
+  if(composition)
+  {
+    # plot the stacked bar chart to show the percentage of each cluster in a sample among sorted CD4 population 
+    # calculate proportion of each cluster within each sample among sorted CD4 population
+    # calculate proportion of cluster 4a within sample 9 among sorted CD4 population
+    
+    props <- prop.table(table(selected_dataset$cluster, selected_dataset$Sample), margin=2)
+    
+    props <- data.frame(t(props))
+    colnames(props) <- c('sample', 'cluster', 'prop')
+    props <- merge(props, annot[, c("Condition", "sample")], by= "sample")
+    
+    props$sample <- factor(props$sample, levels=c("sample_09", "sample_14", "sample_15", 
+                                                  "sample_16", "sample_10", "sample_11", 
+                                                  "sample_12", "sample_13"))
+    as.character(props$cluster)
+    props <- merge(props, df_cluster_number_name, by= "cluster")
+    
+
+    
+    # props$named_cluster[grep('non-conventional T cells', props$cell_type)] <- 'NCT'
+    props$named_cluster <- paste(props$cluster, props$named_cluster, sep = ", ")
+    
+    p <- ggplot(props, aes(fill=named_cluster, y=prop, x=sample)) +
+      geom_bar(position='stack', stat='identity') +
+      facet_grid(~Condition, scales = "free_x", space = "free_x")+
+      theme_classic() +  # Apply classic theme with white background
+      theme(axis.text.x = element_text(angle = 90)) + 
+      scale_fill_brewer(palette = "Pastel1")   # better color palette      
+    print(p)
+    # The scales = "free_x" and space = "free_x" options ensure that the x-axis is shared but allows different sample groupings for each condition.
+    
+    ## and print it
+    print(paste0('Results/', sampSet, '_proportion_each_cluster_', flag, '.png'))
+    png(filename=paste0('Results/', sampSet, '_proportion_each_cluster_', flag, '.png'))
+    print(p)
+    dev.off()  
+    # ggplot(props, aes(fill=cluster, y=prop, x=sample)) +
+    #   geom_bar(position='stack', stat='identity') +
+    #   labs(x=NULL, y='proportion') +
+    #   theme_classic() +
+    #   theme(axis.text.x = element_text(angle = 45, hjust=1), text=element_text(size=21))
+  }
+  
+  
+  
+  
+  
+  ## calculate the proportion of cluster 2 in selected_dataset cells in each sample, 
+  # eg: cells of cluster 2 composed 14% of cells in sample 1 in sorted CD4 population
+  props <- prop.table(table(selected_dataset$cluster, selected_dataset$Sample), margin=2)[selected_cluster,]
+  print(props)
+  proptab <- annot[,c('sample', 'Condition')]
+  proptab$proportions <- props[rownames(proptab)]
+  # proptab$Condition <- factor(proptab$Condition)
+  proptab$Condition <- factor(proptab$Condition, levels = c('ISU1', '135'))
+  cell_type = df_cluster_number_name[df_cluster_number_name$cluster == selected_cluster, 'named_cluster']
+  group_colors <- c('135' = 'red', 'ISU1' = 'black')
+  
+  p <- ggplot(data=proptab, aes(x=Condition, y=proportions)) +
+    geom_boxplot(outlier.shape = NA) +
+    geom_point(aes(col=Condition), position='jitter', size = 5) + 
+    ggtitle(paste(sampSet, 'proportion of cluster', selected_cluster, cell_type, '\n in', flag, 'cell populations between 2 Condition')) +
+    scale_color_manual(values = group_colors)
+  print(p)
+  
+  png(filename=paste0('Results/', sampSet, '_DA_cluster', selected_cluster, '_prop_', flag, '.png'), height=900, width=1080)  
+  print(p)
+  dev.off()
+  
+}
+
+# if(sampSet == 'run_1' )
+# {
+#   # boxplot_cluster_proportion(selected_dataset = all, selected_cluster = '2', flag = 'total')
+#   # boxplot_cluster_proportion(selected_dataset = CD8s, selected_cluster = '2', flag = 'CD8')
+#   # boxplot_cluster_proportion(selected_dataset = all, selected_cluster = '8c', flag = 'total')
+#   # boxplot_cluster_proportion(selected_dataset = CD8s, selected_cluster = '8c', flag = 'CD8')
+#   # 
+#   # ## calculate the proportion of cluster 17 in cells sorted as CD4s in each sample
+#   # ## proportion within those cells sorted as CD4s
+#   # boxplot_cluster_proportion(selected_dataset = all, selected_cluster = '17', flag = 'total')
+#   # boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '17', flag = 'CD4')
+#   
+# }
+# if(sampSet == 'run_2' )
+# {
+#   boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '4a', flag = 'CD4', composition = TRUE, annot=annot)  
+#   boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '4b', flag = 'CD4', annot=annot) 
+#   boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '8', flag = 'CD4', annot=annot) 
+#   
+#   boxplot_cluster_proportion(selected_dataset = MMDs, selected_cluster = '20', flag = 'MMDs', composition = TRUE, annot=annot)  
+#   
+#   # boxplot_cluster_proportion(selected_dataset = Bs, selected_cluster = '17', flag = 'Bs')  
+# }
+
+```
+
+# Differential expression analysis
+
+Now we move on to differential expression analyses. 
+all samples are from female pigs, we only compare samples in same sequencing run at this stage. compare two conditions 135 (s5-8) vs ISU (s1-4)
+
+
+Now we test for differential expression. This analysis will be run as a pseudo-bulk analysis, pooling counts from all of the cells within each cluster for each sample before treating like bulk RNAseq data. 
+
+Differential expression will then be analysed for each cluster. For this first pass, 
+
+```{r create functions and variables needed later for DE analysis}
+plot_volcano <- function(df_re, title) 
+ {
+  ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
+  geom_point() +
+  geom_text_repel(size=7) +
+  labs(title=title, x = "logFC", y = "-log10(p_adjust)") +  # Customize axis labels here if needed
+  geom_vline(xintercept=c(-0.6, 0.6), col="red") +
+  geom_hline(yintercept=-log10(0.05), col="red") +
+  scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
+  theme(
+    plot.title = element_text(size = 20),        # Title font size and style
+    axis.title.x = element_text(size = 15),                     # X-axis label font size
+    axis.title.y = element_text(size = 15)   )
+          # xlim(-3, 3) + ylim(0, -log10(y_limit)) +
+}  
+
+mod_data <- function(df_re, i, cell_type) 
+{
+  y_limit <- 1.0e-20
+  # add a column of NAs
+  df_re$diffexpressed <- "NO"
+  # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP"
+  df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust < 0.05] <- "UP"
+  # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
+  df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust < 0.05] <- "DOWN"
+  # this will output DE results for selected 
+  write.table(df_re, 
+              file=paste0('Results/', sampSet, '_edgeR_annotated_DE_cluster_', i, '.csv'),
+              sep=',', quote=FALSE, row.names = FALSE)  
+  
+  df_re$delabel <- NA
+  if(sum(df_re$diffexpressed != "NO") == 0)
+  {
+    
+    print(paste('no qualified DE genes observed in this cluster', i, ', no volcano plot'))
+    return(df_re)
+  }else
+  {
+    
+    print(paste('qualified DE genes observed in this cluster', i, ', show volcano plot'))
+  df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]
+  # for row/gene who up/down, its delabel column will store the gene symbol again
+  # for row/gene who is not DE, its delabel column is NA
+  # Set p-value floor
+  # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit 
+
+  p1 <- plot_volcano(df_re, title=paste("DE genes across cells within cluster", i, cell_type))
+  print(p1)
+
+  png(filename = paste0('Results/', sampSet, '_edgeR_volcano_cluster', i, '.png') , height=1080, width=1080)
+  # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space 
+  print(p1)
+  dev.off()    
+  }
+
+  return(df_re)
+}
+
+# integrate and output DE of each cluster into one single excel file
+output_DE_to_files <- function(de.results.any, flag= 'm1')
+{
+  cls <- lapply(de.results.any, class)
+  # check which cluster fail to have DE results and remove these clusters in de.results.any
+  if(length(which(cls == 'character')) > 0)
+  {
+    de.results.any <- de.results.any[-which(cls %in% 'character')]
+  }
+  n_cluster <- length(de.results.any)
+  summary_df <- data.frame('DOWN' = rep(0, n_cluster),'NO' = rep(0, n_cluster),
+                           'UP' = rep(0, n_cluster))
+  rownames(summary_df) = names(de.results.any)
+  
+  library(openxlsx)
+  # Create a new workbook
+  wb <- createWorkbook()
+
+  for(i in names(de.results.any))
+  {
+    print(i)
+    output_df <- de.results.any[[i]]
+    output_df$p_adjust <- p.adjust(output_df$PValue, method='fdr')
+    output_df$symbol <- rowData(sce_all_filt)[rownames(output_df), 'Symbol']
+    output_df$ensemble_id <- rownames(output_df)  
+    head(output_df$p_adjust,50)
+    output_df <- output_df[order(output_df$p_adjust),]
+     de.results.any[[i]] <- output_df
+    # change format GHSR, TNFSF10 into GHSR;TNFSF10 for those duplicates in our DE (edgeR) csv files. 
+    ###################################
+    my_vector <- output_df$symbol
+    # Function to replace ', ' with ';' for those Ensembl gene ID who has duplicates symbols
+    replace_comma <- function(x) {
+      gsub(", ", ";", x)
+    }
+    # Identify elements that match the pattern ', '
+    matching_indices <- grep(", ", my_vector)
+    
+    # Apply the function to identified elements and print each changed element
+    for (index in matching_indices) {
+      original_element <- my_vector[index]
+      changed_element <- replace_comma(original_element)
+      # print(paste(original_element, 'after modify', changed_element))
+      
+    }   
+    changed_vector <- sapply(my_vector, replace_comma)
+    length(changed_vector)
+    dim(output_df)
+    output_df$symbol <- changed_vector
+    #############################################
+    # write.table(output_df, 
+    #             file=paste0('Results/', sampSet, '_', flag,'_DE_cluster_', i, '.csv'), 
+    #             sep=',', quote=FALSE, row.names = FALSE)
+    
+    
+    sheet_name <- paste("cluster", i)
+    # Add a worksheet to the workbook with the created name
+    addWorksheet(wb, sheetName = sheet_name)
+    # Write the data frame to the worksheet
+    writeData(wb, sheet = sheet_name, output_df)
+
+    cell_type = df_cluster_number_name[df_cluster_number_name$cluster == i, 'named_cluster']
+    if(flag == 'm2')
+    {
+      # only run mod_data function for method 2, it will output final DE files per cluster that would be used for downstream enrichment analysis
+      output_df <- mod_data(output_df, i, cell_type)      
+    }
+
+    
+    
+    if(length(table(output_df$diffexpressed)) == 1)
+    {
+      print(table(output_df$diffexpressed))
+      print(paste('no significant DE in cluster', i))
+    }else
+    {
+      vector1 <- table(output_df$diffexpressed)
+      summary_df[i,'DOWN'] <- vector1['DOWN']
+      summary_df[i,'UP'] <- vector1['UP']
+      print(paste('exist significant DE in cluster', i))
+    }
+    
+    # add column diffexpressed to denote a DE is up or down expressed
+  }
+  
+  print(paste0('Results/', sampSet, "_m2_DE_all_cluster.xlsx"))
+  # Save the workbook to a file
+  saveWorkbook(wb, file = paste0(pfx,'/', sampSet, "_m2_DE_all_cluster.xlsx"), overwrite = TRUE)
+  
+  for(i in names(de.results.any))
+  {
+    print(paste('DE genes whose FDR below 0.05 in cluster',i))
+    print(de.results.any[[i]][de.results.any[[i]]$p_adjust < 0.05,])
+  }
+  return(summary_df)
+}  
+
+
+# at this stage, sce_all_filt contain 30077 genes, 37511 cells, 8 samples, 21 clusters
+
+# pooling/sum counts from all cells within each cluster for each sample 
+# Differential expression will then be analysed based on each sample-cluster pair
+length(unique(sce_all_filt$cluster))
+table(sce_all_filt$cluster)
+head(colData(sce_all_filt)) 
+summed <- aggregateAcrossCells(sce_all_filt, 
+    id=colData(sce_filt)[,c("cluster", "Sample")])
+# inside summed@assays@data@listData[["counts"]], the resulting columns should be 21*8=168 (168 sample-cluster pairs) rather than 167, is there a mistake? no, it's because a few samples have 0 cell in certain clusters.
+table(summed$cluster, summed$Sample) 
+# View(summed@assays@data@listData[["counts"]])
+head(colData(summed)) 
+
+summed.filt <- summed[,summed$ncells >= 10]
+# remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
+table(summed.filt$cluster, summed.filt$Sample) 
+# dim(summed.filt)
+# head(summed.filt@colData)
+  
+
+clusts <- as.character(levels(factor(summed.filt$cluster)))
+de.results.any <- vector('list', length(clusts))
+
+names(de.results.any) <- clusts
+
+```
+
+```{r apply method 2 conduct DE analysis between 2 virus condition for each cluster and output formal DE results}
+# clust = "1" 
+pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprstotal=40,
+                                selected_comparison = 3)
+  {
+    sc <- sce[,sce$cluster==clust]
+
+    
+    # retrieve 8 samples in cluster 1
+    y <- DGEList(counts=counts(sc), samples=colData(sc))
+
+    if(length(which(table(y$samples$condition) < 2)) > 0)
+    {
+      return('insufficient cells per condition')
+    }else{
+      keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
+                           min.total.count=filtexprstotal)
+      # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
+      # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
+      # filter genes that has total counts below 40 across all samples
+
+      y <- y[keep,]
+
+      filtered_genes <- rownames(y)
+
+      print(paste("after fitering low-expressed genes, genes retained in cluster", clust, "is", 
+                  length(filtered_genes)) )
+      # those retained genes will be statistically tested to see whether differentially expressed 
+      
+      y <- calcNormFactors(y)
+      # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter 
+      y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
+
+      # par(mfrow=c(2,3))
+      for (i in 1:ncol(y)) {
+        # plotMD(y, column=i, main=clust)
+
+      }
+
+      design <- model.matrix(~ 0 + condition, y$samples)
+      # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
+      contrasts <- makeContrasts(conditioncontrol-conditionH1N1, conditioncontrol-conditionPRCV, 
+      conditionH1N1-conditionPRCV, levels = colnames(design))
+      contrasts
+        
+
+      tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
+      if(is(tc, 'error') | is(tc, 'warning'))
+      {
+        return(paste(tc))
+      }else
+      {
+        y <- estimateDisp(y, design)
+        # The NB dispersion is estimated using the estimateDisp function and visualized with plotBCV.
+        # plotBCV(y, main=clust)
+        fit <- glmQLFit(y, design, robust=TRUE)
+        # estimate quasi-likelihood (QL) dispersions, visualized with plotQLDisp.
+        # plotQLDisp(fit)
+        res <- glmQLFTest(fit, contrast=contrasts[, selected_comparison])
+        
+        # We then perform quasi-likelihood F-test for contrast 2 conditions.
+        # topTags(res)
+        restab <- res$table
+        restab$comparison <- colnames(contrasts)[selected_comparison]  
+        # print(head(restab))        
+        return(restab)
+      }
+    }
+  }
+
+for(i in clusts)
+{
+  de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt)
+}
+length(de.results.any)
+
+
+
+summary_df <- output_DE_to_files(de.results.any, flag= 'm2')
+original_summary_df <- summary_df 
+
+
+
+
+```
+
+
+```{r  plot up and down DE genes number per cluster bar plot }
+# plot up and down DE genes number per cluster bar plot 
+# Melt the data frame for ggplot2
+# library(reshape2)
+# summary_df$cluster <- rownames(summary_df)
+# summary_df$NO <- NULL
+# 
+# df_cell_type_cluster = data.frame(cluster = colData(sce_all_filt)$cluster,
+#                                   cell_type = colData(sce_all_filt)$named_cluster)
+# df_cell_type_cluster = unique(df_cell_type_cluster)
+# 
+# # merge two data frames by ID and Country
+# summary_df <- merge(df_cell_type_cluster ,summary_df ,by=c("cluster"))
+# summary_df$named_cluster <- paste(summary_df$cluster, summary_df$cell_type, sep = ', ' )
+# summary_df$cell_type
+# 
+# summary_df$cell_type[grep('Monocytes', summary_df$cell_type)] <- 'Monocyte'
+# summary_df$cell_type[grep('conventional', summary_df$cell_type)] <- 'NCT'
+# summary_df$cell_type[grep('T regs', summary_df$cell_type)] <- 'Tregs'
+# 
+# summary_df$cell_type[grep('Mitotic CD4 T Cells', summary_df$cell_type)] <- 'mCD4T'
+# summary_df$cell_type[grep('Mitotic CD8 T Cells', summary_df$cell_type)] <- 'mCD8T'
+# 
+# summary_df$cell_type[grep('CD8 T Cells', summary_df$cell_type)] <- 'CD8T'
+# summary_df$cell_type[grep('CD4 T Cells', summary_df$cell_type)] <- 'CD4T'
+# 
+# 
+# summary_df_sim <- summary_df[,c("DOWN", "UP", "named_cluster")]
+# melted_df <- melt(summary_df_sim, id.vars = 'named_cluster')
+# melted_df <- merge(melted_df ,summary_df[,c('named_cluster', 'cell_type')] ,by=c("named_cluster"))
+# 
+# 
+# 
+# # Plotting overview 
+# p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value), 
+#                       fill = variable)) +
+#   geom_bar(stat = 'identity', position = 'identity') +
+#   labs(x = 'named_cluster', y = 'Number of Genes', 
+#        title = paste(sampSet, 'edgeR summary of DE genes per cluster')) +
+#   scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
+#   theme_minimal() +
+#   geom_text(aes(label = value, 
+#                 vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
+#             color = "black", 
+#             size = 3) + 
+#   theme(axis.text.x = element_text(angle = 90)) + 
+#   facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
+#   theme(
+#     strip.background = element_rect(color = "black", fill = "white", size = 1))  # Add black rectangle border
+# 
+# print(p1)
+# 
+# 
+# 
+# 
+# # monocytes, macrophages, cDCs, pDCs, NCT, CD8T, mCD8T, CD4T, mCD4T, Tregs (please without a blank between "T" and "regs") B cells, plasma cells.
+# 
+# melted_df$cell_type <- factor(melted_df$cell_type, levels = c('Monocyte', 'Macrophages', 
+#                                             'cDCs', 'pDCs', "NCT", "CD8T","mCD8T","CD4T","mCD4T",
+#                                             'Tregs', 'B Cells', "Plasma Cells" ))
+# # unique(melted_df$cell_type)
+# 
+# # Save the plot with larger dimensions for better clarity
+# png(filename = paste0('Results/', sampSet, '_edgeR_DE_gene_num_overview.png'), 
+#     height = 1000, width = 2000, res = 150)  # Adjust height, width, and resolution for better clarity
+# p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value), 
+#                             fill = variable)) +
+#   geom_bar(stat = 'identity', position = 'identity') +
+#   labs(x = 'annotated cluster',  # Custom x-axis title
+#        y = 'Number of DE Genes',  # Custom y-axis title
+#        title = paste(sampDPI, 'edgeR summary of DE genes per cluster'),  # Custom plot title
+#        fill = 'change') +  # Custom legend title
+#   scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
+#   theme_minimal() +
+#   geom_text(aes(label = value, 
+#                 vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
+#             color = "black", 
+#             size = 4) +  # Increase text size inside bars
+#   theme(axis.text.x = element_text(angle = 90, size = 10),  # Increase x-axis text size
+#         axis.text.y = element_text(size = 10),  # Increase y-axis text size
+#         axis.title.x = element_text(size = 10, face = "bold"),  # Increase x-axis label size
+#         axis.title.y = element_text(size = 10, face = "bold"),  # Increase y-axis label size
+#         plot.title = element_text(size = 10, face = "bold", hjust = 0.5),  # Increase title size and center
+#         strip.text = element_text(size = 9),  # Increase facet label size
+#         legend.text = element_text(size = 10),  # Increase legend text size
+#         legend.title = element_text(size = 10, face = "bold")) +  # Increase legend title size
+#   facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
+#   theme(strip.background = element_rect(color = "black", fill = "white"))  # Add black rectangle border
+# print(p1)
+# dev.off()
+# 
+
+
+```
+
+<!-- # check if up & down direction consistent VennDiagrams and shared-gene-tables -->
+<!-- plot VennDiagrams of shared DE genes between main cell population (Macrophages, CD8 T cells, CD4 T cells, B cells) -->
+
+<!-- ```{r VennDiagrams functions } -->
+<!-- library(dplyr) -->
+
+<!-- mod2_data <- function(df_re, i, cell_type)  -->
+<!-- { -->
+<!--   y_limit <- 1.0e-20 -->
+<!--   # add a column of NAs -->
+<!--   df_re$diffexpressed <- "NO" -->
+<!--   # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP" -->
+<!--   df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust < 0.05] <- "UP" -->
+<!--   # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN" -->
+<!--   df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust < 0.05] <- "DOWN" -->
+
+<!--   df_re$delabel <- NA -->
+<!--   if(sum(df_re$diffexpressed != "NO") == 0) -->
+<!--   { -->
+
+<!--     print(paste('no qualified DE genes observed in this cluster', i, ', no volcano plot')) -->
+<!--     return(df_re) -->
+<!--   }else -->
+<!--   { -->
+
+<!--     print(paste('qualified DE genes observed in this cluster', i, ', ')) -->
+<!--   # df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"] -->
+<!--   # for row/gene who up/down, its delabel column will store the gene symbol again -->
+<!--   # for row/gene who is not DE, its delabel column is NA -->
+<!--   # Set p-value floor -->
+<!--   # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit  -->
+
+<!--   } -->
+
+<!--   return(df_re) -->
+<!-- } -->
+
+
+
+<!-- modify_data_for_Venn <- function(de.results.any, flag= 'm2', selected_clusters ) -->
+<!-- { -->
+<!--   cls <- lapply(de.results.any, class) -->
+
+<!--   # check which cluster fail to have DE results and remove these clusters in de.results.any -->
+<!--   # when a cluster have DE results, class of de.results.any[cluster] is data.frame -->
+<!--   # when a cluster fail to have DE results, class of de.results.any[cluster] is character -->
+<!--   if(length(which(cls == 'character')) > 0) -->
+<!--   { -->
+<!--     delete_cluster <- names(de.results.any)[which(cls %in% 'character')] -->
+<!--     print(paste('delete_cluster',delete_cluster))  -->
+<!--     selected_clusters <- selected_clusters[! selected_clusters %in% delete_cluster] -->
+<!--     de.results.any <- de.results.any[-which(cls %in% 'character')] -->
+<!--   } -->
+<!--   output_df_main_population <- NULL -->
+<!--   print(selected_clusters) -->
+<!--   for(i in selected_clusters) -->
+<!--   { -->
+<!--     print(i)   -->
+<!--     output_df <- NULL -->
+
+<!--     output_df$p_adjust <- p.adjust(de.results.any[[i]]$PValue, method='fdr') -->
+<!--     output_df$symbol <- rowData(sce_all_filt)[rownames(de.results.any[[i]]), 'hgnc_symbol'] -->
+<!--     output_df$ensemble_id <- rownames(de.results.any[[i]])   -->
+<!--     output_df$logFC <- de.results.any[[i]]$logFC -->
+<!--     output_df <- as.data.frame(output_df) -->
+
+<!--     output_df = output_df[order(output_df$p_adjust) , ] -->
+
+<!--     # change format GHSR, TNFSF10 into GHSR;TNFSF10 for those duplicates in our DE (edgeR) csv files.  -->
+<!--     my_vector <- output_df$symbol -->
+
+<!--     # Function to replace ', ' with ';' for those Ensembl gene ID who has duplicates IDs -->
+<!--     replace_comma <- function(x) { -->
+<!--       gsub(", ", ";", x) -->
+<!--     } -->
+
+<!--     # Identify elements that match the pattern ', ' -->
+<!--     matching_indices <- grep(", ", my_vector) -->
+
+<!--     # Apply the function to identified elements and print each changed element -->
+<!--     for (index in matching_indices) { -->
+<!--       original_element <- my_vector[index] -->
+<!--       changed_element <- replace_comma(original_element) -->
+<!--       # print(paste(original_element, 'after modify', changed_element)) -->
+<!--     }    -->
+<!--     changed_vector <- sapply(my_vector, replace_comma) -->
+<!--     output_df$symbol <- changed_vector -->
+
+
+<!--     cell_type = df_cluster_number_name[df_cluster_number_name$cluster == i, 'named_cluster'] -->
+<!--     output_df <- mod2_data(output_df, i, cell_type) -->
+<!--     output_df$cluster <- i -->
+<!--     output_df_main_population <- rbind(output_df_main_population, output_df) -->
+<!--     # add column diffexpressed to denote a DE is up or down expressed -->
+<!--   } -->
+
+
+<!--   output_df_main_population$symbol[output_df_main_population$symbol == ""] <- output_df_main_population$ensemble_id[output_df_main_population$symbol == ""] -->
+<!--   return(output_df_main_population) -->
+
+<!-- }   -->
+
+<!-- # Define the aggregation function -->
+<!-- aggregate_rows <- function(df) { -->
+<!--   #   # this version is less strict -->
+<!--   # 1.	If a gene is upregulated in one cluster and downregulated in another, I randomly assign it as either up or down in the main population. -->
+<!--   # 2.	If a gene is upregulated in one of the clusters, it is considered upregulated in the main population. -->
+<!--   # 2.	If a gene is downregulated in one of the clusters, it is considered downregulated in the main population. -->
+<!--   # 3.	If a gene is not DE in all clusters, it is considered non DE in the main population. -->
+
+<!--   # Check if there are any rows with 'UP' or 'DOWN' in 'diffexpressed' -->
+<!--   up_down_rows <- df %>% filter(diffexpressed %in% c("UP", "DOWN")) -->
+
+<!--   if (nrow(up_down_rows) > 0) { -->
+<!--     if(nrow(up_down_rows) >= 2 && length(unique(up_down_rows$diffexpressed)) == 1) -->
+<!--     { -->
+<!--       # print('same direction') -->
+<!--     } -->
+
+<!--     if(length(unique(up_down_rows$diffexpressed)) == 2) -->
+<!--     { -->
+<!--       print('opposite direction') -->
+<!--       print(up_down_rows) -->
+<!--     } -->
+<!--     # Keep only one of the 'UP' or 'DOWN' rows -->
+
+<!--     result <- up_down_rows %>% sample_n(1) -->
+<!--   } else { -->
+<!--     # Randomly select one row if all rows have 'NO' in 'diffexpressed' -->
+<!--     result <- df %>% sample_n(1) -->
+<!--   } -->
+
+<!--   return(result) -->
+<!-- } -->
+
+<!-- aggregate_up_rows <- function(df) { -->
+<!--   #   # this version is less strict -->
+<!--   # 1.	If a gene is upregulated in one cluster and downregulated in another, I randomly assign it as either up or down in the main population. -->
+<!--   # 2.	If a gene is upregulated in one of the clusters, it is considered upregulated in the main population. -->
+<!--   # 2.	If a gene is downregulated in one of the clusters, it is considered downregulated in the main population. -->
+<!--   # 3.	If a gene is not DE in all clusters, it is considered non DE in the main population. -->
+
+<!--   # Check if there are any rows with 'UP' or 'DOWN' in 'diffexpressed' -->
+<!--   up_down_rows <- df %>% filter(diffexpressed %in% c("UP")) -->
+
+<!--   if (nrow(up_down_rows) > 0) { -->
+<!--     # Keep only one of the 'UP' or 'DOWN' rows -->
+<!--     print(up_down_rows) -->
+<!--     result <- up_down_rows %>% sample_n(1) -->
+<!--   } else { -->
+<!--     # Randomly select one row if all rows have 'NO' in 'diffexpressed' -->
+<!--     result <- df %>% sample_n(1) -->
+<!--   } -->
+
+<!--   return(result) -->
+<!-- } -->
+
+<!-- aggregate_rows_strict <- function(df) { -->
+<!--   # this version is more strict -->
+<!--   # If a gene is upregulated in one cluster and downregulated in another, I now assign it as "not DE" in the main population. -->
+<!-- # 2.	If a gene is upregulated in all clusters, it is considered upregulated in the main population. -->
+<!-- # 3.	If a gene is downregulated in all clusters, it is considered downregulated in the main population. -->
+<!-- # -->
+<!--   # Get unique values of 'diffexpressed' -->
+<!--   unique_values <- unique(df$diffexpressed) -->
+
+<!--   # Case 1: All rows have 'DOWN' value -->
+<!--   if (all(df$diffexpressed == "DOWN")) { -->
+<!--     result <- df %>% sample_n(1) -->
+
+<!--     # Case 2: All rows have 'UP' value -->
+<!--   } else if (all(df$diffexpressed == "UP")) { -->
+<!--     result <- df %>% sample_n(1) -->
+
+<!--     # Case 3: All rows have 'NO' value -->
+<!--   } else if (all(df$diffexpressed == "NO")) { -->
+<!--     result <- df %>% sample_n(1) -->
+
+<!--     # Case 4: Rows have mixed 'UP', 'DOWN', 'NO' values -->
+<!--   } else { -->
+<!--     # Randomly choose one row but set 'diffexpressed' to 'NO' -->
+<!--     result <- df %>% sample_n(1) -->
+<!--     result$diffexpressed <- "NO" -->
+<!--   } -->
+
+<!--   return(result) -->
+<!-- } -->
+
+<!-- # to obtain the required Macrophages_Data input for VennDiagrams plot -->
+<!-- integrete_DE_main_population <- function(de.results.any, selected_clusters = c("5", "10", "12c"), -->
+<!--                                          sampSet, main_population )  -->
+<!-- { -->
+<!--   output_df_main_population <- modify_data_for_Venn(de.results.any, flag= 'm2', selected_clusters = selected_clusters)  -->
+<!--   # a large dataframe that merges the DE results for several clusters -->
+
+<!--   # Apply the function to the data frame -->
+<!--   aggregated_data <- output_df_main_population %>% -->
+<!--     group_by(ensemble_id) %>% -->
+<!--     do(aggregate_rows(.)) %>% -->
+<!--     ungroup() -->
+
+<!--   write.csv(aggregated_data, file = paste0("Results/", sampSet, "_DE_edgeR_", main_population, ".csv"), -->
+<!--             row.names = FALSE) -->
+
+<!--   return(aggregated_data) -->
+<!-- }  -->
+
+
+<!-- # add UP DOWN NO lable to DE genes' results -->
+<!-- Create_Set <- function(Data){ -->
+<!--   DE_subset <- Data[Data$diffexpressed != "NO",] -->
+<!--   # keep the DE genes are up-regulated or down-regulateds -->
+
+<!--   # remove any DE genes whose symbol column is NA or empty -->
+<!--   DE_subset <- DE_subset[!is.na(DE_subset$symbol),] -->
+<!--   DE_subset <- DE_subset[DE_subset$symbol != "",] -->
+
+<!--   # check if any DE genes whose symbol column start with ENSSSCG, and remove those -->
+<!--   DE_subset <- DE_subset[!grepl("ENSSSCG", DE_subset$symbol, fixed = TRUE),] -->
+<!--   # fixed logical. If TRUE, pattern is a string to be matched as is. Overrides all conflicting arguments. -->
+<!--   Set <- DE_subset$diffexpressed == "UP" -->
+<!--   # give up regulated genes value 1 -->
+<!--   Set[Set == TRUE] <- 1 -->
+<!--    # give non up-regulated genes value -1 -->
+<!--   Set[Set == FALSE] <- -1 -->
+<!--    # add gene name for each value -->
+
+<!--   Set <- as.integer(Set) -->
+<!--   names(Set) <- DE_subset$symbol -->
+<!--   return(Set) -->
+<!-- } -->
+<!-- # return a named vector of DE genes, with 1 denote up-regulated genes, -1  denote down-regulated genes  -->
+
+<!-- # prepare input data to plot Venn Diagrams -->
+<!-- # save.image(file = paste0('differential_edgeR_',sampSet,'_debug.RData')) -->
+
+<!-- ``` -->
+
+
+<!-- the cluster assignment is based on the slides 'Analysis of scRNA seq data on PRCV samples update 24.07.16.pptx'page 25, but delete cluster 11, 19c in run2. and add plasma cell clusters in B cells main population  -->
+
+<!-- ```{r prepare the input data of VennDiagrams by combine multiple clusters into one main population for edgeR DE results} -->
+
+<!-- # back_up = de.results.any -->
+<!-- head(as.data.frame(de.results.any[2])) -->
+<!-- #  -->
+<!-- # typeof(de.results.any[1]) -->
+
+<!-- if(sampSet == 'run_1' ) -->
+<!-- { -->
+
+<!--   CD8TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("2", "9a", "14a"), -->
+<!--                                                  sampSet, main_population = "CD8T")   -->
+<!--   # CD8TCells_Data[CD8TCells_Data$symbol == 'LGALS3',] -->
+<!--   # table(CD8TCells_Data$diffexpressed) -->
+
+<!--   Macrophages_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("5", "10", "12c"), -->
+<!--                                                  sampSet, main_population = "Macrophages") -->
+<!--    # table(aggregated_data$diffexpressed) -->
+
+<!--   CD4TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("3a", "14c", "17"), -->
+<!--                                                  sampSet, main_population = "CD4T") -->
+<!--   BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("7", "13", '1', '4', '15'), -->
+<!--                                                  sampSet, main_population = "BCells") -->
+<!--   # BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("7", "13"), -->
+<!--                                                  # sampSet, main_population = "BCells") -->
+<!--   # i add plasma cells into B Cells category since there are more DE in plasma cells, worth to have a look at their function -->
+<!-- } -->
+
+<!-- if(sampSet == 'run_2' ) -->
+<!-- { -->
+<!--   Macrophages_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("3", "6", "20"), -->
+<!--                                                  sampSet, main_population = "Macrophages") -->
+<!--    # table(aggregated_data$diffexpressed) -->
+<!--   CD4TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("4a", "8", "9a"), -->
+<!--                                                  sampSet, main_population = "CD4T") -->
+<!--   # BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("7", "17"), -->
+<!--   #                                                sampSet, main_population = "BCells") -->
+
+<!--   CD8TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("1", "9c"), -->
+<!--                                                  sampSet, main_population = "CD8T")     -->
+<!--   BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c('5', '10', '12', '13', '14', -->
+<!--                                                                                     '18', "7", "17"), sampSet, -->
+<!--                                               main_population = "BCells") -->
+<!--   } -->
+
+
+
+
+
+
+
+
+<!-- ``` -->
+
+
+<!-- ```{r plot VennDiagrams} -->
+
+
+
+<!-- # install.packages("remotes") -->
+<!-- # remotes::install_github("jmw86069/venndir"); -->
+<!-- # The development version of venndir -->
+<!-- library(vctrs) -->
+<!-- library(venndir) -->
+
+<!-- set_colours <- c('#FF999A', '#B2DF8A', '#33A02C', '#A6CEE3') -->
+<!-- theme_set(theme_minimal(base_size = 35)) -->
+
+
+
+
+<!-- DE_genes_Set = list(Macrophages=Create_Set(Macrophages_Data), -->
+<!--                  CD4_T_Cells=Create_Set(CD4TCells_Data), -->
+<!--                  CD8_T_Cells=Create_Set(CD8TCells_Data), -->
+<!--                  B_Cells=Create_Set(BCells_Data)) -->
+
+<!-- print(sapply(DE_genes_Set, length)) -->
+<!-- if(sum(sapply(DE_genes_Set, length)) > 0) -->
+<!-- { -->
+<!--   non_empty_DE_genes_Set_flag = TRUE -->
+<!--   options("warn"=1) -->
+
+<!--   venndir(DE_genes_Set, poly_alpha=0.5, proportional=F, set_colors = set_colours, overlap_type="each", verbose = TRUE)  -->
+<!--   # + ggtitle(paste('edgeR', sampSet, 'Venn Diagrams')) -->
+
+<!--   library(grid) -->
+<!--   png(filename=paste0("Results/", sampSet, "_edgeR_Venn_Diagram.png"), height=1080, width=1600) -->
+<!--   options("warn"=-1) -->
+<!--   venndir(DE_genes_Set, poly_alpha=0.5, proportional=F, set_colors = set_colours, font_cex = c(3,2,2), overlap_type="each") -->
+<!--   # Add a title using grid package -->
+<!--   grid.text(paste0(sampSet, " edgeR Venn Diagram"), x = 0.5, y = 0.95, gp = gpar(fontsize = 20)) -->
+
+<!--   dev.off()   -->
+<!-- }else -->
+<!-- { -->
+<!--   print(paste('skip plot venn diagramm because there is no DE genes inside each main population')) -->
+<!--   non_empty_DE_genes_Set_flag = FALSE -->
+<!-- } -->
+
+
+
+
+<!-- ``` -->
+
+<!-- create tables of shared genes to accompany venn diagrams -->
+<!-- ```{r create shared-gene-tables} -->
+<!-- library(dplyr) -->
+
+<!-- #red for up, blue for down , purple for mix -->
+<!-- #since changed to append up, down, mixed, to use Excel's conditional formatting -->
+<!-- set_gene_colour <- function(n_v){ -->
+<!--   colour_vector <- c() -->
+<!--   for(value in n_v){ -->
+<!--   if(length(value) == 0){ -->
+<!--     colour <- "NA" -->
+<!--     next -->
+<!--   } -->
+<!--   if(any(1==value)){ -->
+<!--     colour <- "-Up"} -->
+<!--   if(any(-1==value)){ -->
+<!--     colour <- "-Down"} -->
+<!--   if(any(1==value) & any(-1==value)){ -->
+<!--     colour <- "-Mixed"} -->
+<!--     colour_vector <- c(colour_vector, colour) -->
+<!--   } -->
+<!--   return(colour_vector) -->
+<!-- } -->
+
+<!-- #create function to convert sets into lists of genes for each possible combination, colour by up or down regulation (purple for both) -->
+<!-- #convert 4 sets into 15 sets, numerical into vector -->
+<!-- set_to_df <- function(setlist) -->
+<!--   { -->
+<!--   #chain intersects to get genes in all four -->
+<!--   All_4_names <- intersect(intersect(intersect(names(setlist$Macrophages), -->
+<!--                                                names(setlist$CD4_T_Cells)), -->
+<!--                                      names(setlist$CD8_T_Cells)), -->
+<!--                            names(setlist$B_Cells)) -->
+<!--   # intersect(x, y) finds all rows in both x and y. -->
+
+<!--   All_4 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% All_4_names], -->
+<!--              setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% All_4_names], -->
+<!--              setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% All_4_names], -->
+<!--              setlist$B_Cells[names(setlist$B_Cells) %in% All_4_names]) -->
+
+<!--   # retrieve DE genes that only exist in one of these 4 main cell populations -->
+<!--   Macro_only_DE_genes  <-  setdiff(names(setlist$Macrophages),  -->
+<!--   c(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells), names(setlist$B_Cells))) -->
+<!--   Macro_only <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_only_DE_genes]) -->
+<!--   # setdiff(x, y) finds all rows in x that aren't in y. -->
+<!--   # find DE genes in Macrophages but not in reaming 3 main cell populations then output the rows where such genes locate  -->
+
+
+<!--   CD4_only <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% setdiff(names(setlist$CD4_T_Cells), c(names(setlist$Macrophages), names(setlist$CD8_T_Cells), names(setlist$B_Cells)))]) -->
+
+<!--   CD8_only <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% setdiff(names(setlist$CD8_T_Cells), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells), names(setlist$B_Cells)))]) -->
+
+<!--   B_only <- bind_rows(setlist$B_Cells[names(setlist$B_Cells) %in% setdiff(names(setlist$B_Cells), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)))]) -->
+
+<!--   # retrieve DE genes that only exist in 2 of these 4 main cell populations, there are 6 different combinations -->
+<!--   Macro_CD4_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), c(names(setlist$CD8_T_Cells), names(setlist$B_Cells))) -->
+
+<!--   Macro_CD4 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_names], setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_names]) -->
+
+<!--   Macro_CD8_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$CD8_T_Cells)), c(names(setlist$CD4_T_Cells), names(setlist$B_Cells))) -->
+
+<!--   Macro_CD8 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD8_names], setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD8_names]) -->
+<!--   # -->
+<!--   Macro_B_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$B_Cells)), c(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells))) -->
+
+<!--   Macro_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_B_names], setlist$B_Cells[names(setlist$B_Cells) %in% Macro_B_names]) -->
+<!--   # -->
+<!--   CD4_CD8_names <- setdiff(intersect(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)), c(names(setlist$Macrophages), names(setlist$B_Cells))) -->
+
+<!--   CD4_CD8 <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD4_CD8_names], setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_CD8_names]) -->
+<!--   # -->
+<!--   CD4_B_names <- setdiff(intersect(names(setlist$CD4_T_Cells), names(setlist$B_Cells)), c(names(setlist$Macrophages), names(setlist$CD8_T_Cells))) -->
+<!--   CD4_B <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_B_names], setlist$B_Cells[names(setlist$B_Cells) %in% CD4_B_names]) -->
+<!--   # -->
+<!--   CD8_B_names <-setdiff(intersect(names(setlist$B_Cells), names(setlist$CD8_T_Cells)), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells))) -->
+<!--   CD8_B <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD8_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% CD8_B_names]) -->
+
+
+<!--   # # retrieve DE genes that only exist in 3 of these 4 main cell populations, -->
+<!--   # there are 3 possible combinations -->
+<!--   Macro_CD4_CD8_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), names(setlist$CD8_T_Cells)), names(setlist$B_Cells)) -->
+<!--   Macro_CD4_CD8 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_CD8_names],setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_CD8_names],setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD4_CD8_names]) -->
+<!--   # -->
+<!--   Macro_CD4_B_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), names(setlist$B_Cells)), names(setlist$CD8_T_Cells)) -->
+<!--   Macro_CD4_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_B_names],setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% Macro_CD4_B_names]) -->
+<!--   # -->
+<!--   Macro_CD8_B_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD8_T_Cells)), names(setlist$B_Cells)), names(setlist$CD4_T_Cells)) -->
+<!--   Macro_CD8_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD8_B_names],setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD8_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% Macro_CD8_B_names]) -->
+<!--   # -->
+<!--   CD4_CD8_B_names <- setdiff(intersect(intersect(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)), names(setlist$B_Cells)), names(setlist$Macrophages)) -->
+<!--   CD4_CD8_B <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_CD8_B_names], -->
+<!--                          setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD4_CD8_B_names], -->
+<!--                          setlist$B_Cells[names(setlist$B_Cells) %in% CD4_CD8_B_names]) -->
+
+<!--   All_Combs <- list(Macro_only, CD4_only, CD8_only, B_only, Macro_CD4, Macro_CD8, Macro_B, CD4_CD8, CD4_B, CD8_B, Macro_CD4_CD8, Macro_CD4_B, Macro_CD8_B, CD4_CD8_B, All_4) -->
+<!--   All_Names <- c("Macrophages Only", "CD4 T Cells Only", "CD8 T Cells Only", "B Cells Only", "Macrophages/CD4 T Cells",  "Macrophages/CD8 T Cells", "Macrophages/B Cells", "CD4 T Cells/CD8 T Cells", "CD4 T Cells/B Cells", "CD8 T Cells/B Cells", "Macrophages/CD4 T Cells/CD8 T Cells", "Macrophages/CD4 T Cells/B Cells", "Macrophages/CD8 T Cells/B Cells", "CD4 T Cells/CD8 T Cells/B Cells", "All 4") -->
+<!--   # make vectors same length (fill with NA) -->
+<!--   max.length <- max(sapply(All_Combs,length)) -->
+<!--   All_Combs2 <- lapply(All_Combs, "length<-", max.length) -->
+<!--   Export_DF <- tibble(temp = 1:max.length) -->
+<!--   # Extract names and make lists of colours for export table -->
+<!--   for(i in 1:length(All_Combs2)){ -->
+<!--     n_v <- All_Combs2[[i]] -->
+<!--     gene_vector <- names(n_v) -->
+<!--     colour_vector <- set_gene_colour(n_v) -->
+<!--     new_vector <- paste0(gene_vector, colour_vector) -->
+<!--     Title <- All_Names[[i]] -->
+<!--       if(length(new_vector)==0){ -->
+<!--       new_vector <- rep(NA, max.length) -->
+<!--       } -->
+<!--     Export_DF[[Title]] <- new_vector -->
+<!--   } -->
+<!--   Export_DF <- Export_DF[,names(Export_DF) != "temp"] -->
+<!--   return(Export_DF) -->
+
+<!--   } -->
+<!-- if(non_empty_DE_genes_Set_flag) -->
+<!-- { -->
+<!--   setlist = DE_genes_Set -->
+<!--   write.csv(set_to_df(DE_genes_Set), paste0("Results/", sampSet, "edgeR_shared_genes_table.csv")) -->
+
+<!-- }else -->
+<!-- { -->
+<!--   print(paste('skip create shared-gene-tables because there is no DE genes inside each main population')) -->
+<!-- } -->
+
+
+
+
+
+
+<!-- ``` -->
+
+
+
+
+
+<!-- # Wrapping up -->
+
+<!-- Save everything -->
+
+<!-- ```{r save rds} -->
+
+<!-- #  -->
+<!-- # save.image(file = paste0('differential_edgeR_',sampSet,'.RData')) -->
+<!-- sessionInfo() -->
+<!-- # saveRDS(sce_all_filt, file=paste0('sce_',sampSet,'_cluster_filt.rds')) -->
+
+
+
+
+<!-- ``` -->
+
