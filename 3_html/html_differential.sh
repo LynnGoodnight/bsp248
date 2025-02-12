@@ -27,6 +27,9 @@ echo "differential edgeR date: " `date`
 
 cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code/bsp248
 
+export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/"
+export bsp_num="bsp_248"
+export clustK="15"
 export sampSet="all"
 export sampDPI="both"
 echo "sampSet" $sampSet
