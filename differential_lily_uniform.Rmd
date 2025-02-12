@@ -89,22 +89,22 @@ Based on manual annotation from the clustered data using the generated marker ge
 sce_all_corrected$cluster <- sce_all$cluster
 
 # plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD4'], x='cluster', exprs_values='logcounts')
-plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD4'], x='cluster')
+plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD4'], x='cluster')
 
-# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD8B'], x='cluster', exprs_values='logcounts')
-plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD8B'], x='cluster')
+# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$Symbol == 'CD8B'], x='cluster', exprs_values='logcounts')
+plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD8B'], x='cluster')
 
-# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD163'], x='cluster', exprs_values='logcounts')
-plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD163'], x='cluster')
+# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$Symbol == 'CD163'], x='cluster', exprs_values='logcounts')
+plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD163'], x='cluster')
 
-# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD14'], x='cluster', exprs_values='logcounts')
-plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD14'], x='cluster')
+# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$Symbol == 'CD14'], x='cluster', exprs_values='logcounts')
+plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD14'], x='cluster')
  
-# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD3D'], x='cluster', exprs_values='logcounts')
-plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD3D'], x='cluster')
+# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$Symbol == 'CD3D'], x='cluster', exprs_values='logcounts')
+plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD3D'], x='cluster')
 
-# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD3E'], x='cluster', exprs_values='logcounts')
-plotExpression(sce_all, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD3E'], x='cluster')
+# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$Symbol == 'CD3E'], x='cluster', exprs_values='logcounts')
+plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD3E'], x='cluster')
 
 ```
 
