@@ -137,7 +137,7 @@ if(bsp_num == "bsp_248")
     
     name <- munual_annotation[ i, "name"]
     long_name <- paste(name, i, sep = ", ")       
-    print(paste(i, name, long_name))
+    # print(paste(i, name, long_name))
     sce_all_filt$named_cluster[sce_all_filt$cluster==i] <- name
     sce_all_filt$long_named_cluster[sce_all_filt$cluster==i] <- long_name
     }
@@ -183,7 +183,7 @@ saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_named_subcluster.rds')
 
 And make some UMAPs for visulization.
 
-```{r plot UMAPs to show annotated cell types of clusters, fig.width= 12}
+```{r plot UMAPs to show annotated cell types of clusters, fig.width= 12, fig.height=12}
 
 # plot automatic assigned color for each cell type and cluster in UMAP
 sce_filt
