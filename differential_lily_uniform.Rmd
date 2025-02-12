@@ -436,6 +436,8 @@ DA <- lapply(subsets, function(x){
 })
 return(DA)  
 }
+
+# output DA results to excel files
 output_DA_excel <- function(DA, file_name_tag = '')
 {
    
