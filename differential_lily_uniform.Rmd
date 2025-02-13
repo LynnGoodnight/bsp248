@@ -142,7 +142,7 @@ if(bsp_num == "bsp_248")
     sce_all_filt$long_named_cluster[sce_all_filt$cluster==i] <- long_name
     }
 }
-head(sce_all_filt$long_named_cluster)
+# head(sce_all_filt$long_named_cluster)
 
 unique(sce_all_filt$long_named_cluster)
 
@@ -174,7 +174,7 @@ sce_all_filt
 # sce_all_filt$colour  <- BAL_colour_list
 
 colData(sce_filt)[,c('named_cluster', 'long_named_cluster', 'verbose_cluster', 'EXP_celltype')] <- colData(sce_all_filt)[, c('named_cluster', 'long_named_cluster', 'verbose_cluster', 'EXP_celltype')]
-unique(sce_filt$long_named_cluster)
+
 # # Update shiny app with filtered data for easier visualization and identification. For easier visualization in app, pre-convert counts metrics to log scale. 
 saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected_named_with_subcluster.rds'))
 saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_named_subcluster.rds'))
@@ -403,7 +403,7 @@ DA <- lapply(subsets, function(x){
   contrasts
   
   
-  
+  # nrow(abundances) represent the number of clusters been take account.
   if(nrow(abundances) > 2)
   {
     y.ab <- estimateDisp(y.ab, design, trend="none")
