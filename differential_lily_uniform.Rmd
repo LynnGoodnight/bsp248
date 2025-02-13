@@ -358,8 +358,8 @@ if(bsp_num == "bsp_248")
     annot$sample_id <- samps
     rownames(annot) <- annot$sample_id
     head(sce_all_filt$cull_date)
-    sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
-    sce_filt  <- sce_filt[, sce_all_filt$Sample != "sample_20"]
+    # sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
+    # sce_filt  <- sce_filt[, sce_all_filt$Sample != "sample_20"]
     DPI_1 <- sce_all_filt[,sce_all_filt$cull_date == 1]
     DPI_12 <- sce_all_filt[,sce_all_filt$cull_date == 12]
     subsets <- list(DPI_1=DPI_1, DPI_12=DPI_12)
@@ -844,7 +844,7 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprsto
         # plotBCV(y, main=clust)
         fit <- glmQLFit(y, design, robust=TRUE)
         # estimate quasi-likelihood (QL) dispersions, visualized with plotQLDisp.
-        # plotQLDisp(fit)
+        plotQLDisp(fit)
         res <- glmQLFTest(fit, contrast=contrasts[, selected_comparison])
         
         # We then perform quasi-likelihood F-test for contrast 2 conditions.
