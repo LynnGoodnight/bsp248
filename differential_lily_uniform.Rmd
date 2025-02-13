@@ -358,6 +358,8 @@ if(bsp_num == "bsp_248")
     annot$sample_id <- samps
     rownames(annot) <- annot$sample_id
     head(sce_all_filt$cull_date)
+    sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
+    sce_filt  <- sce_filt[, sce_all_filt$Sample != "sample_20"]
     DPI_1 <- sce_all_filt[,sce_all_filt$cull_date == 1]
     DPI_12 <- sce_all_filt[,sce_all_filt$cull_date == 12]
     subsets <- list(DPI_1=DPI_1, DPI_12=DPI_12)
@@ -367,7 +369,7 @@ if(bsp_num == "bsp_248")
 }
 head(colData(sce_all_filt))
 head(annot)
-table(annot$condition)
+# table(annot$condition)
 ```
 
 Our DA analysis will be run using a negative binomial test.
@@ -446,7 +448,7 @@ output_DA_excel <- function(DA, file_name_tag = '')
   
   for(i in names(DA))
   {
-    print(i)
+    # print(i)
     DA_list_per_element <- DA[[i]]
     # colnames(DA_list_per_element)
     DA_list_per_element$cluster <-  paste0('cluster_', rownames(DA_list_per_element))
@@ -463,7 +465,7 @@ output_DA_excel <- function(DA, file_name_tag = '')
 }
 df_cluster_number_name  <- as.data.frame(unique(colData(sce_all_filt)[,c('named_cluster', 'cluster')]))
 rownames(df_cluster_number_name) <- 1:nrow(df_cluster_number_name)
-head(df_cluster_number_name)
+# head(df_cluster_number_name)
 
 
 DA <- conduct_DA(subsets, selected_comparison = 3)
@@ -762,17 +764,17 @@ output_DE_to_files <- function(de.results.any, flag= 'm1')
 # Differential expression will then be analysed based on each sample-cluster pair
 length(unique(sce_all_filt$cluster))
 table(sce_all_filt$cluster)
-head(colData(sce_all_filt)) 
+# head(colData(sce_all_filt)) 
 summed <- aggregateAcrossCells(sce_all_filt, 
     id=colData(sce_filt)[,c("cluster", "Sample")])
 # inside summed@assays@data@listData[["counts"]], the resulting columns should be 21*8=168 (168 sample-cluster pairs) rather than 167, is there a mistake? no, it's because a few samples have 0 cell in certain clusters.
-table(summed$cluster, summed$Sample) 
+# table(summed$cluster, summed$Sample) 
 # View(summed@assays@data@listData[["counts"]])
 head(colData(summed)) 
 
 summed.filt <- summed[,summed$ncells >= 10]
 # remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
-table(summed.filt$cluster, summed.filt$Sample) 
+# table(summed.filt$cluster, summed.filt$Sample) 
 # dim(summed.filt)
 # head(summed.filt@colData)
   
