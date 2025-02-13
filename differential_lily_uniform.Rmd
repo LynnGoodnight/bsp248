@@ -399,11 +399,11 @@ DA <- lapply(subsets, function(x){
   y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('control', 'H1N1', 'PRCV'))
   
   design <- model.matrix(~ 0 + condition, y.ab$samples)
-  
+  print(design)
   contrasts <- makeContrasts(conditioncontrol-conditionH1N1, conditioncontrol-conditionPRCV, 
   conditionH1N1-conditionPRCV, levels=colnames(design))
-  contrasts
   
+  print(contrasts)
   
   # nrow(abundances) represent the number of clusters been take account.
   if(nrow(abundances) > 2)
@@ -826,11 +826,12 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprsto
       }
 
       design <- model.matrix(~ 0 + condition, y$samples)
+      print(design)
       # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
       contrasts <- makeContrasts(conditioncontrol-conditionH1N1, conditioncontrol-conditionPRCV, 
       conditionH1N1-conditionPRCV, levels = colnames(design))
-      contrasts
-        
+      # contrasts
+      print(contrasts)
 
       tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
       if(is(tc, 'error') | is(tc, 'warning'))
