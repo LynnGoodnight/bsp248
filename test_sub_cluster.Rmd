@@ -165,7 +165,10 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   
   
   # we now only select marker genes we're interested as input for the re-clustering
-  related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1)))
+  KLRK1_corr <- KLRK1_corr[1:790]
+  related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1),
+                            which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1)))  
+  # related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1)))
   top <- vargenes8[related_genes]
   top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213',
          "ENSSSCG00000039708", 'ENSSSCG00000040465', 'ENSSSCG00000040140' )
