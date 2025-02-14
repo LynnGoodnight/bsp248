@@ -330,12 +330,10 @@ add a bubbleplot of defining genes
 #   sce_filt <- sce_filt[,!sce_filt$cluster %in% c('9b', '14b', '19')]
 #     
 # }
-# if(sampSet == 'run_2' )
-# {
-#   sce_all_filt <- sce_all_filt[,!sce_all_filt$cluster %in% c('2a', '16', '19b', '19c')]
-#   sce_filt <- sce_filt[,!sce_filt$cluster %in% c('2a', '16', '19b', '19c')]
-#   
-# }
+
+sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
+sce_filt  <- sce_filt[, sce_filt$Sample != "sample_20"]
+
 ```
 
 
@@ -358,8 +356,7 @@ if(bsp_num == "bsp_248")
     annot$sample_id <- samps
     rownames(annot) <- annot$sample_id
     head(sce_all_filt$cull_date)
-    # sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
-    # sce_filt  <- sce_filt[, sce_all_filt$Sample != "sample_20"]
+
     DPI_1 <- sce_all_filt[,sce_all_filt$cull_date == 1]
     DPI_12 <- sce_all_filt[,sce_all_filt$cull_date == 12]
     subsets <- list(DPI_1=DPI_1, DPI_12=DPI_12)
@@ -767,6 +764,8 @@ table(sce_all_filt$cluster)
 # head(colData(sce_all_filt)) 
 summed <- aggregateAcrossCells(sce_all_filt, 
     id=colData(sce_filt)[,c("cluster", "Sample")])
+
+
 # inside summed@assays@data@listData[["counts"]], the resulting columns should be 21*8=168 (168 sample-cluster pairs) rather than 167, is there a mistake? no, it's because a few samples have 0 cell in certain clusters.
 # table(summed$cluster, summed$Sample) 
 # View(summed@assays@data@listData[["counts"]])
