@@ -183,7 +183,7 @@ saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_named_subcluster.rds')
 
 And make some UMAPs for visulization.
 
-```{r plot UMAPs to show annotated cell types of clusters, fig.width= 12, fig.height=12}
+```{r plot UMAPs to show annotated cell types of clusters, fig.width= 12, fig.height=10}
 
 # plot automatic assigned color for each cell type and cluster in UMAP
 sce_filt
@@ -245,7 +245,7 @@ dir.create(results_dir)
 
 ```
 
-```{r plot cell type legend of UMAPs, fig.width= 12, fig.height=12}
+```{r plot cell type legend of UMAPs, fig.width= 12, fig.height=10}
 
 # # plot a legend with manually assigned color for each cell type and cluster 
 # ggplot(data=df_legend_colours, aes(x=dummy_data)) +
@@ -302,7 +302,7 @@ add a heatmap of all defining gene markers for our cell types
 
 
 add a bubbleplot of defining genes
-```{r add a bubbleplot of defining genes, fig.height=12}
+```{r add a bubbleplot of defining genes, fig.height=10}
 # #reorder axis's using heatmap dendrogram
 # pp <- heatmap.2(defining_matrix, scale="row")
 # rowIndex <- pp$rowInd
