@@ -183,7 +183,7 @@ saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_named_subcluster.rds')
 
 And make some UMAPs for visulization.
 
-```{r plot UMAPs to show annotated cell types of clusters, fig.width= 12, fig.height=10}
+```{r plot UMAPs to show annotated cell types of clusters, fig.width= 12, fig.height=8}
 
 # plot automatic assigned color for each cell type and cluster in UMAP
 sce_filt
@@ -245,7 +245,7 @@ dir.create(results_dir)
 
 ```
 
-```{r plot cell type legend of UMAPs, fig.width= 12, fig.height=10}
+```{r plot cell type legend of UMAPs, fig.width= 12, fig.height=8}
 
 # # plot a legend with manually assigned color for each cell type and cluster 
 # ggplot(data=df_legend_colours, aes(x=dummy_data)) +
@@ -302,7 +302,7 @@ add a heatmap of all defining gene markers for our cell types
 
 
 add a bubbleplot of defining genes
-```{r add a bubbleplot of defining genes, fig.height=10}
+```{r add a bubbleplot of defining genes, fig.height=8}
 # #reorder axis's using heatmap dendrogram
 # pp <- heatmap.2(defining_matrix, scale="row")
 # rowIndex <- pp$rowInd
@@ -343,9 +343,7 @@ For running DA analysis, we looking for differential abundance/ cell type propor
 
 
 ```{r divide cells based on sorted population}
-print(table(sce_all_filt$cluster))
-print(table(sce_all_filt$Sample))
-print(table(sce_all_filt$condition))
+
 
 # load annotation table as meta information need to use later
 if(bsp_num == "bsp_248")
@@ -364,11 +362,59 @@ if(bsp_num == "bsp_248")
 
   
 }
+
+print(table(sce_all_filt$cluster))
+print(table(sce_all_filt$Sample))
+print(table(sce_all_filt$condition))
 head(colData(sce_all_filt))
 head(annot)
 # table(annot$condition)
 ```
 
+```{r draw dot plots to direct visulize and compare cluster proportion between condition}
+direct_t_test <- function(DPI_1)
+{
+  abundances <- table(x$cluster, x$Sample)
+  abundances <- unclass(abundances)
+  
+  df_proportion <- prop.table(as.matrix(abundances), margin = 2)
+  df_proportion <-as.data.frame(t(df_proportion)) 
+  n_cluster <- ncol(df_proportion)
+  df_proportion$sample_id <- rownames(df_proportion)
+  df_condition <- selected_anno[ , c("condition", "sample_id")]  
+  df_pro_condition <- merge(df_condition, df_proportion)
+    
+  for (selected_cluster in 1:n_cluster) 
+    {
+    print(selected_cluster)
+    df_pro_one <- df_pro_condition[ , c("sample_id", "condition", as.character(selected_cluster))]
+  colnames(df_pro_one)[3] <- "proportion"
+  compare_means(proportion ~ condition,  data = df_pro_one, 
+                method = "t.test")
+  
+ 
+  my_comparisons <- list( c("PRCV", "H1N1"), c("PRCV", "control"), c("control", "H1N1") )
+  # p <-  ggboxplot(df_pro_one, x = "condition", y = "proportion",
+  #           color = "condition")  + ggtitle( paste("proportion of cluster", selected_cluster, "across condition")) +
+  #   geom_jitter(aes(color = condition), width = 0.2, size = 3, alpha = 0.7) +
+  #   stat_compare_means(comparisons = my_comparisons,
+  #                      method = "t.test") 
+  #   print(p)
+    
+    p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
+                    color = "condition") + ggtitle( paste("proportion of cluster", selected_cluster, "across condition"))  +
+    stat_compare_means(comparisons = my_comparisons,
+                       method = "t.test")
+    print(p)
+  }
+
+  
+
+  
+}
+direct_t_test(DPI_1)
+direct_t_test(DPI_2)
+```
 Our DA analysis will be run using a negative binomial test.
 <!-- Because clusters were computed on the dataset after merging and correcting for differences between runs, we will not include run as a covariate here. Instead, we will account for sex while testing differential abundance between conditions.  -->
 
@@ -379,13 +425,19 @@ We'll consider a change in abundance (proportion of one cluster) with condition 
 # {
 # save.image(file = "differential_lily_develop.RData")
 # }
+df_cluster_number_name  <- as.data.frame(unique(colData(sce_all_filt)[,c('named_cluster', 'cluster')]))
+rownames(df_cluster_number_name) <- 1:nrow(df_cluster_number_name)
+# head(df_cluster_number_name)
+
+x=DPI_1
 conduct_DA <- function(subsets, selected_comparison = 3)
 {
 DA <- lapply(subsets, function(x){
 # print(x)  
   abundances <- table(x$cluster, x$Sample)
-  abundances <- unclass(abundances)
-  
+  typeof(abundances)
+  write.csv(abundances, file = 'abundances_check.csv')
+  abundances <- as.data.frame(abundances)
   head(abundances)
   head(colnames(abundances))
   selected_anno <- annot[colnames(abundances), ]
@@ -395,10 +447,10 @@ DA <- lapply(subsets, function(x){
 
   y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('control', 'H1N1', 'PRCV'))
   
-  design <- model.matrix(~ 0 + condition, y.ab$samples)
+  design <- model.matrix(~ 0 + condition, data = y.ab$samples)
   print(design)
-  contrasts <- makeContrasts(conditioncontrol-conditionH1N1, conditioncontrol-conditionPRCV, 
-  conditionH1N1-conditionPRCV, levels=colnames(design))
+  contrasts <- makeContrasts(ctl_t1 = conditioncontrol-conditionH1N1, ctl_t2 =  conditioncontrol-conditionPRCV, 
+  t1_t2 = conditionH1N1-conditionPRCV, levels = design)
   
   print(contrasts)
   
@@ -427,9 +479,11 @@ DA <- lapply(subsets, function(x){
   res <- glmQLFTest(fit.ab, contrast=contrasts[, selected_comparison])
 
   restab <- res$table
-  restab$FDR <- p.adjust(restab$PValue, method='fdr')
+  
+  print(head(restab$PValue))
+  restab$FDR <- p.adjust(restab$PValue, method='BH')
   restab$comparison <- colnames(contrasts)[selected_comparison]  
-  print(head(restab))
+  print(head(restab, 10))
   
   return(restab)
 })
@@ -460,11 +514,10 @@ output_DA_excel <- function(DA, file_name_tag = '')
   saveWorkbook(wb, file = paste0('Results/', sampSet, file_name_tag, "_DA_list_per_element.xlsx"), overwrite = TRUE) 
   # run_2 table contain the results of run 1+2
 }
-df_cluster_number_name  <- as.data.frame(unique(colData(sce_all_filt)[,c('named_cluster', 'cluster')]))
-rownames(df_cluster_number_name) <- 1:nrow(df_cluster_number_name)
-# head(df_cluster_number_name)
 
-
+head(DA[["DPI_1"]])
+typeof(DA)
+names(DA)
 DA <- conduct_DA(subsets, selected_comparison = 3)
 output_DA_excel(DA, file_name_tag='_t1_t2_')
 
@@ -773,7 +826,8 @@ head(colData(summed))
 
 summed.filt <- summed[,summed$ncells >= 10]
 # remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
-# table(summed.filt$cluster, summed.filt$Sample) 
+
+write.csv(table(summed.filt$cluster, summed.filt$Sample), file = "summed.filt_check.csv")
 # dim(summed.filt)
 # head(summed.filt@colData)
   
