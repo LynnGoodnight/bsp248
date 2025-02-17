@@ -17,7 +17,7 @@
 #SBATCH --mem-per-cpu=128G
 
 ## Job Steps
-echo "Starting: in sbatch we asked for 10 thread and 256G mem"
+echo "Starting: in sbatch we asked for 10 thread and 128G mem"
 echo `date`
 
 module load tools
