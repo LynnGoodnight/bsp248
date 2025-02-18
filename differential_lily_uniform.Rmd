@@ -381,6 +381,12 @@ direct_t_test <- function(x = DPI_1)
   df_proportion <-as.data.frame(t(df_proportion)) 
   n_cluster <- ncol(df_proportion)
   df_proportion$sample_id <- rownames(df_proportion)
+  
+  
+  abundances <- table(x$cluster, x$Sample)
+  abundances <- unclass(abundances)
+  selected_anno <- annot[colnames(abundances), ]
+  
   df_condition <- selected_anno[ , c("condition", "sample_id")]  
   df_pro_condition <- merge(df_condition, df_proportion)
     
@@ -435,11 +441,11 @@ conduct_DA <- function(subsets, selected_comparison = 3)
 DA <- lapply(subsets, function(x){
 # print(x)  
   abundances <- table(x$cluster, x$Sample)
-  typeof(abundances)
-  write.csv(abundances, file = 'abundances_check.csv')
-  abundances <- as.data.frame(abundances)
-  head(abundances)
-  head(colnames(abundances))
+  abundances <- unclass(abundances)
+  # typeof(abundances)
+  # write.csv(abundances, file = 'abundances_check.csv')
+  # head(abundances)
+  # head(colnames(abundances))
   selected_anno <- annot[colnames(abundances), ]
   # extract rows of samples used there, s1-8 
   
