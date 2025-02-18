@@ -372,7 +372,7 @@ head(annot)
 ```
 
 ```{r draw dot plots to direct visulize and compare cluster proportion between condition}
-direct_t_test <- function(DPI_1)
+direct_t_test <- function(x = DPI_1)
 {
   abundances <- table(x$cluster, x$Sample)
   abundances <- unclass(abundances)
