@@ -243,7 +243,7 @@ draw_UMAP_after_sampling <- function(selected_sce, title_flag = "batch effect co
 }
 draw_UMAP_after_sampling(sce_corrected, "batch effect corrected" )
 
-draw_UMAP_after_sampling(sce, "original, no batch effect correction")
+# draw_UMAP_after_sampling(sce, "original, no batch effect correction")
 ```
 
 ### colour cluster plot by condition
@@ -995,10 +995,6 @@ ggplot(dat, aes(fill=sample, y=n_cells, x=cluster)) +
   geom_bar(position='stack', stat='identity')
 
 
-ggplot(data=dat, aes(x=cluster, y=n_cells, fill = cluster)) +
-  geom_bar(stat="identity")+
-  geom_text(aes(label=n_cells), vjust=-0.3, size=3.5) +
-  ggtitle(paste0("cell number summary per cluster in",sampSet))
 ```
 
 # output DE genes for all clusters
