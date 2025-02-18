@@ -435,7 +435,7 @@ df_cluster_number_name  <- as.data.frame(unique(colData(sce_all_filt)[,c('named_
 rownames(df_cluster_number_name) <- 1:nrow(df_cluster_number_name)
 # head(df_cluster_number_name)
 
-x=DPI_1
+
 conduct_DA <- function(subsets, selected_comparison = 3)
 {
 DA <- lapply(subsets, function(x){
@@ -501,10 +501,10 @@ output_DA_excel <- function(DA, file_name_tag = '')
 {
    
   library(openxlsx)
-  wb <- createWorkbook() 
   
   for(i in names(DA))
   {
+    wb <- createWorkbook() 
     # print(i)
     DA_list_per_element <- DA[[i]]
     # colnames(DA_list_per_element)
@@ -514,30 +514,26 @@ output_DA_excel <- function(DA, file_name_tag = '')
     addWorksheet(wb, sheetName = i)
     # Write the data frame to the worksheet
     writeData(wb, sheet = i, DA_list_per_element, rowNames = TRUE)
-    
+    # Save the workbook to a file
+    saveWorkbook(wb, file = paste0('Results/', sampSet, file_name_tag, i, "_DA_list_per_element.xlsx"), overwrite = TRUE)     
   }
-  # Save the workbook to a file
-  saveWorkbook(wb, file = paste0('Results/', sampSet, file_name_tag, "_DA_list_per_element.xlsx"), overwrite = TRUE) 
+
   # run_2 table contain the results of run 1+2
 }
 
-head(DA[["DPI_1"]])
-typeof(DA)
-names(DA)
 DA <- conduct_DA(subsets, selected_comparison = 3)
 output_DA_excel(DA, file_name_tag='_t1_t2_')
 
+# head(DA[["DPI_1"]])
+# typeof(DA)
+# names(DA)
 DA_ctl_t1 <- conduct_DA(subsets, selected_comparison = 1)
 output_DA_excel(DA_ctl_t1, file_name_tag='_ctl_t1_')
 
-DA_ctl_t1 <- conduct_DA(subsets, selected_comparison = 2)
-output_DA_excel(DA_ctl_t1, file_name_tag='_ctl_t2_')
+DA_ctl_t2 <- conduct_DA(subsets, selected_comparison = 2)
+output_DA_excel(DA_ctl_t2, file_name_tag='_ctl_t2_')
 ```
 
-run 1:
-Interestingly, some clusters have differential abundance between 2 conditions.
-CD4: 17
-CD8: 2, 8c
 
 Let's plot box plots of proportions between 2 conditions to have a look.
 
