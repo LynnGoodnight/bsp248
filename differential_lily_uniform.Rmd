@@ -382,7 +382,7 @@ direct_t_test <- function(x = DPI_1)
   n_cluster <- ncol(df_proportion)
   df_proportion$sample_id <- rownames(df_proportion)
   
-  
+  library(ggpubr)
   abundances <- table(x$cluster, x$Sample)
   abundances <- unclass(abundances)
   selected_anno <- annot[colnames(abundances), ]
