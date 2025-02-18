@@ -886,7 +886,7 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprsto
   }
 }
 
-DE_analysis <- function(sce_all_filt, selected_DPI)
+DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3)
 {
 # at this stage, sce_all_filt contain 30077 genes, 37511 cells, 8 samples, 21 clusters
 
@@ -922,21 +922,21 @@ names(de.results.any) <- clusts
 
 for(i in clusts)
 {
-  de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt)
+  de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt, selected_comparison = 3)
 }
 length(de.results.any)
 
 
 
-summary_df <- output_DE_to_files(de.results.any, flag= paste0('m2_', selected_DPI))
+summary_df <- output_DE_to_files(de.results.any, flag= paste0('_m2_DPI', selected_DPI))
 original_summary_df <- summary_df 
   
 }
 
 
-DE_analysis(sce_all_filt, 1)
+DE_analysis(sce_all_filt, 1, selected_comparison = 3)
 
-DE_analysis(sce_all_filt, 12)
+DE_analysis(sce_all_filt, 12, selected_comparison = 3)
 
 ```
 
