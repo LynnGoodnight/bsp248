@@ -797,14 +797,15 @@ output_DE_to_files <- function(de.results.any, flag= 'm1')
     # add column diffexpressed to denote a DE is up or down expressed
   }
   
-  print(paste0('Results/', sampSet, "_m2_DE_all_cluster.xlsx"))
+
   # Save the workbook to a file
-  saveWorkbook(wb, file = paste0(pfx,'/', sampSet, "_m2_DE_all_cluster.xlsx"), overwrite = TRUE)
+  saveWorkbook(wb, file = paste0(pfx,'/', sampSet, flag, "_DE_all_cluster.xlsx"), overwrite = TRUE)
   
   for(i in names(de.results.any))
   {
-    print(paste('DE genes whose FDR below 0.05 in cluster',i))
-    print(de.results.any[[i]][de.results.any[[i]]$p_adjust < 0.05,])
+    print(paste('TRUE means DE genes whose FDR below 0.05 in cluster', i))
+    print(table(de.results.any[[i]]$p_adjust < 0.05))
+    
   }
   return(summary_df)
 }  
@@ -818,72 +819,72 @@ output_DE_to_files <- function(de.results.any, flag= 'm1')
 
 pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprstotal=40,
                                 selected_comparison = 3)
+{
+  sc <- sce[,sce$cluster==clust]
+
+  
+  # retrieve 8 samples in cluster 1
+  y <- DGEList(counts=counts(sc), samples=colData(sc))
+
+  if(length(which(table(y$samples$condition) < 2)) > 0)
   {
-    sc <- sce[,sce$cluster==clust]
+    return('insufficient cells per condition')
+  }else{
+    keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
+                         min.total.count=filtexprstotal)
+    # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
+    # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
+    # filter genes that has total counts below 40 across all samples
 
+    y <- y[keep,]
+
+    filtered_genes <- rownames(y)
+
+    print(paste("after fitering low-expressed genes, genes retained in cluster", clust, "is", 
+                length(filtered_genes)) )
+    # those retained genes will be statistically tested to see whether differentially expressed 
     
-    # retrieve 8 samples in cluster 1
-    y <- DGEList(counts=counts(sc), samples=colData(sc))
+    y <- calcNormFactors(y)
+    # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter 
+    y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
 
-    if(length(which(table(y$samples$condition) < 2)) > 0)
+    # par(mfrow=c(2,3))
+    for (i in 1:ncol(y)) {
+      # plotMD(y, column=i, main=clust)
+
+    }
+
+    design <- model.matrix(~ 0 + condition, y$samples)
+    print(design)
+    # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
+    contrasts <- makeContrasts(conditioncontrol-conditionH1N1, conditioncontrol-conditionPRCV, 
+    conditionH1N1-conditionPRCV, levels = colnames(design))
+    # contrasts
+    print(contrasts)
+
+    tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
+    if(is(tc, 'error') | is(tc, 'warning'))
     {
-      return('insufficient cells per condition')
-    }else{
-      keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
-                           min.total.count=filtexprstotal)
-      # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
-      # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
-      # filter genes that has total counts below 40 across all samples
-
-      y <- y[keep,]
-
-      filtered_genes <- rownames(y)
-
-      print(paste("after fitering low-expressed genes, genes retained in cluster", clust, "is", 
-                  length(filtered_genes)) )
-      # those retained genes will be statistically tested to see whether differentially expressed 
+      return(paste(tc))
+    }else
+    {
+      y <- estimateDisp(y, design)
+      # The NB dispersion is estimated using the estimateDisp function and visualized with plotBCV.
+      # plotBCV(y, main=clust)
+      fit <- glmQLFit(y, design, robust=TRUE)
+      # estimate quasi-likelihood (QL) dispersions, visualized with plotQLDisp.
+      plotQLDisp(fit)
+      res <- glmQLFTest(fit, contrast=contrasts[, selected_comparison])
       
-      y <- calcNormFactors(y)
-      # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter 
-      y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
-
-      # par(mfrow=c(2,3))
-      for (i in 1:ncol(y)) {
-        # plotMD(y, column=i, main=clust)
-
-      }
-
-      design <- model.matrix(~ 0 + condition, y$samples)
-      print(design)
-      # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
-      contrasts <- makeContrasts(conditioncontrol-conditionH1N1, conditioncontrol-conditionPRCV, 
-      conditionH1N1-conditionPRCV, levels = colnames(design))
-      # contrasts
-      print(contrasts)
-
-      tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
-      if(is(tc, 'error') | is(tc, 'warning'))
-      {
-        return(paste(tc))
-      }else
-      {
-        y <- estimateDisp(y, design)
-        # The NB dispersion is estimated using the estimateDisp function and visualized with plotBCV.
-        # plotBCV(y, main=clust)
-        fit <- glmQLFit(y, design, robust=TRUE)
-        # estimate quasi-likelihood (QL) dispersions, visualized with plotQLDisp.
-        plotQLDisp(fit)
-        res <- glmQLFTest(fit, contrast=contrasts[, selected_comparison])
-        
-        # We then perform quasi-likelihood F-test for contrast 2 conditions.
-        # topTags(res)
-        restab <- res$table
-        restab$comparison <- colnames(contrasts)[selected_comparison]  
-        # print(head(restab))        
-        return(restab)
-      }
+      # We then perform quasi-likelihood F-test for contrast 2 conditions.
+      # topTags(res)
+      restab <- res$table
+      restab$comparison <- colnames(contrasts)[selected_comparison]  
+      # print(head(restab))        
+      return(restab)
     }
   }
+}
 
 DE_analysis <- function(sce_all_filt, selected_DPI)
 {
