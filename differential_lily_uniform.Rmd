@@ -419,7 +419,7 @@ direct_t_test <- function(x = DPI_1)
   
 }
 direct_t_test(DPI_1)
-direct_t_test(DPI_2)
+direct_t_test(DPI_12)
 ```
 Our DA analysis will be run using a negative binomial test.
 <!-- Because clusters were computed on the dataset after merging and correcting for differences between runs, we will not include run as a covariate here. Instead, we will account for sex while testing differential abundance between conditions.  -->
