@@ -810,39 +810,12 @@ output_DE_to_files <- function(de.results.any, flag= 'm1')
 }  
 
 
-# at this stage, sce_all_filt contain 30077 genes, 37511 cells, 8 samples, 21 clusters
-
-# pooling/sum counts from all cells within each cluster for each sample 
-# Differential expression will then be analysed based on each sample-cluster pair
-length(unique(sce_all_filt$cluster))
-table(sce_all_filt$cluster)
-# head(colData(sce_all_filt)) 
-summed <- aggregateAcrossCells(sce_all_filt, 
-    id=colData(sce_filt)[,c("cluster", "Sample")])
-
-
-# inside summed@assays@data@listData[["counts"]], the resulting columns should be 21*8=168 (168 sample-cluster pairs) rather than 167, is there a mistake? no, it's because a few samples have 0 cell in certain clusters.
-# table(summed$cluster, summed$Sample) 
-# View(summed@assays@data@listData[["counts"]])
-head(colData(summed)) 
-
-summed.filt <- summed[,summed$ncells >= 10]
-# remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
-
-write.csv(table(summed.filt$cluster, summed.filt$Sample), file = "summed.filt_check.csv")
-# dim(summed.filt)
-# head(summed.filt@colData)
-  
-
-clusts <- as.character(levels(factor(summed.filt$cluster)))
-de.results.any <- vector('list', length(clusts))
-
-names(de.results.any) <- clusts
-
 ```
 
 ```{r apply method 2 conduct DE analysis between 2 virus condition for each cluster and output formal DE results}
 # clust = "1" 
+
+
 pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprstotal=40,
                                 selected_comparison = 3)
   {
@@ -912,6 +885,40 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprsto
     }
   }
 
+DE_analysis <- function(sce_all_filt, selected_DPI)
+{
+# at this stage, sce_all_filt contain 30077 genes, 37511 cells, 8 samples, 21 clusters
+
+# pooling/sum counts from all cells within each cluster for each sample 
+# Differential expression will then be analysed based on each sample-cluster pair
+length(unique(sce_all_filt$cluster))
+table(sce_all_filt$cluster)
+# head(colData(sce_all_filt)) 
+
+sce_all_filt_DPI_selected <- sce_all_filt[,sce_all_filt$cull_date == selected_DPI]
+
+summed <- aggregateAcrossCells(sce_all_filt_DPI_selected, 
+    id=colData(sce_all_filt_DPI_selected)[,c("cluster", "Sample")])
+
+
+# inside summed@assays@data@listData[["counts"]], the resulting columns should be 21*8=168 (168 sample-cluster pairs) rather than 167, is there a mistake? no, it's because a few samples have 0 cell in certain clusters.
+# table(summed$cluster, summed$Sample) 
+# View(summed@assays@data@listData[["counts"]])
+head(colData(summed)) 
+
+summed.filt <- summed[,summed$ncells >= 10]
+# remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
+
+# write.csv(table(summed.filt$cluster, summed.filt$Sample), file = "summed.filt_check.csv")
+# dim(summed.filt)
+# head(summed.filt@colData)
+  
+
+clusts <- as.character(levels(factor(summed.filt$cluster)))
+de.results.any <- vector('list', length(clusts))
+
+names(de.results.any) <- clusts
+
 for(i in clusts)
 {
   de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt)
@@ -920,11 +927,15 @@ length(de.results.any)
 
 
 
-summary_df <- output_DE_to_files(de.results.any, flag= 'm2')
+summary_df <- output_DE_to_files(de.results.any, flag= paste0('m2_', selected_DPI))
 original_summary_df <- summary_df 
+  
+}
 
 
+DE_analysis(sce_all_filt, 1)
 
+DE_analysis(sce_all_filt, 12)
 
 ```
 
