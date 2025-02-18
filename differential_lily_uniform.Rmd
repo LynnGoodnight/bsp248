@@ -490,6 +490,9 @@ DA <- lapply(subsets, function(x){
   restab$FDR <- p.adjust(restab$PValue, method='BH')
   restab$comparison <- colnames(contrasts)[selected_comparison]  
   print(head(restab, 10))
+  print('cluster proportion has significantly changed across condition: ')
+  print(restab[ (restab$FDR < 0.05), ])
+  
   
   return(restab)
 })
