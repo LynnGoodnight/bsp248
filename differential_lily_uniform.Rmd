@@ -355,8 +355,18 @@ if(bsp_num == "bsp_248")
     rownames(annot) <- annot$sample_id
     head(sce_all_filt$cull_date)
 
-    DPI_1 <- sce_all_filt[,sce_all_filt$cull_date == 1]
-    DPI_12 <- sce_all_filt[,sce_all_filt$cull_date == 12]
+    # DPI_1 <- sce_all_filt[,sce_all_filt$cull_date == 1]
+    # DPI_12 <- sce_all_filt[,sce_all_filt$cull_date == 12]
+    
+    
+    DPI_1 <- sce_all_filt[, (sce_all_filt$cull_date == 1) | (sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control")]
+    DPI_12 <- sce_all_filt[, (sce_all_filt$cull_date == 12) | (sce_all_filt$cull_date == 1 & sce_all_filt$condition == "control")]    
+    # table(sce_all_filt$cull_date == 1)
+    # table(sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control")
+    # table((sce_all_filt$cull_date == 1) | (sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control"))
+    # colData(sce_all_filt)
+
+    
     subsets <- list(DPI_1=DPI_1, DPI_12=DPI_12)
 
 
@@ -372,6 +382,7 @@ head(annot)
 ```
 
 ```{r draw dot plots to direct visulize and compare cluster proportion between condition}
+
 direct_t_test <- function(x = DPI_1)
 {
   abundances <- table(x$cluster, x$Sample)
@@ -389,33 +400,33 @@ direct_t_test <- function(x = DPI_1)
   
   df_condition <- selected_anno[ , c("condition", "sample_id")]  
   df_pro_condition <- merge(df_condition, df_proportion)
-    
+  
   for (selected_cluster in 1:n_cluster) 
-    {
+  {
     print(selected_cluster)
     df_pro_one <- df_pro_condition[ , c("sample_id", "condition", as.character(selected_cluster))]
-  colnames(df_pro_one)[3] <- "proportion"
-  compare_means(proportion ~ condition,  data = df_pro_one, 
-                method = "t.test")
-  
- 
-  my_comparisons <- list( c("PRCV", "H1N1"), c("PRCV", "control"), c("control", "H1N1") )
-  # p <-  ggboxplot(df_pro_one, x = "condition", y = "proportion",
-  #           color = "condition")  + ggtitle( paste("proportion of cluster", selected_cluster, "across condition")) +
-  #   geom_jitter(aes(color = condition), width = 0.2, size = 3, alpha = 0.7) +
-  #   stat_compare_means(comparisons = my_comparisons,
-  #                      method = "t.test") 
-  #   print(p)
+    colnames(df_pro_one)[3] <- "proportion"
+    compare_means(proportion ~ condition,  data = df_pro_one, 
+                  method = "t.test")
     
+    
+    my_comparisons <- list( c("PRCV", "H1N1"), c("PRCV", "control"), c("control", "H1N1") )
+    # p <-  ggboxplot(df_pro_one, x = "condition", y = "proportion",
+    #           color = "condition")  + ggtitle( paste("proportion of cluster", selected_cluster, "across condition")) +
+    #   geom_jitter(aes(color = condition), width = 0.2, size = 3, alpha = 0.7) +
+    #   stat_compare_means(comparisons = my_comparisons,
+    #                      method = "t.test") 
+    #   print(p)
+    df_pro_one$condition = factor(df_pro_one$condition, levels=c('control', 'H1N1', 'PRCV'))
     p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
                     color = "condition") + ggtitle( paste("proportion of cluster", selected_cluster, "across condition"))  +
-    stat_compare_means(comparisons = my_comparisons,
-                       method = "t.test")
+      stat_compare_means(comparisons = my_comparisons,
+                         method = "t.test")
     print(p)
   }
-
   
-
+  
+  
   
 }
 direct_t_test(DPI_1)
@@ -438,65 +449,65 @@ rownames(df_cluster_number_name) <- 1:nrow(df_cluster_number_name)
 
 conduct_DA <- function(subsets, selected_comparison = 3)
 {
-DA <- lapply(subsets, function(x){
-# print(x)  
-  abundances <- table(x$cluster, x$Sample)
-  abundances <- unclass(abundances)
-  # typeof(abundances)
-  # write.csv(abundances, file = 'abundances_check.csv')
-  # head(abundances)
-  # head(colnames(abundances))
-  selected_anno <- annot[colnames(abundances), ]
-  # extract rows of samples used there, s1-8 
-  
-  y.ab <- DGEList(abundances, samples= selected_anno)
-
-  y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('control', 'H1N1', 'PRCV'))
-  
-  design <- model.matrix(~ 0 + condition, data = y.ab$samples)
-  print(design)
-  contrasts <- makeContrasts(ctl_t1 = conditioncontrol-conditionH1N1, ctl_t2 =  conditioncontrol-conditionPRCV, 
-  t1_t2 = conditionH1N1-conditionPRCV, levels = design)
-  
-  print(contrasts)
-  
-  # nrow(abundances) represent the number of clusters been take account.
-  if(nrow(abundances) > 2)
-  {
-    y.ab <- estimateDisp(y.ab, design, trend="none")
-    # Setting trend="none" disables the fitting of a trend to the dispersion estimates. This means each gene's dispersion is estimated independently of its mean expression level. This can be useful if you believe the dispersion does not depend on the abundance, but it might lead to less stable estimates, especially for lowly expressed genes.
-    # Setting robust=TRUE enables robust estimation methods, which help mitigate the influence of outliers on the model fitting. This is useful if your data contain outliers or if you want to ensure that the results are not unduly affected by a few extreme values.
+  DA <- lapply(subsets, function(x){
+    # print(x)  
+    abundances <- table(x$cluster, x$Sample)
+    abundances <- unclass(abundances)
+    # typeof(abundances)
+    # write.csv(abundances, file = 'abundances_check.csv')
+    # head(abundances)
+    # head(colnames(abundances))
+    selected_anno <- annot[colnames(abundances), ]
+    # extract rows of samples used there, s1-8 
     
-    summary(y.ab$common.dispersion)
-    # plotBCV(y.ab, cex=1)
-    fit.ab <- glmQLFit(y.ab, design, robust=TRUE, abundance.trend=FALSE)
-    # Setting abundance.trend=FALSE disables the consideration of a trend in gene abundance during model fitting. This assumes that the quasi-likelihood dispersion does not depend on the average abundance of the genes. , this might be suitable if you believe there is no relationship between dispersion and mean expression.
+    y.ab <- DGEList(abundances, samples= selected_anno)
+    
+    y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('control', 'H1N1', 'PRCV'))
+    
+    design <- model.matrix(~ 0 + condition, data = y.ab$samples)
+    print(design)
+    contrasts <- makeContrasts(ctl_t1 = conditioncontrol-conditionH1N1, ctl_t2 =  conditioncontrol-conditionPRCV, 
+                               t1_t2 = conditionH1N1-conditionPRCV, levels = design)
+    
+    print(contrasts)
+    
+    # nrow(abundances) represent the number of clusters been take account.
+    if(nrow(abundances) > 2)
+    {
+      y.ab <- estimateDisp(y.ab, design, trend="none")
+      # Setting trend="none" disables the fitting of a trend to the dispersion estimates. This means each gene's dispersion is estimated independently of its mean expression level. This can be useful if you believe the dispersion does not depend on the abundance, but it might lead to less stable estimates, especially for lowly expressed genes.
+      # Setting robust=TRUE enables robust estimation methods, which help mitigate the influence of outliers on the model fitting. This is useful if your data contain outliers or if you want to ensure that the results are not unduly affected by a few extreme values.
       
-  }else
-  {
-    y.ab <- estimateDisp(y.ab, design, trend="none")
-    summary(y.ab$common.dispersion)
-    fit.ab <- glmQLFit(y.ab, design, abundance.trend=FALSE)
-    # print(fit.ab)
-  }
-  summary(fit.ab$var.prior)
-  # summary(fit.ab$df.prior)
-  # plotQLDisp(fit.ab, cex=1)
-  res <- glmQLFTest(fit.ab, contrast=contrasts[, selected_comparison])
-
-  restab <- res$table
-  
-  print(head(restab$PValue))
-  restab$FDR <- p.adjust(restab$PValue, method='BH')
-  restab$comparison <- colnames(contrasts)[selected_comparison]  
-  print(head(restab, 10))
-  print('cluster proportion has significantly changed across condition: ')
-  print(restab[ (restab$FDR < 0.05), ])
-  
-  
-  return(restab)
-})
-return(DA)  
+      summary(y.ab$common.dispersion)
+      # plotBCV(y.ab, cex=1)
+      fit.ab <- glmQLFit(y.ab, design, robust=TRUE, abundance.trend=FALSE)
+      # Setting abundance.trend=FALSE disables the consideration of a trend in gene abundance during model fitting. This assumes that the quasi-likelihood dispersion does not depend on the average abundance of the genes. , this might be suitable if you believe there is no relationship between dispersion and mean expression.
+      
+    }else
+    {
+      y.ab <- estimateDisp(y.ab, design, trend="none")
+      summary(y.ab$common.dispersion)
+      fit.ab <- glmQLFit(y.ab, design, abundance.trend=FALSE)
+      # print(fit.ab)
+    }
+    summary(fit.ab$var.prior)
+    # summary(fit.ab$df.prior)
+    # plotQLDisp(fit.ab, cex=1)
+    res <- glmQLFTest(fit.ab, contrast=contrasts[, selected_comparison])
+    
+    restab <- res$table
+    
+    # print(head(restab$PValue))
+    restab$FDR <- p.adjust(restab$PValue, method='BH')
+    restab$comparison <- colnames(contrasts)[selected_comparison]  
+    # print(head(restab, 10))
+    print('cluster proportion has significantly changed across condition: ')
+    print(restab[ (restab$FDR < 0.05), ])
+    
+    
+    return(restab)
+  })
+  return(DA)  
 }
 
 # output DA results to excel files
@@ -787,14 +798,16 @@ output_DE_to_files <- function(de.results.any, flag= 'm1')
     
     if(length(table(output_df$diffexpressed)) == 1)
     {
-      print(table(output_df$diffexpressed))
+
       print(paste('no significant DE in cluster', i))
+      print(table(output_df$diffexpressed))      
     }else
     {
       vector1 <- table(output_df$diffexpressed)
       summary_df[i,'DOWN'] <- vector1['DOWN']
       summary_df[i,'UP'] <- vector1['UP']
-      print(paste('exist significant DE in cluster', i))
+      # print(paste('exist significant DE in cluster', i))
+      print(table(output_df$diffexpressed))
     }
     
     # add column diffexpressed to denote a DE is up or down expressed
