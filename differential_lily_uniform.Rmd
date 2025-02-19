@@ -737,7 +737,7 @@ mod_data <- function(df_re, i, cell_type)
 }
 
 # integrate and output DE of each cluster into one single excel file
-output_DE_to_files <- function(de.results.any, flag= 'm1')
+output_DE_to_files <- function(de.results.any, flag= '_t1_t2')
 {
   print(flag)
   cls <- lapply(de.results.any, class)
@@ -925,7 +925,7 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprsto
   }
 }
 
-DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3)
+DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3, comparison_prefix = "t1_t2")
 {
   # at this stage, sce_all_filt contain 30077 genes, 37511 cells, 8 samples, 21 clusters
   
@@ -934,7 +934,13 @@ DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3)
   table(sce_all_filt$cluster)
   # head(colData(sce_all_filt)) 
   
-  sce_all_filt_DPI_selected <- sce_all_filt[,sce_all_filt$cull_date == selected_DPI]
+  # merge 4 control samples as one group
+    sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$cull_date == selected_DPI) | (sce_all_filt$cull_date != selected_DPI & sce_all_filt$condition == "control")]
+   
+  # not merge 4 control samples as one group  
+  # sce_all_filt_DPI_selected <- sce_all_filt[ , sce_all_filt$cull_date == selected_DPI]
+    
+    
   # pooling/sum counts from all cells within each cluster for each sample 
   # Differential expression will then be analysed based on each sample-cluster pair
   summed <- aggregateAcrossCells(sce_all_filt_DPI_selected, 
@@ -967,14 +973,20 @@ DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3)
   
   
   
-  summary_df <- output_DE_to_files(de.results.any, flag= paste0('_m2_DPI', selected_DPI))
+  summary_df <- output_DE_to_files(de.results.any, flag= paste0(comparison_prefix, '_DPI', selected_DPI))
   original_summary_df <- summary_df 
   
 }
-DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 3)
+DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 3, comparison_prefix = "_t1_t2")
+# compare between 2 virus in same DPI
+DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 3, comparison_prefix = "_t1_t2")
+
+DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 2, comparison_prefix = "_ctl_t2_")
+DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 2, comparison_prefix = "_ctl_t2_")
 
 
-DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 3)
+DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 1, comparison_prefix = "_ctl_t1_")
+DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 1, comparison_prefix = "_ctl_t1_")
 
 ```
 
