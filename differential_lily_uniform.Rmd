@@ -394,6 +394,7 @@ direct_t_test <- function(x = DPI_1)
   df_proportion$sample_id <- rownames(df_proportion)
   
   library(ggpubr)
+  library(ggrepel)
   abundances <- table(x$cluster, x$Sample)
   abundances <- unclass(abundances)
   selected_anno <- annot[colnames(abundances), ]
@@ -409,7 +410,7 @@ direct_t_test <- function(x = DPI_1)
     compare_means(proportion ~ condition,  data = df_pro_one, 
                   method = "t.test")
     
-    
+    library(ggrepel)
     my_comparisons <- list( c("PRCV", "H1N1"), c("PRCV", "control"), c("control", "H1N1") )
     # p <-  ggboxplot(df_pro_one, x = "condition", y = "proportion",
     #           color = "condition")  + ggtitle( paste("proportion of cluster", selected_cluster, "across condition")) +
@@ -418,17 +419,26 @@ direct_t_test <- function(x = DPI_1)
     #                      method = "t.test") 
     #   print(p)
     df_pro_one$condition = factor(df_pro_one$condition, levels=c('control', 'H1N1', 'PRCV'))
+    df_pro_one$S_id = gsub("sample_", "S", df_pro_one$sample_id ) 
     p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
-                    color = "condition") + ggtitle( paste("proportion of cluster", selected_cluster, "across condition"))  +
+                    color = "sample_id") +
+      ggtitle( paste("proportion of cluster", selected_cluster, "across condition"))  +
       stat_compare_means(comparisons = my_comparisons,
                          method = "t.test")
     print(p)
+    
+    
+
+
+    
+    
   }
   
   
   
   
 }
+
 direct_t_test(DPI_1)
 direct_t_test(DPI_12)
 ```
@@ -676,16 +686,16 @@ plot_volcano <- function(df_re, title)
   
   ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
     geom_point() +
-    geom_text_repel(size=50) +
+    geom_text_repel(size=2) +
     labs(title=title, x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
     geom_vline(xintercept=c(-0.6, 0.6), col="red") +
     geom_hline(yintercept=-log10(0.05), col="red") +
     scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
-    theme(
-      plot.title = element_text(size = 20),        # Title font size and style
-      axis.title.x = element_text(size = 15),                     # X-axis label font size
-      axis.title.y = element_text(size = 15)   )
-  # xlim(-3, 3) + ylim(0, -log10(y_limit)) +
+    theme(axis.title.x = element_text(size = 15),                     # X-axis label font size
+       axis.title.y = element_text(size = 15)   )
+  # xlim(-3, 3) + ylim(0, -log10(y_limit)) +     
+  # plot.title = element_text(size = 20),        # Title font size and style
+
 }  
 
 mod_data <- function(df_re, i, cell_type) 
@@ -725,7 +735,7 @@ mod_data <- function(df_re, i, cell_type)
     # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit 
     
     p1 <- plot_volcano(df_re, title=paste("DE genes across cells within cluster", i, cell_type))
-    print(p1)
+    # print(p1)
     
     png(filename = paste0('Results/', sampSet, '_edgeR_volcano_cluster', i, '.png') , height=1080, width=1080)
     # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space 
@@ -977,8 +987,8 @@ DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3, com
   original_summary_df <- summary_df 
   
 }
-DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 3, comparison_prefix = "_t1_t2")
 # compare between 2 virus in same DPI
+DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 3, comparison_prefix = "_t1_t2")
 DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 3, comparison_prefix = "_t1_t2")
 
 DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 2, comparison_prefix = "_ctl_t2_")
