@@ -466,8 +466,8 @@ conduct_DA <- function(subsets, selected_comparison = 3)
     
     design <- model.matrix(~ 0 + condition, data = y.ab$samples)
     print(design)
-    contrasts <- makeContrasts(ctl_t1 = conditioncontrol-conditionH1N1, ctl_t2 =  conditioncontrol-conditionPRCV, 
-                               t1_t2 = conditionH1N1-conditionPRCV, levels = design)
+    contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1, control_PRCV =  conditioncontrol-conditionPRCV, 
+                               H1N1_PRCV = conditionH1N1-conditionPRCV, levels = design)
     
     print(contrasts)
     
@@ -668,20 +668,24 @@ Now we test for differential expression. This analysis will be run as a pseudo-b
 Differential expression will then be analysed for each cluster. For this first pass, 
 
 ```{r create functions and variables needed later for DE analysis}
+
 plot_volcano <- function(df_re, title) 
- {
+{
+  df_re$p_adjust <- df_re$PValue
+  
+  
   ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
-  geom_point() +
-  geom_text_repel(size=7) +
-  labs(title=title, x = "logFC", y = "-log10(p_adjust)") +  # Customize axis labels here if needed
-  geom_vline(xintercept=c(-0.6, 0.6), col="red") +
-  geom_hline(yintercept=-log10(0.05), col="red") +
-  scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
-  theme(
-    plot.title = element_text(size = 20),        # Title font size and style
-    axis.title.x = element_text(size = 15),                     # X-axis label font size
-    axis.title.y = element_text(size = 15)   )
-          # xlim(-3, 3) + ylim(0, -log10(y_limit)) +
+    geom_point() +
+    geom_text_repel(size=50) +
+    labs(title=title, x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
+    geom_vline(xintercept=c(-0.6, 0.6), col="red") +
+    geom_hline(yintercept=-log10(0.05), col="red") +
+    scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
+    theme(
+      plot.title = element_text(size = 20),        # Title font size and style
+      axis.title.x = element_text(size = 15),                     # X-axis label font size
+      axis.title.y = element_text(size = 15)   )
+  # xlim(-3, 3) + ylim(0, -log10(y_limit)) +
 }  
 
 mod_data <- function(df_re, i, cell_type) 
@@ -689,11 +693,17 @@ mod_data <- function(df_re, i, cell_type)
   y_limit <- 1.0e-20
   # add a column of NAs
   df_re$diffexpressed <- "NO"
-  # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP"
-  df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust < 0.05] <- "UP"
-  # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
-  df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust < 0.05] <- "DOWN"
-  # this will output DE results for selected 
+  # # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP"
+  # df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust < 0.05] <- "UP"
+  # # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
+  # df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust < 0.05] <- "DOWN"
+  
+  
+  df_re$diffexpressed[df_re$logFC > 0.6 & df_re$PValue < 0.05] <- "UP"
+  df_re$diffexpressed[df_re$logFC < -0.6 & df_re$PValue < 0.05] <- "DOWN"
+  table(df_re$diffexpressed)
+
+  dir.create('Results')
   write.table(df_re, 
               file=paste0('Results/', sampSet, '_edgeR_annotated_DE_cluster_', i, '.csv'),
               sep=',', quote=FALSE, row.names = FALSE)  
@@ -708,27 +718,28 @@ mod_data <- function(df_re, i, cell_type)
   {
     
     print(paste('qualified DE genes observed in this cluster', i, ', show volcano plot'))
-  df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]
-  # for row/gene who up/down, its delabel column will store the gene symbol again
-  # for row/gene who is not DE, its delabel column is NA
-  # Set p-value floor
-  # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit 
-
-  p1 <- plot_volcano(df_re, title=paste("DE genes across cells within cluster", i, cell_type))
-  print(p1)
-
-  png(filename = paste0('Results/', sampSet, '_edgeR_volcano_cluster', i, '.png') , height=1080, width=1080)
-  # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space 
-  print(p1)
-  dev.off()    
+    df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]
+    # for row/gene who up/down, its delabel column will store the gene symbol again
+    # for row/gene who is not DE, its delabel column is NA
+    # Set p-value floor
+    # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit 
+    
+    p1 <- plot_volcano(df_re, title=paste("DE genes across cells within cluster", i, cell_type))
+    print(p1)
+    
+    png(filename = paste0('Results/', sampSet, '_edgeR_volcano_cluster', i, '.png') , height=1080, width=1080)
+    # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space 
+    print(p1)
+    dev.off()    
   }
-
+  
   return(df_re)
 }
 
 # integrate and output DE of each cluster into one single excel file
 output_DE_to_files <- function(de.results.any, flag= 'm1')
 {
+  print(flag)
   cls <- lapply(de.results.any, class)
   # check which cluster fail to have DE results and remove these clusters in de.results.any
   if(length(which(cls == 'character')) > 0)
@@ -743,17 +754,22 @@ output_DE_to_files <- function(de.results.any, flag= 'm1')
   library(openxlsx)
   # Create a new workbook
   wb <- createWorkbook()
-
+  
   for(i in names(de.results.any))
   {
-    print(i)
+    # print(i)
     output_df <- de.results.any[[i]]
+    
+
+    
     output_df$p_adjust <- p.adjust(output_df$PValue, method='fdr')
+    
     output_df$symbol <- rowData(sce_all_filt)[rownames(output_df), 'Symbol']
     output_df$ensemble_id <- rownames(output_df)  
-    head(output_df$p_adjust,50)
+
     output_df <- output_df[order(output_df$p_adjust),]
-     de.results.any[[i]] <- output_df
+    head(output_df$p_adjust,50)    
+    de.results.any[[i]] <- output_df
     # change format GHSR, TNFSF10 into GHSR;TNFSF10 for those duplicates in our DE (edgeR) csv files. 
     ###################################
     my_vector <- output_df$symbol
@@ -786,19 +802,19 @@ output_DE_to_files <- function(de.results.any, flag= 'm1')
     addWorksheet(wb, sheetName = sheet_name)
     # Write the data frame to the worksheet
     writeData(wb, sheet = sheet_name, output_df)
-
+    
     cell_type = df_cluster_number_name[df_cluster_number_name$cluster == i, 'named_cluster']
-    if(flag == 'm2')
-    {
+    # if(flag == 'm2')
+    # {
       # only run mod_data function for method 2, it will output final DE files per cluster that would be used for downstream enrichment analysis
       output_df <- mod_data(output_df, i, cell_type)      
-    }
-
+    # }
+    
     
     
     if(length(table(output_df$diffexpressed)) == 1)
     {
-
+      
       print(paste('no significant DE in cluster', i))
       print(table(output_df$diffexpressed))      
     }else
@@ -806,26 +822,28 @@ output_DE_to_files <- function(de.results.any, flag= 'm1')
       vector1 <- table(output_df$diffexpressed)
       summary_df[i,'DOWN'] <- vector1['DOWN']
       summary_df[i,'UP'] <- vector1['UP']
-      # print(paste('exist significant DE in cluster', i))
+      print(paste('remain gene number is', nrow(output_df), 'exist significant DE in cluster', i))
       print(table(output_df$diffexpressed))
+      
     }
     
     # add column diffexpressed to denote a DE is up or down expressed
   }
   
-
+  flag = "_m2_DPI12"
   # Save the workbook to a file
-  saveWorkbook(wb, file = paste0(pfx,'/', sampSet, flag, "_DE_all_cluster.xlsx"), overwrite = TRUE)
+  file_name = paste0('Results/', sampSet, flag, "_DE_all_cluster.xlsx")
+  saveWorkbook(wb, file = file_name, overwrite = TRUE)
+  print(paste('output excel file store the DE results in', file_name ))
   
   for(i in names(de.results.any))
   {
     print(paste('TRUE means DE genes whose FDR below 0.05 in cluster', i))
     print(table(de.results.any[[i]]$p_adjust < 0.05))
-    
+
   }
   return(summary_df)
 }  
-
 
 ```
 
@@ -837,11 +855,16 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprsto
                                 selected_comparison = 3)
 {
   sc <- sce[,sce$cluster==clust]
-
+  
+  colData(sc) <- colData(sc)[ , c("Sample", "condition", "run", "cull_date", "animal_id", "cluster",
+                                  "named_cluster", "ncells" )]
+  # head(colData(sc))
+  # colnames(colData(sc))
+  rownames(colData(sc)) <- colData(sc)$Sample   
   
   # retrieve 8 samples in cluster 1
   y <- DGEList(counts=counts(sc), samples=colData(sc))
-
+  
   if(length(which(table(y$samples$condition) < 2)) > 0)
   {
     return('insufficient cells per condition')
@@ -851,33 +874,33 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprsto
     # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
     # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
     # filter genes that has total counts below 40 across all samples
-
+    
     y <- y[keep,]
-
-    filtered_genes <- rownames(y)
-
+    
+    remain_genes <- rownames(y)
+    
     print(paste("after fitering low-expressed genes, genes retained in cluster", clust, "is", 
-                length(filtered_genes)) )
+                length(remain_genes)) )
     # those retained genes will be statistically tested to see whether differentially expressed 
     
     y <- calcNormFactors(y)
     # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter 
     y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
-
+    
     # par(mfrow=c(2,3))
     for (i in 1:ncol(y)) {
       # plotMD(y, column=i, main=clust)
-
+      
     }
-
+    
     design <- model.matrix(~ 0 + condition, y$samples)
     print(design)
     # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
-    contrasts <- makeContrasts(conditioncontrol-conditionH1N1, conditioncontrol-conditionPRCV, 
-    conditionH1N1-conditionPRCV, levels = colnames(design))
-    # contrasts
+    contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1, control_PRCV =  conditioncontrol-conditionPRCV, H1N1_PRCV = conditionH1N1-conditionPRCV, levels = design)
+    
+    
     print(contrasts)
-
+    
     tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
     if(is(tc, 'error') | is(tc, 'warning'))
     {
@@ -904,55 +927,54 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprsto
 
 DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3)
 {
-# at this stage, sce_all_filt contain 30077 genes, 37511 cells, 8 samples, 21 clusters
-
-# pooling/sum counts from all cells within each cluster for each sample 
-# Differential expression will then be analysed based on each sample-cluster pair
-length(unique(sce_all_filt$cluster))
-table(sce_all_filt$cluster)
-# head(colData(sce_all_filt)) 
-
-sce_all_filt_DPI_selected <- sce_all_filt[,sce_all_filt$cull_date == selected_DPI]
-
-summed <- aggregateAcrossCells(sce_all_filt_DPI_selected, 
-    id=colData(sce_all_filt_DPI_selected)[,c("cluster", "Sample")])
-
-
-# inside summed@assays@data@listData[["counts"]], the resulting columns should be 21*8=168 (168 sample-cluster pairs) rather than 167, is there a mistake? no, it's because a few samples have 0 cell in certain clusters.
-# table(summed$cluster, summed$Sample) 
-# View(summed@assays@data@listData[["counts"]])
-head(colData(summed)) 
-
-summed.filt <- summed[,summed$ncells >= 10]
-# remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
-
-# write.csv(table(summed.filt$cluster, summed.filt$Sample), file = "summed.filt_check.csv")
-# dim(summed.filt)
-# head(summed.filt@colData)
+  # at this stage, sce_all_filt contain 30077 genes, 37511 cells, 8 samples, 21 clusters
   
-
-clusts <- as.character(levels(factor(summed.filt$cluster)))
-de.results.any <- vector('list', length(clusts))
-
-names(de.results.any) <- clusts
-
-for(i in clusts)
-{
-  de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt, selected_comparison = 3)
-}
-length(de.results.any)
-
-
-
-summary_df <- output_DE_to_files(de.results.any, flag= paste0('_m2_DPI', selected_DPI))
-original_summary_df <- summary_df 
+  
+  length(unique(sce_all_filt$cluster))
+  table(sce_all_filt$cluster)
+  # head(colData(sce_all_filt)) 
+  
+  sce_all_filt_DPI_selected <- sce_all_filt[,sce_all_filt$cull_date == selected_DPI]
+  # pooling/sum counts from all cells within each cluster for each sample 
+  # Differential expression will then be analysed based on each sample-cluster pair
+  summed <- aggregateAcrossCells(sce_all_filt_DPI_selected, 
+                                 id=colData(sce_all_filt_DPI_selected)[,c("cluster", "Sample")])
+  
+  
+  # inside summed@assays@data@listData[["counts"]], the resulting columns should be 21*8=168 (168 sample-cluster pairs) rather than 167, is there a mistake? no, it's because a few samples have 0 cell in certain clusters.
+  # table(summed$cluster, summed$Sample) 
+  # View(summed@assays@data@listData[["counts"]])
+  head(colData(summed)) 
+  
+  summed.filt <- summed[,summed$ncells >= 10]
+  # remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
+  
+  # write.csv(table(summed.filt$cluster, summed.filt$Sample), file = "summed.filt_check.csv")
+  # dim(summed.filt)
+  # head(summed.filt@colData)
+  
+  
+  clusts <- as.character(levels(factor(summed.filt$cluster)))
+  de.results.any <- vector('list', length(clusts))
+  
+  names(de.results.any) <- clusts
+  
+  for(i in clusts)
+  {
+    de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt, selected_comparison = 3)
+  }
+  length(de.results.any)
+  
+  
+  
+  summary_df <- output_DE_to_files(de.results.any, flag= paste0('_m2_DPI', selected_DPI))
+  original_summary_df <- summary_df 
   
 }
+DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 3)
 
 
-DE_analysis(sce_all_filt, 1, selected_comparison = 3)
-
-DE_analysis(sce_all_filt, 12, selected_comparison = 3)
+DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 3)
 
 ```
 
