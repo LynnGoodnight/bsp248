@@ -716,7 +716,7 @@ mod_data <- function(df_re, i, cell_type, flag)
 
   dir.create('Results')
   write.table(df_re, 
-              file=paste0('Results/', sampSet, flag, '_edgeR_annotated_DE_cluster_', i, '.csv'),
+              file=paste0('Results/DE_edgeR_', sampSet, flag, '_annotated_cluster_', i, '.csv'),
               sep=',', quote=FALSE, row.names = FALSE)  
   
   df_re$delabel <- NA
@@ -738,7 +738,7 @@ mod_data <- function(df_re, i, cell_type, flag)
     p1 <- plot_volcano(df_re, title=paste("DE genes across cells within cluster", i, cell_type, flag))
     # print(p1)
     
-    png(filename = paste0('Results/', sampSet, flag, '_edgeR_volcano_cluster', i, '.png') , height=1080, width=1080, res = 220)
+    png(filename = paste0('Results/DE_edgeR_', sampSet, flag, '_volcano_cluster', i, '.png') , height=1080, width=1080, res = 220)
     # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space 
     print(p1)
     dev.off()    
@@ -748,7 +748,7 @@ mod_data <- function(df_re, i, cell_type, flag)
 }
 
 # integrate and output DE of each cluster into one single excel file
-output_DE_to_files <- function(de.results.any, flag= 'DPI1_t1_t2')
+output_DE_to_files <- function(de.results.any, flag= 't1_t2_DPI1_')
 {
   print(flag)
   cls <- lapply(de.results.any, class)
@@ -779,7 +779,7 @@ output_DE_to_files <- function(de.results.any, flag= 'DPI1_t1_t2')
     output_df$ensemble_id <- rownames(output_df)  
 
     output_df <- output_df[order(output_df$p_adjust),]
-    head(output_df$p_adjust,50)    
+    # head(output_df$p_adjust,50)    
     de.results.any[[i]] <- output_df
     # change format GHSR, TNFSF10 into GHSR;TNFSF10 for those duplicates in our DE (edgeR) csv files. 
     ###################################
@@ -842,7 +842,7 @@ output_DE_to_files <- function(de.results.any, flag= 'DPI1_t1_t2')
   }
   
   # Save the workbook to a file
-  file_name = paste0('Results/', sampSet, flag, "_DE_all_cluster.xlsx")
+  file_name = paste0('Results/DE_', sampSet, flag, "_all_cluster.xlsx")
   saveWorkbook(wb, file = file_name, overwrite = TRUE)
   print(paste('output excel file store the DE results in', file_name ))
   
