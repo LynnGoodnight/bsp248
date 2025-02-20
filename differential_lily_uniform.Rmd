@@ -382,7 +382,7 @@ head(annot)
 ```
 
 ```{r draw dot plots to direct visulize and compare cluster proportion between condition}
-
+# draw dot plots to direct visualize and compare cluster proportion between condition
 direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
 {
   abundances <- table(x$cluster, x$Sample)
@@ -456,7 +456,7 @@ df_cluster_number_name  <- as.data.frame(unique(colData(sce_all_filt)[,c('named_
 rownames(df_cluster_number_name) <- 1:nrow(df_cluster_number_name)
 # head(df_cluster_number_name)
 
-
+# conduct_DA conduct DA for DPI1, DPI12 for selected comparison
 conduct_DA <- function(subsets, selected_comparison = 3)
 {
   DA <- lapply(subsets, function(x){
@@ -539,7 +539,7 @@ output_DA_excel <- function(DA, file_name_tag = '')
     # Write the data frame to the worksheet
     writeData(wb, sheet = i, DA_list_per_element, rowNames = TRUE)
     # Save the workbook to a file
-    saveWorkbook(wb, file = paste0('Results/', sampSet, file_name_tag, i, "_DA_list_per_element.xlsx"), overwrite = TRUE)     
+    saveWorkbook(wb, file = paste0('Results/DA_edgeR_', sampSet, file_name_tag, i, ".xlsx"), overwrite = TRUE)     
   }
 
   # run_2 table contain the results of run 1+2
