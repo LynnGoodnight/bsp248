@@ -398,8 +398,13 @@ rownames(df_cluster_number_name) <- 1:nrow(df_cluster_number_name)
 # conduct_DA conduct DA for DPI1, DPI12 for selected comparison
 conduct_DA <- function(subsets, selected_comparison = 3)
 {
-  DA <- lapply(subsets, function(x){
-    # print(x)  
+  DA <- NULL
+
+  for (i in 1:length(subsets) ) 
+  {
+    DPI <- names(subsets[i])
+    x <- subsets[[i]]
+    
     abundances <- table(x$cluster, x$Sample)
     abundances <- unclass(abundances)
     # typeof(abundances)
@@ -450,13 +455,16 @@ conduct_DA <- function(subsets, selected_comparison = 3)
     restab$FDR <- p.adjust(restab$PValue, method='BH')
     restab$comparison <- colnames(contrasts)[selected_comparison]  
     # print(head(restab, 10))
-    print('cluster proportion has significantly changed across condition: ')
+    
+    print(paste('cluster proportion has significantly changed across condition: ', DPI))
     print(restab[ (restab$FDR < 0.05), ])
-    print('significant P values ')
+    
+    print(paste('significant P values ', DPI))
     print(restab[ (restab$PValue < 0.05), ])    
     
-    return(restab)
-  })
+    DA[[DPI]] <- restab
+    
+  }
   return(DA)  
 }
 
@@ -498,9 +506,9 @@ DA_ctl_t2 <- conduct_DA(subsets, selected_comparison = 2)
 output_DA_excel(DA_ctl_t2, file_name_tag='_ctl_t2_')
 ```
 
-```{r draw dot plots to direct visulize and compare cluster proportion between condition}
+```{r draw dot plots to direct visulize and compare cluster proportion between condition, fig.width= 10}
 # draw dot plots to direct visualize and compare cluster proportion between condition
-direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1", df_cluster_number_name = df_cluster_number_name)
+direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
 {
   abundances <- table(x$cluster, x$Sample)
   abundances <- unclass(abundances)
