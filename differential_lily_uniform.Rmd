@@ -452,7 +452,8 @@ conduct_DA <- function(subsets, selected_comparison = 3)
     # print(head(restab, 10))
     print('cluster proportion has significantly changed across condition: ')
     print(restab[ (restab$FDR < 0.05), ])
-    
+    print('significant P values ')
+    print(restab[ (restab$PValue < 0.05), ])    
     
     return(restab)
   })
@@ -575,7 +576,13 @@ visulize_abundance <- function(sce_all_filt, annot)
   dat_annot$DPI <- paste0("DPI_", dat_annot$DPI)
   
   
-  
+  dat_annot$cell_type <- gsub(", [0-9]*", "", dat_annot$cluster)
+  p <- ggplot(data=dat_annot, aes(x=S_id, y=proportion, fill=cell_type)) +
+    geom_bar(stat="identity")
+  print(p)
+  p <- ggplot(data=dat_annot, aes(x=S_id, y=proportion, fill=cluster)) +
+    geom_bar(stat="identity")
+  print(p)
   
   for (selected_cluster in unique(dat_annot$cluster) ) 
   {
