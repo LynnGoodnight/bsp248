@@ -500,7 +500,7 @@ output_DA_excel(DA_ctl_t2, file_name_tag='_ctl_t2_')
 
 ```{r draw dot plots to direct visulize and compare cluster proportion between condition}
 # draw dot plots to direct visualize and compare cluster proportion between condition
-direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
+direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1", df_cluster_number_name = df_cluster_number_name)
 {
   abundances <- table(x$cluster, x$Sample)
   abundances <- unclass(abundances)
@@ -530,10 +530,11 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
     df_pro_one$S_id = gsub("sample_", "S", df_pro_one$sample_id )     
     library(ggrepel)
     my_comparisons <- list( c("PRCV", "H1N1"), c("PRCV", "control"), c("control", "H1N1") )
+    cell_type <- df_cluster_number_name[ selected_cluster, "named_cluster" ]
 
     p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
                     color = "sample_id") +
-      ggtitle(paste("proportion of cluster", selected_cluster, "across condition", selected_DPI))  +
+      ggtitle(paste("proportion of cluster", selected_cluster, cell_type, "across condition", selected_DPI))  +
       stat_compare_means(comparisons = my_comparisons,
                          method = "t.test")
     print(p)
@@ -1074,96 +1075,101 @@ DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 1, comparison
 
 
 ```{r  plot up and down DE genes number per cluster bar plot }
-# plot up and down DE genes number per cluster bar plot 
+
+up_down_summary_barplot <- function(summary_df, prefix = "t1_t2")
+{
+# plot up and down DE genes number per cluster bar plot
 # Melt the data frame for ggplot2
-# library(reshape2)
-# summary_df$cluster <- rownames(summary_df)
-# summary_df$NO <- NULL
-# 
-# df_cell_type_cluster = data.frame(cluster = colData(sce_all_filt)$cluster,
-#                                   cell_type = colData(sce_all_filt)$named_cluster)
-# df_cell_type_cluster = unique(df_cell_type_cluster)
-# 
-# # merge two data frames by ID and Country
-# summary_df <- merge(df_cell_type_cluster ,summary_df ,by=c("cluster"))
-# summary_df$named_cluster <- paste(summary_df$cluster, summary_df$cell_type, sep = ', ' )
-# summary_df$cell_type
-# 
-# summary_df$cell_type[grep('Monocytes', summary_df$cell_type)] <- 'Monocyte'
-# summary_df$cell_type[grep('conventional', summary_df$cell_type)] <- 'NCT'
-# summary_df$cell_type[grep('T regs', summary_df$cell_type)] <- 'Tregs'
-# 
-# summary_df$cell_type[grep('Mitotic CD4 T Cells', summary_df$cell_type)] <- 'mCD4T'
-# summary_df$cell_type[grep('Mitotic CD8 T Cells', summary_df$cell_type)] <- 'mCD8T'
-# 
-# summary_df$cell_type[grep('CD8 T Cells', summary_df$cell_type)] <- 'CD8T'
-# summary_df$cell_type[grep('CD4 T Cells', summary_df$cell_type)] <- 'CD4T'
-# 
-# 
-# summary_df_sim <- summary_df[,c("DOWN", "UP", "named_cluster")]
-# melted_df <- melt(summary_df_sim, id.vars = 'named_cluster')
-# melted_df <- merge(melted_df ,summary_df[,c('named_cluster', 'cell_type')] ,by=c("named_cluster"))
-# 
-# 
-# 
-# # Plotting overview 
-# p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value), 
-#                       fill = variable)) +
-#   geom_bar(stat = 'identity', position = 'identity') +
-#   labs(x = 'named_cluster', y = 'Number of Genes', 
-#        title = paste(sampSet, 'edgeR summary of DE genes per cluster')) +
-#   scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
-#   theme_minimal() +
-#   geom_text(aes(label = value, 
-#                 vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
-#             color = "black", 
-#             size = 3) + 
-#   theme(axis.text.x = element_text(angle = 90)) + 
-#   facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-#   theme(
-#     strip.background = element_rect(color = "black", fill = "white", size = 1))  # Add black rectangle border
-# 
-# print(p1)
-# 
-# 
-# 
-# 
-# # monocytes, macrophages, cDCs, pDCs, NCT, CD8T, mCD8T, CD4T, mCD4T, Tregs (please without a blank between "T" and "regs") B cells, plasma cells.
-# 
-# melted_df$cell_type <- factor(melted_df$cell_type, levels = c('Monocyte', 'Macrophages', 
-#                                             'cDCs', 'pDCs', "NCT", "CD8T","mCD8T","CD4T","mCD4T",
-#                                             'Tregs', 'B Cells', "Plasma Cells" ))
-# # unique(melted_df$cell_type)
-# 
-# # Save the plot with larger dimensions for better clarity
-# png(filename = paste0('Results/', sampSet, '_edgeR_DE_gene_num_overview.png'), 
-#     height = 1000, width = 2000, res = 150)  # Adjust height, width, and resolution for better clarity
-# p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value), 
-#                             fill = variable)) +
-#   geom_bar(stat = 'identity', position = 'identity') +
-#   labs(x = 'annotated cluster',  # Custom x-axis title
-#        y = 'Number of DE Genes',  # Custom y-axis title
-#        title = paste(sampDPI, 'edgeR summary of DE genes per cluster'),  # Custom plot title
-#        fill = 'change') +  # Custom legend title
-#   scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
-#   theme_minimal() +
-#   geom_text(aes(label = value, 
-#                 vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
-#             color = "black", 
-#             size = 4) +  # Increase text size inside bars
-#   theme(axis.text.x = element_text(angle = 90, size = 10),  # Increase x-axis text size
-#         axis.text.y = element_text(size = 10),  # Increase y-axis text size
-#         axis.title.x = element_text(size = 10, face = "bold"),  # Increase x-axis label size
-#         axis.title.y = element_text(size = 10, face = "bold"),  # Increase y-axis label size
-#         plot.title = element_text(size = 10, face = "bold", hjust = 0.5),  # Increase title size and center
-#         strip.text = element_text(size = 9),  # Increase facet label size
-#         legend.text = element_text(size = 10),  # Increase legend text size
-#         legend.title = element_text(size = 10, face = "bold")) +  # Increase legend title size
-#   facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-#   theme(strip.background = element_rect(color = "black", fill = "white"))  # Add black rectangle border
-# print(p1)
-# dev.off()
-# 
+library(reshape2)
+summary_df$cluster <- rownames(summary_df)
+summary_df$NO <- NULL
+
+df_cell_type_cluster = data.frame(cluster = colData(sce_all_filt)$cluster,
+                                  cell_type = colData(sce_all_filt)$named_cluster)
+df_cell_type_cluster = unique(df_cell_type_cluster)
+
+# merge two data frames by ID and Country
+summary_df <- merge(df_cell_type_cluster ,summary_df ,by=c("cluster"))
+summary_df$named_cluster <- paste(summary_df$cluster, summary_df$cell_type, sep = ', ' )
+summary_df$cell_type
+
+summary_df$cell_type[grep('Monocytes', summary_df$cell_type)] <- 'Monocyte'
+summary_df$cell_type[grep('conventional', summary_df$cell_type)] <- 'NCT'
+summary_df$cell_type[grep('T regs', summary_df$cell_type)] <- 'Tregs'
+
+summary_df$cell_type[grep('Mitotic CD4 T Cells', summary_df$cell_type)] <- 'mCD4T'
+summary_df$cell_type[grep('Mitotic CD8 T Cells', summary_df$cell_type)] <- 'mCD8T'
+
+summary_df$cell_type[grep('CD8 T Cells', summary_df$cell_type)] <- 'CD8T'
+summary_df$cell_type[grep('CD4 T Cells', summary_df$cell_type)] <- 'CD4T'
+
+
+summary_df_sim <- summary_df[,c("DOWN", "UP", "named_cluster")]
+melted_df <- melt(summary_df_sim, id.vars = 'named_cluster')
+melted_df <- merge(melted_df ,summary_df[,c('named_cluster', 'cell_type')] ,by=c("named_cluster"))
+
+
+
+# Plotting overview
+p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
+                      fill = variable)) +
+  geom_bar(stat = 'identity', position = 'identity') +
+  labs(x = 'named_cluster', y = 'Number of Genes',
+       title = paste(sampSet, 'edgeR summary of DE genes per cluster')) +
+  scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
+  theme_minimal() +
+  geom_text(aes(label = value,
+                vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
+            color = "black",
+            size = 3) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
+  theme(
+    strip.background = element_rect(color = "black", fill = "white", size = 1))  # Add black rectangle border
+
+print(p1)
+
+
+
+
+# monocytes, macrophages, cDCs, pDCs, NCT, CD8T, mCD8T, CD4T, mCD4T, Tregs (please without a blank between "T" and "regs") B cells, plasma cells.
+
+melted_df$cell_type <- factor(melted_df$cell_type, levels = c('Monocyte', 'Macrophages',
+                                            'cDCs', 'pDCs', "NCT", "CD8T","mCD8T","CD4T","mCD4T",
+                                            'Tregs', 'B Cells', "Plasma Cells" ))
+# unique(melted_df$cell_type)
+
+# Save the plot with larger dimensions for better clarity
+png(filename = paste0('Results/', sampSet, '_edgeR_DE_gene_num_overview.png'),
+    height = 1000, width = 2000, res = 150)  # Adjust height, width, and resolution for better clarity
+p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
+                            fill = variable)) +
+  geom_bar(stat = 'identity', position = 'identity') +
+  labs(x = 'annotated cluster',  # Custom x-axis title
+       y = 'Number of DE Genes',  # Custom y-axis title
+       title = paste(sampDPI, 'edgeR summary of DE genes per cluster'),  # Custom plot title
+       fill = 'change') +  # Custom legend title
+  scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
+  theme_minimal() +
+  geom_text(aes(label = value,
+                vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
+            color = "black",
+            size = 4) +  # Increase text size inside bars
+  theme(axis.text.x = element_text(angle = 90, size = 10),  # Increase x-axis text size
+        axis.text.y = element_text(size = 10),  # Increase y-axis text size
+        axis.title.x = element_text(size = 10, face = "bold"),  # Increase x-axis label size
+        axis.title.y = element_text(size = 10, face = "bold"),  # Increase y-axis label size
+        plot.title = element_text(size = 10, face = "bold", hjust = 0.5),  # Increase title size and center
+        strip.text = element_text(size = 9),  # Increase facet label size
+        legend.text = element_text(size = 10),  # Increase legend text size
+        legend.title = element_text(size = 10, face = "bold")) +  # Increase legend title size
+  facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
+  theme(strip.background = element_rect(color = "black", fill = "white"))  # Add black rectangle border
+print(p1)
+dev.off()
+
+  
+}
 
 
 ```

@@ -977,13 +977,13 @@ if(sampSet == 'run_2' )
 }
 
 
-umap_plot <- plotUMAP(sce, colour_by="cluster", point_size=0.3, text_by = "cluster")
-
-# Adjust the legend text and title size
-umap_plot <- umap_plot + guides(colour = guide_legend(override.aes = list(size=6)))+ ggtitle(paste(sampSet))
-
-# Print the plot
-print(umap_plot)
+# umap_plot <- plotUMAP(sce, colour_by="cluster", point_size=0.3, text_by = "cluster")
+# 
+# # Adjust the legend text and title size
+# umap_plot <- umap_plot + guides(colour = guide_legend(override.aes = list(size=6)))+ ggtitle(paste(sampSet))
+# 
+# # Print the plot
+# print(umap_plot)
 
 dat <- as.data.frame(table(sce$cluster, sce$Sample))
 colnames(dat) <- c('cluster', 'sample', 'n_cells')
