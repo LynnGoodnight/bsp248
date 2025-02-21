@@ -1026,7 +1026,7 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprsto
 
 ```{r  plot up and down DE genes number per cluster bar plot }
 
-DRAW_up_down_summary_barplot <- function(summary_df, prefix = "t1_t2_DPI1")
+DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
 {
   # plot up and down DE genes number per cluster bar plot
   # Melt the data frame for ggplot2
@@ -1091,7 +1091,7 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "t1_t2_DPI1")
   # unique(melted_df$cell_type)
   
   # Save the plot with larger dimensions for better clarity
-  png(filename = paste0('Results/', sampSet, '_edgeR_DE_gene_num_overview.png'),
+  png(filename = paste0('Results/DE_edgeR_', sampSet, prefix, '_DEG_num_overview.png'),
       height = 1000, width = 2000, res = 150)  # Adjust height, width, and resolution for better clarity
   p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
                               fill = variable)) +
