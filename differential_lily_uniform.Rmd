@@ -31,6 +31,9 @@ if (sampSet == "") {
 print(sampSet)
 pfx <- paste0(work_dir,"Results/")
 dir.create(pfx, showWarnings = FALSE)
+# results_dir <- "Results"
+# 
+# dir.create(results_dir)
 ```
 
 
@@ -199,9 +202,7 @@ p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster",
 print(p1)  
   
 
-results_dir <- "Results"
 
-dir.create(results_dir)
 
 ```
 
@@ -767,7 +768,7 @@ plot_volcano <- function(df_re, title)
   
   ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
     geom_point() +
-    geom_text_repel(size=2) +
+    geom_text_repel() +
     labs(title=title, x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
     geom_vline(xintercept=c(-0.6, 0.6), col="red") +
     geom_hline(yintercept=-log10(0.05), col="red") +
@@ -776,7 +777,11 @@ plot_volcano <- function(df_re, title)
           axis.title.y = element_text(size = 15)   )
   # xlim(-3, 3) + ylim(0, -log10(y_limit)) +     
   # plot.title = element_text(size = 20),        # Title font size and style
-  
+## Warning: Removed 7866 rows containing missing values or values outside the scale range
+## (`geom_text_repel()`).
+## Warning: ggrepel: 191 unlabeled data points (too many overlaps). Consider
+## increasing max.overlaps
+  # as there is insufficient space in the plot to display gene symbol of each dot, warning above appear. 
 }  
 
 mod_data <- function(df_re, i, cell_type, flag) 
@@ -794,7 +799,7 @@ mod_data <- function(df_re, i, cell_type, flag)
   df_re$diffexpressed[df_re$logFC < -0.6 & df_re$PValue < 0.05] <- "DOWN"
   table(df_re$diffexpressed)
   
-  dir.create('Results')
+  # dir.create('Results')
   write.table(df_re, 
               file=paste0('Results/DE_edgeR_', sampSet, flag, '_annotated_cluster_', i, '.csv'),
               sep=',', quote=FALSE, row.names = FALSE)  
@@ -1061,7 +1066,7 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "t1_t2_DPI1")
                               fill = variable)) +
     geom_bar(stat = 'identity', position = 'identity') +
     labs(x = 'named_cluster', y = 'Number of Genes',
-         title = paste(sampSet, 'edgeR summary of DE genes per cluster')) +
+         title = paste(prefix, 'edgeR summary of DE genes per cluster')) +
     scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
     theme_minimal() +
     geom_text(aes(label = value,
@@ -1121,7 +1126,7 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "t1_t2_DPI1")
 ```
 
 
-```{r apply method 2 conduct DE analysis between 2 virus condition for each cluster and output formal DE results}
+```{r apply method 2 conduct DE analysis between 2 virus condition for each cluster and output formal DE results,  fig.width= 12}
 
 DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3, comparison_prefix = "t1_t2")
 {
@@ -1191,501 +1196,502 @@ DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 1, comparison
 ```
 
 
-<!-- # check if up & down direction consistent VennDiagrams and shared-gene-tables -->
-<!-- plot VennDiagrams of shared DE genes between main cell population (Macrophages, CD8 T cells, CD4 T cells, B cells) -->
-
-<!-- ```{r VennDiagrams functions } -->
-<!-- library(dplyr) -->
-
-<!-- mod2_data <- function(df_re, i, cell_type)  -->
-<!-- { -->
-<!--   y_limit <- 1.0e-20 -->
-<!--   # add a column of NAs -->
-<!--   df_re$diffexpressed <- "NO" -->
-<!--   # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP" -->
-<!--   df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust < 0.05] <- "UP" -->
-<!--   # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN" -->
-<!--   df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust < 0.05] <- "DOWN" -->
-
-<!--   df_re$delabel <- NA -->
-<!--   if(sum(df_re$diffexpressed != "NO") == 0) -->
-<!--   { -->
-
-<!--     print(paste('no qualified DE genes observed in this cluster', i, ', no volcano plot')) -->
-<!--     return(df_re) -->
-<!--   }else -->
-<!--   { -->
-
-<!--     print(paste('qualified DE genes observed in this cluster', i, ', ')) -->
-<!--   # df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"] -->
-<!--   # for row/gene who up/down, its delabel column will store the gene symbol again -->
-<!--   # for row/gene who is not DE, its delabel column is NA -->
-<!--   # Set p-value floor -->
-<!--   # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit  -->
-
-<!--   } -->
-
-<!--   return(df_re) -->
-<!-- } -->
-
-
-
-<!-- modify_data_for_Venn <- function(de.results.any, flag= 'm2', selected_clusters ) -->
-<!-- { -->
-<!--   cls <- lapply(de.results.any, class) -->
-
-<!--   # check which cluster fail to have DE results and remove these clusters in de.results.any -->
-<!--   # when a cluster have DE results, class of de.results.any[cluster] is data.frame -->
-<!--   # when a cluster fail to have DE results, class of de.results.any[cluster] is character -->
-<!--   if(length(which(cls == 'character')) > 0) -->
-<!--   { -->
-<!--     delete_cluster <- names(de.results.any)[which(cls %in% 'character')] -->
-<!--     print(paste('delete_cluster',delete_cluster))  -->
-<!--     selected_clusters <- selected_clusters[! selected_clusters %in% delete_cluster] -->
-<!--     de.results.any <- de.results.any[-which(cls %in% 'character')] -->
-<!--   } -->
-<!--   output_df_main_population <- NULL -->
-<!--   print(selected_clusters) -->
-<!--   for(i in selected_clusters) -->
-<!--   { -->
-<!--     print(i)   -->
-<!--     output_df <- NULL -->
-
-<!--     output_df$p_adjust <- p.adjust(de.results.any[[i]]$PValue, method='fdr') -->
-<!--     output_df$symbol <- rowData(sce_all_filt)[rownames(de.results.any[[i]]), 'hgnc_symbol'] -->
-<!--     output_df$ensemble_id <- rownames(de.results.any[[i]])   -->
-<!--     output_df$logFC <- de.results.any[[i]]$logFC -->
-<!--     output_df <- as.data.frame(output_df) -->
-
-<!--     output_df = output_df[order(output_df$p_adjust) , ] -->
-
-<!--     # change format GHSR, TNFSF10 into GHSR;TNFSF10 for those duplicates in our DE (edgeR) csv files.  -->
-<!--     my_vector <- output_df$symbol -->
-
-<!--     # Function to replace ', ' with ';' for those Ensembl gene ID who has duplicates IDs -->
-<!--     replace_comma <- function(x) { -->
-<!--       gsub(", ", ";", x) -->
-<!--     } -->
-
-<!--     # Identify elements that match the pattern ', ' -->
-<!--     matching_indices <- grep(", ", my_vector) -->
-
-<!--     # Apply the function to identified elements and print each changed element -->
-<!--     for (index in matching_indices) { -->
-<!--       original_element <- my_vector[index] -->
-<!--       changed_element <- replace_comma(original_element) -->
-<!--       # print(paste(original_element, 'after modify', changed_element)) -->
-<!--     }    -->
-<!--     changed_vector <- sapply(my_vector, replace_comma) -->
-<!--     output_df$symbol <- changed_vector -->
-
-
-<!--     cell_type = df_cluster_number_name[df_cluster_number_name$cluster == i, 'named_cluster'] -->
-<!--     output_df <- mod2_data(output_df, i, cell_type) -->
-<!--     output_df$cluster <- i -->
-<!--     output_df_main_population <- rbind(output_df_main_population, output_df) -->
-<!--     # add column diffexpressed to denote a DE is up or down expressed -->
-<!--   } -->
-
-
-<!--   output_df_main_population$symbol[output_df_main_population$symbol == ""] <- output_df_main_population$ensemble_id[output_df_main_population$symbol == ""] -->
-<!--   return(output_df_main_population) -->
-
-<!-- }   -->
-
-<!-- # Define the aggregation function -->
-<!-- aggregate_rows <- function(df) { -->
-<!--   #   # this version is less strict -->
-<!--   # 1.	If a gene is upregulated in one cluster and downregulated in another, I randomly assign it as either up or down in the main population. -->
-<!--   # 2.	If a gene is upregulated in one of the clusters, it is considered upregulated in the main population. -->
-<!--   # 2.	If a gene is downregulated in one of the clusters, it is considered downregulated in the main population. -->
-<!--   # 3.	If a gene is not DE in all clusters, it is considered non DE in the main population. -->
-
-<!--   # Check if there are any rows with 'UP' or 'DOWN' in 'diffexpressed' -->
-<!--   up_down_rows <- df %>% filter(diffexpressed %in% c("UP", "DOWN")) -->
-
-<!--   if (nrow(up_down_rows) > 0) { -->
-<!--     if(nrow(up_down_rows) >= 2 && length(unique(up_down_rows$diffexpressed)) == 1) -->
-<!--     { -->
-<!--       # print('same direction') -->
-<!--     } -->
-
-<!--     if(length(unique(up_down_rows$diffexpressed)) == 2) -->
-<!--     { -->
-<!--       print('opposite direction') -->
-<!--       print(up_down_rows) -->
-<!--     } -->
-<!--     # Keep only one of the 'UP' or 'DOWN' rows -->
-
-<!--     result <- up_down_rows %>% sample_n(1) -->
-<!--   } else { -->
-<!--     # Randomly select one row if all rows have 'NO' in 'diffexpressed' -->
-<!--     result <- df %>% sample_n(1) -->
-<!--   } -->
-
-<!--   return(result) -->
-<!-- } -->
-
-<!-- aggregate_up_rows <- function(df) { -->
-<!--   #   # this version is less strict -->
-<!--   # 1.	If a gene is upregulated in one cluster and downregulated in another, I randomly assign it as either up or down in the main population. -->
-<!--   # 2.	If a gene is upregulated in one of the clusters, it is considered upregulated in the main population. -->
-<!--   # 2.	If a gene is downregulated in one of the clusters, it is considered downregulated in the main population. -->
-<!--   # 3.	If a gene is not DE in all clusters, it is considered non DE in the main population. -->
-
-<!--   # Check if there are any rows with 'UP' or 'DOWN' in 'diffexpressed' -->
-<!--   up_down_rows <- df %>% filter(diffexpressed %in% c("UP")) -->
-
-<!--   if (nrow(up_down_rows) > 0) { -->
-<!--     # Keep only one of the 'UP' or 'DOWN' rows -->
-<!--     print(up_down_rows) -->
-<!--     result <- up_down_rows %>% sample_n(1) -->
-<!--   } else { -->
-<!--     # Randomly select one row if all rows have 'NO' in 'diffexpressed' -->
-<!--     result <- df %>% sample_n(1) -->
-<!--   } -->
-
-<!--   return(result) -->
-<!-- } -->
-
-<!-- aggregate_rows_strict <- function(df) { -->
-<!--   # this version is more strict -->
-<!--   # If a gene is upregulated in one cluster and downregulated in another, I now assign it as "not DE" in the main population. -->
-<!-- # 2.	If a gene is upregulated in all clusters, it is considered upregulated in the main population. -->
-<!-- # 3.	If a gene is downregulated in all clusters, it is considered downregulated in the main population. -->
-<!-- # -->
-<!--   # Get unique values of 'diffexpressed' -->
-<!--   unique_values <- unique(df$diffexpressed) -->
-
-<!--   # Case 1: All rows have 'DOWN' value -->
-<!--   if (all(df$diffexpressed == "DOWN")) { -->
-<!--     result <- df %>% sample_n(1) -->
-
-<!--     # Case 2: All rows have 'UP' value -->
-<!--   } else if (all(df$diffexpressed == "UP")) { -->
-<!--     result <- df %>% sample_n(1) -->
-
-<!--     # Case 3: All rows have 'NO' value -->
-<!--   } else if (all(df$diffexpressed == "NO")) { -->
-<!--     result <- df %>% sample_n(1) -->
-
-<!--     # Case 4: Rows have mixed 'UP', 'DOWN', 'NO' values -->
-<!--   } else { -->
-<!--     # Randomly choose one row but set 'diffexpressed' to 'NO' -->
-<!--     result <- df %>% sample_n(1) -->
-<!--     result$diffexpressed <- "NO" -->
-<!--   } -->
-
-<!--   return(result) -->
-<!-- } -->
-
-<!-- # to obtain the required Macrophages_Data input for VennDiagrams plot -->
-<!-- integrete_DE_main_population <- function(de.results.any, selected_clusters = c("5", "10", "12c"), -->
-<!--                                          sampSet, main_population )  -->
-<!-- { -->
-<!--   output_df_main_population <- modify_data_for_Venn(de.results.any, flag= 'm2', selected_clusters = selected_clusters)  -->
-<!--   # a large dataframe that merges the DE results for several clusters -->
-
-<!--   # Apply the function to the data frame -->
-<!--   aggregated_data <- output_df_main_population %>% -->
-<!--     group_by(ensemble_id) %>% -->
-<!--     do(aggregate_rows(.)) %>% -->
-<!--     ungroup() -->
-
-<!--   write.csv(aggregated_data, file = paste0("Results/", sampSet, "_DE_edgeR_", main_population, ".csv"), -->
-<!--             row.names = FALSE) -->
-
-<!--   return(aggregated_data) -->
-<!-- }  -->
-
-
-<!-- # add UP DOWN NO lable to DE genes' results -->
-<!-- Create_Set <- function(Data){ -->
-<!--   DE_subset <- Data[Data$diffexpressed != "NO",] -->
-<!--   # keep the DE genes are up-regulated or down-regulateds -->
-
-<!--   # remove any DE genes whose symbol column is NA or empty -->
-<!--   DE_subset <- DE_subset[!is.na(DE_subset$symbol),] -->
-<!--   DE_subset <- DE_subset[DE_subset$symbol != "",] -->
-
-<!--   # check if any DE genes whose symbol column start with ENSSSCG, and remove those -->
-<!--   DE_subset <- DE_subset[!grepl("ENSSSCG", DE_subset$symbol, fixed = TRUE),] -->
-<!--   # fixed logical. If TRUE, pattern is a string to be matched as is. Overrides all conflicting arguments. -->
-<!--   Set <- DE_subset$diffexpressed == "UP" -->
-<!--   # give up regulated genes value 1 -->
-<!--   Set[Set == TRUE] <- 1 -->
-<!--    # give non up-regulated genes value -1 -->
-<!--   Set[Set == FALSE] <- -1 -->
-<!--    # add gene name for each value -->
-
-<!--   Set <- as.integer(Set) -->
-<!--   names(Set) <- DE_subset$symbol -->
-<!--   return(Set) -->
-<!-- } -->
-<!-- # return a named vector of DE genes, with 1 denote up-regulated genes, -1  denote down-regulated genes  -->
-
-<!-- # prepare input data to plot Venn Diagrams -->
-<!-- # save.image(file = paste0('differential_edgeR_',sampSet,'_debug.RData')) -->
-
-<!-- ``` -->
-
-
-<!-- the cluster assignment is based on the slides 'Analysis of scRNA seq data on PRCV samples update 24.07.16.pptx'page 25, but delete cluster 11, 19c in run2. and add plasma cell clusters in B cells main population  -->
-
-<!-- ```{r prepare the input data of VennDiagrams by combine multiple clusters into one main population for edgeR DE results} -->
-
-<!-- # back_up = de.results.any -->
-<!-- head(as.data.frame(de.results.any[2])) -->
-<!-- #  -->
-<!-- # typeof(de.results.any[1]) -->
-
-<!-- if(sampSet == 'run_1' ) -->
-<!-- { -->
-
-<!--   CD8TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("2", "9a", "14a"), -->
-<!--                                                  sampSet, main_population = "CD8T")   -->
-<!--   # CD8TCells_Data[CD8TCells_Data$symbol == 'LGALS3',] -->
-<!--   # table(CD8TCells_Data$diffexpressed) -->
-
-<!--   Macrophages_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("5", "10", "12c"), -->
-<!--                                                  sampSet, main_population = "Macrophages") -->
-<!--    # table(aggregated_data$diffexpressed) -->
-
-<!--   CD4TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("3a", "14c", "17"), -->
-<!--                                                  sampSet, main_population = "CD4T") -->
-<!--   BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("7", "13", '1', '4', '15'), -->
-<!--                                                  sampSet, main_population = "BCells") -->
-<!--   # BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("7", "13"), -->
-<!--                                                  # sampSet, main_population = "BCells") -->
-<!--   # i add plasma cells into B Cells category since there are more DE in plasma cells, worth to have a look at their function -->
-<!-- } -->
-
-<!-- if(sampSet == 'run_2' ) -->
-<!-- { -->
-<!--   Macrophages_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("3", "6", "20"), -->
-<!--                                                  sampSet, main_population = "Macrophages") -->
-<!--    # table(aggregated_data$diffexpressed) -->
-<!--   CD4TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("4a", "8", "9a"), -->
-<!--                                                  sampSet, main_population = "CD4T") -->
-<!--   # BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("7", "17"), -->
-<!--   #                                                sampSet, main_population = "BCells") -->
-
-<!--   CD8TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("1", "9c"), -->
-<!--                                                  sampSet, main_population = "CD8T")     -->
-<!--   BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c('5', '10', '12', '13', '14', -->
-<!--                                                                                     '18', "7", "17"), sampSet, -->
-<!--                                               main_population = "BCells") -->
-<!--   } -->
-
-
-
-
-
-
-
-
-<!-- ``` -->
-
-
-<!-- ```{r plot VennDiagrams} -->
-
-
-
-<!-- # install.packages("remotes") -->
-<!-- # remotes::install_github("jmw86069/venndir"); -->
-<!-- # The development version of venndir -->
-<!-- library(vctrs) -->
-<!-- library(venndir) -->
-
-<!-- set_colours <- c('#FF999A', '#B2DF8A', '#33A02C', '#A6CEE3') -->
-<!-- theme_set(theme_minimal(base_size = 35)) -->
-
-
-
-
-<!-- DE_genes_Set = list(Macrophages=Create_Set(Macrophages_Data), -->
-<!--                  CD4_T_Cells=Create_Set(CD4TCells_Data), -->
-<!--                  CD8_T_Cells=Create_Set(CD8TCells_Data), -->
-<!--                  B_Cells=Create_Set(BCells_Data)) -->
-
-<!-- print(sapply(DE_genes_Set, length)) -->
-<!-- if(sum(sapply(DE_genes_Set, length)) > 0) -->
-<!-- { -->
-<!--   non_empty_DE_genes_Set_flag = TRUE -->
-<!--   options("warn"=1) -->
-
-<!--   venndir(DE_genes_Set, poly_alpha=0.5, proportional=F, set_colors = set_colours, overlap_type="each", verbose = TRUE)  -->
-<!--   # + ggtitle(paste('edgeR', sampSet, 'Venn Diagrams')) -->
-
-<!--   library(grid) -->
-<!--   png(filename=paste0("Results/", sampSet, "_edgeR_Venn_Diagram.png"), height=1080, width=1600) -->
-<!--   options("warn"=-1) -->
-<!--   venndir(DE_genes_Set, poly_alpha=0.5, proportional=F, set_colors = set_colours, font_cex = c(3,2,2), overlap_type="each") -->
-<!--   # Add a title using grid package -->
-<!--   grid.text(paste0(sampSet, " edgeR Venn Diagram"), x = 0.5, y = 0.95, gp = gpar(fontsize = 20)) -->
-
-<!--   dev.off()   -->
-<!-- }else -->
-<!-- { -->
-<!--   print(paste('skip plot venn diagramm because there is no DE genes inside each main population')) -->
-<!--   non_empty_DE_genes_Set_flag = FALSE -->
-<!-- } -->
-
-
-
-
-<!-- ``` -->
-
-<!-- create tables of shared genes to accompany venn diagrams -->
-<!-- ```{r create shared-gene-tables} -->
-<!-- library(dplyr) -->
-
-<!-- #red for up, blue for down , purple for mix -->
-<!-- #since changed to append up, down, mixed, to use Excel's conditional formatting -->
-<!-- set_gene_colour <- function(n_v){ -->
-<!--   colour_vector <- c() -->
-<!--   for(value in n_v){ -->
-<!--   if(length(value) == 0){ -->
-<!--     colour <- "NA" -->
-<!--     next -->
-<!--   } -->
-<!--   if(any(1==value)){ -->
-<!--     colour <- "-Up"} -->
-<!--   if(any(-1==value)){ -->
-<!--     colour <- "-Down"} -->
-<!--   if(any(1==value) & any(-1==value)){ -->
-<!--     colour <- "-Mixed"} -->
-<!--     colour_vector <- c(colour_vector, colour) -->
-<!--   } -->
-<!--   return(colour_vector) -->
-<!-- } -->
-
-<!-- #create function to convert sets into lists of genes for each possible combination, colour by up or down regulation (purple for both) -->
-<!-- #convert 4 sets into 15 sets, numerical into vector -->
-<!-- set_to_df <- function(setlist) -->
-<!--   { -->
-<!--   #chain intersects to get genes in all four -->
-<!--   All_4_names <- intersect(intersect(intersect(names(setlist$Macrophages), -->
-<!--                                                names(setlist$CD4_T_Cells)), -->
-<!--                                      names(setlist$CD8_T_Cells)), -->
-<!--                            names(setlist$B_Cells)) -->
-<!--   # intersect(x, y) finds all rows in both x and y. -->
-
-<!--   All_4 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% All_4_names], -->
-<!--              setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% All_4_names], -->
-<!--              setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% All_4_names], -->
-<!--              setlist$B_Cells[names(setlist$B_Cells) %in% All_4_names]) -->
-
-<!--   # retrieve DE genes that only exist in one of these 4 main cell populations -->
-<!--   Macro_only_DE_genes  <-  setdiff(names(setlist$Macrophages),  -->
-<!--   c(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells), names(setlist$B_Cells))) -->
-<!--   Macro_only <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_only_DE_genes]) -->
-<!--   # setdiff(x, y) finds all rows in x that aren't in y. -->
-<!--   # find DE genes in Macrophages but not in reaming 3 main cell populations then output the rows where such genes locate  -->
-
-
-<!--   CD4_only <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% setdiff(names(setlist$CD4_T_Cells), c(names(setlist$Macrophages), names(setlist$CD8_T_Cells), names(setlist$B_Cells)))]) -->
-
-<!--   CD8_only <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% setdiff(names(setlist$CD8_T_Cells), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells), names(setlist$B_Cells)))]) -->
-
-<!--   B_only <- bind_rows(setlist$B_Cells[names(setlist$B_Cells) %in% setdiff(names(setlist$B_Cells), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)))]) -->
-
-<!--   # retrieve DE genes that only exist in 2 of these 4 main cell populations, there are 6 different combinations -->
-<!--   Macro_CD4_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), c(names(setlist$CD8_T_Cells), names(setlist$B_Cells))) -->
-
-<!--   Macro_CD4 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_names], setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_names]) -->
-
-<!--   Macro_CD8_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$CD8_T_Cells)), c(names(setlist$CD4_T_Cells), names(setlist$B_Cells))) -->
-
-<!--   Macro_CD8 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD8_names], setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD8_names]) -->
-<!--   # -->
-<!--   Macro_B_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$B_Cells)), c(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells))) -->
-
-<!--   Macro_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_B_names], setlist$B_Cells[names(setlist$B_Cells) %in% Macro_B_names]) -->
-<!--   # -->
-<!--   CD4_CD8_names <- setdiff(intersect(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)), c(names(setlist$Macrophages), names(setlist$B_Cells))) -->
-
-<!--   CD4_CD8 <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD4_CD8_names], setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_CD8_names]) -->
-<!--   # -->
-<!--   CD4_B_names <- setdiff(intersect(names(setlist$CD4_T_Cells), names(setlist$B_Cells)), c(names(setlist$Macrophages), names(setlist$CD8_T_Cells))) -->
-<!--   CD4_B <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_B_names], setlist$B_Cells[names(setlist$B_Cells) %in% CD4_B_names]) -->
-<!--   # -->
-<!--   CD8_B_names <-setdiff(intersect(names(setlist$B_Cells), names(setlist$CD8_T_Cells)), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells))) -->
-<!--   CD8_B <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD8_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% CD8_B_names]) -->
-
-
-<!--   # # retrieve DE genes that only exist in 3 of these 4 main cell populations, -->
-<!--   # there are 3 possible combinations -->
-<!--   Macro_CD4_CD8_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), names(setlist$CD8_T_Cells)), names(setlist$B_Cells)) -->
-<!--   Macro_CD4_CD8 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_CD8_names],setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_CD8_names],setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD4_CD8_names]) -->
-<!--   # -->
-<!--   Macro_CD4_B_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), names(setlist$B_Cells)), names(setlist$CD8_T_Cells)) -->
-<!--   Macro_CD4_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_B_names],setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% Macro_CD4_B_names]) -->
-<!--   # -->
-<!--   Macro_CD8_B_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD8_T_Cells)), names(setlist$B_Cells)), names(setlist$CD4_T_Cells)) -->
-<!--   Macro_CD8_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD8_B_names],setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD8_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% Macro_CD8_B_names]) -->
-<!--   # -->
-<!--   CD4_CD8_B_names <- setdiff(intersect(intersect(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)), names(setlist$B_Cells)), names(setlist$Macrophages)) -->
-<!--   CD4_CD8_B <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_CD8_B_names], -->
-<!--                          setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD4_CD8_B_names], -->
-<!--                          setlist$B_Cells[names(setlist$B_Cells) %in% CD4_CD8_B_names]) -->
-
-<!--   All_Combs <- list(Macro_only, CD4_only, CD8_only, B_only, Macro_CD4, Macro_CD8, Macro_B, CD4_CD8, CD4_B, CD8_B, Macro_CD4_CD8, Macro_CD4_B, Macro_CD8_B, CD4_CD8_B, All_4) -->
-<!--   All_Names <- c("Macrophages Only", "CD4 T Cells Only", "CD8 T Cells Only", "B Cells Only", "Macrophages/CD4 T Cells",  "Macrophages/CD8 T Cells", "Macrophages/B Cells", "CD4 T Cells/CD8 T Cells", "CD4 T Cells/B Cells", "CD8 T Cells/B Cells", "Macrophages/CD4 T Cells/CD8 T Cells", "Macrophages/CD4 T Cells/B Cells", "Macrophages/CD8 T Cells/B Cells", "CD4 T Cells/CD8 T Cells/B Cells", "All 4") -->
-<!--   # make vectors same length (fill with NA) -->
-<!--   max.length <- max(sapply(All_Combs,length)) -->
-<!--   All_Combs2 <- lapply(All_Combs, "length<-", max.length) -->
-<!--   Export_DF <- tibble(temp = 1:max.length) -->
-<!--   # Extract names and make lists of colours for export table -->
-<!--   for(i in 1:length(All_Combs2)){ -->
-<!--     n_v <- All_Combs2[[i]] -->
-<!--     gene_vector <- names(n_v) -->
-<!--     colour_vector <- set_gene_colour(n_v) -->
-<!--     new_vector <- paste0(gene_vector, colour_vector) -->
-<!--     Title <- All_Names[[i]] -->
-<!--       if(length(new_vector)==0){ -->
-<!--       new_vector <- rep(NA, max.length) -->
-<!--       } -->
-<!--     Export_DF[[Title]] <- new_vector -->
-<!--   } -->
-<!--   Export_DF <- Export_DF[,names(Export_DF) != "temp"] -->
-<!--   return(Export_DF) -->
-
-<!--   } -->
-<!-- if(non_empty_DE_genes_Set_flag) -->
-<!-- { -->
-<!--   setlist = DE_genes_Set -->
-<!--   write.csv(set_to_df(DE_genes_Set), paste0("Results/", sampSet, "edgeR_shared_genes_table.csv")) -->
-
-<!-- }else -->
-<!-- { -->
-<!--   print(paste('skip create shared-gene-tables because there is no DE genes inside each main population')) -->
-<!-- } -->
-
-
-
-
-
-
-<!-- ``` -->
-
-
-
-
-
-<!-- # Wrapping up -->
-
-<!-- Save everything -->
-
-<!-- ```{r save rds} -->
-
-<!-- #  -->
-<!-- # save.image(file = paste0('differential_edgeR_',sampSet,'.RData')) -->
-<!-- sessionInfo() -->
-<!-- # saveRDS(sce_all_filt, file=paste0('sce_',sampSet,'_cluster_filt.rds')) -->
-
-
-
-
-<!-- ``` -->
+# check if up & down direction consistent VennDiagrams and shared-gene-tables
+plot VennDiagrams of shared DE genes between main cell population (Macrophages, CD8 T cells, CD4 T cells, B cells)
+
+```{r VennDiagrams functions }
+# library(dplyr)
+# 
+# mod2_data <- function(df_re, i, cell_type)
+# {
+#   y_limit <- 1.0e-20
+#   # add a column of NAs
+#   df_re$diffexpressed <- "NO"
+#   # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP"
+#   df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust < 0.05] <- "UP"
+#   # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
+#   df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust < 0.05] <- "DOWN"
+# 
+#   df_re$delabel <- NA
+#   if(sum(df_re$diffexpressed != "NO") == 0)
+#   {
+# 
+#     print(paste('no qualified DE genes observed in this cluster', i, ', no volcano plot'))
+#     return(df_re)
+#   }else
+#   {
+# 
+#     print(paste('qualified DE genes observed in this cluster', i, ', '))
+#   # df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]
+#   # for row/gene who up/down, its delabel column will store the gene symbol again
+#   # for row/gene who is not DE, its delabel column is NA
+#   # Set p-value floor
+#   # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit
+# 
+#   }
+# 
+#   return(df_re)
+# }
+# 
+# 
+# 
+# modify_data_for_Venn <- function(de.results.any, flag= 'm2', selected_clusters )
+# {
+#   cls <- lapply(de.results.any, class)
+# 
+#   # check which cluster fail to have DE results and remove these clusters in de.results.any
+#   # when a cluster have DE results, class of de.results.any[cluster] is data.frame
+#   # when a cluster fail to have DE results, class of de.results.any[cluster] is character
+#   if(length(which(cls == 'character')) > 0)
+#   {
+#     delete_cluster <- names(de.results.any)[which(cls %in% 'character')]
+#     print(paste('delete_cluster',delete_cluster))
+#     selected_clusters <- selected_clusters[! selected_clusters %in% delete_cluster]
+#     de.results.any <- de.results.any[-which(cls %in% 'character')]
+#   }
+#   output_df_main_population <- NULL
+#   print(selected_clusters)
+#   for(i in selected_clusters)
+#   {
+#     print(i)
+#     output_df <- NULL
+# 
+#     output_df$p_adjust <- p.adjust(de.results.any[[i]]$PValue, method='fdr')
+#     output_df$symbol <- rowData(sce_all_filt)[rownames(de.results.any[[i]]), 'hgnc_symbol']
+#     output_df$ensemble_id <- rownames(de.results.any[[i]])
+#     output_df$logFC <- de.results.any[[i]]$logFC
+#     output_df <- as.data.frame(output_df)
+# 
+#     output_df = output_df[order(output_df$p_adjust) , ]
+# 
+#     # change format GHSR, TNFSF10 into GHSR;TNFSF10 for those duplicates in our DE (edgeR) csv files.
+#     my_vector <- output_df$symbol
+# 
+#     # Function to replace ', ' with ';' for those Ensembl gene ID who has duplicates IDs
+#     replace_comma <- function(x) {
+#       gsub(", ", ";", x)
+#     }
+# 
+#     # Identify elements that match the pattern ', '
+#     matching_indices <- grep(", ", my_vector)
+# 
+#     # Apply the function to identified elements and print each changed element
+#     for (index in matching_indices) {
+#       original_element <- my_vector[index]
+#       changed_element <- replace_comma(original_element)
+#       # print(paste(original_element, 'after modify', changed_element))
+#     }
+#     changed_vector <- sapply(my_vector, replace_comma)
+#     output_df$symbol <- changed_vector
+# 
+# 
+#     cell_type = df_cluster_number_name[df_cluster_number_name$cluster == i, 'named_cluster']
+#     output_df <- mod2_data(output_df, i, cell_type)
+#     output_df$cluster <- i
+#     output_df_main_population <- rbind(output_df_main_population, output_df)
+#     # add column diffexpressed to denote a DE is up or down expressed
+#   }
+# 
+# 
+#   output_df_main_population$symbol[output_df_main_population$symbol == ""] <- output_df_main_population$ensemble_id[output_df_main_population$symbol == ""]
+#   return(output_df_main_population)
+# 
+# }
+# 
+# # Define the aggregation function
+# aggregate_rows <- function(df) {
+#   #   # this version is less strict
+#   # 1.	If a gene is upregulated in one cluster and downregulated in another, I randomly assign it as either up or down in the main population.
+#   # 2.	If a gene is upregulated in one of the clusters, it is considered upregulated in the main population.
+#   # 2.	If a gene is downregulated in one of the clusters, it is considered downregulated in the main population.
+#   # 3.	If a gene is not DE in all clusters, it is considered non DE in the main population.
+# 
+#   # Check if there are any rows with 'UP' or 'DOWN' in 'diffexpressed'
+#   up_down_rows <- df %>% filter(diffexpressed %in% c("UP", "DOWN"))
+# 
+#   if (nrow(up_down_rows) > 0) {
+#     if(nrow(up_down_rows) >= 2 && length(unique(up_down_rows$diffexpressed)) == 1)
+#     {
+#       # print('same direction')
+#     }
+# 
+#     if(length(unique(up_down_rows$diffexpressed)) == 2)
+#     {
+#       print('opposite direction')
+#       print(up_down_rows)
+#     }
+#     # Keep only one of the 'UP' or 'DOWN' rows
+# 
+#     result <- up_down_rows %>% sample_n(1)
+#   } else {
+#     # Randomly select one row if all rows have 'NO' in 'diffexpressed'
+#     result <- df %>% sample_n(1)
+#   }
+# 
+#   return(result)
+# }
+# 
+# aggregate_up_rows <- function(df) {
+#   #   # this version is less strict
+#   # 1.	If a gene is upregulated in one cluster and downregulated in another, I randomly assign it as either up or down in the main population.
+#   # 2.	If a gene is upregulated in one of the clusters, it is considered upregulated in the main population.
+#   # 2.	If a gene is downregulated in one of the clusters, it is considered downregulated in the main population.
+#   # 3.	If a gene is not DE in all clusters, it is considered non DE in the main population.
+# 
+#   # Check if there are any rows with 'UP' or 'DOWN' in 'diffexpressed'
+#   up_down_rows <- df %>% filter(diffexpressed %in% c("UP"))
+# 
+#   if (nrow(up_down_rows) > 0) {
+#     # Keep only one of the 'UP' or 'DOWN' rows
+#     print(up_down_rows)
+#     result <- up_down_rows %>% sample_n(1)
+#   } else {
+#     # Randomly select one row if all rows have 'NO' in 'diffexpressed'
+#     result <- df %>% sample_n(1)
+#   }
+# 
+#   return(result)
+# }
+# 
+# aggregate_rows_strict <- function(df) {
+#   # this version is more strict
+#   # If a gene is upregulated in one cluster and downregulated in another, I now assign it as "not DE" in the main population.
+# # 2.	If a gene is upregulated in all clusters, it is considered upregulated in the main population.
+# # 3.	If a gene is downregulated in all clusters, it is considered downregulated in the main population.
+# #
+#   # Get unique values of 'diffexpressed'
+#   unique_values <- unique(df$diffexpressed)
+# 
+#   # Case 1: All rows have 'DOWN' value
+#   if (all(df$diffexpressed == "DOWN")) {
+#     result <- df %>% sample_n(1)
+# 
+#     # Case 2: All rows have 'UP' value
+#   } else if (all(df$diffexpressed == "UP")) {
+#     result <- df %>% sample_n(1)
+# 
+#     # Case 3: All rows have 'NO' value
+#   } else if (all(df$diffexpressed == "NO")) {
+#     result <- df %>% sample_n(1)
+# 
+#     # Case 4: Rows have mixed 'UP', 'DOWN', 'NO' values
+#   } else {
+#     # Randomly choose one row but set 'diffexpressed' to 'NO'
+#     result <- df %>% sample_n(1)
+#     result$diffexpressed <- "NO"
+#   }
+# 
+#   return(result)
+# }
+# 
+# # to obtain the required Macrophages_Data input for VennDiagrams plot
+# integrete_DE_main_population <- function(de.results.any, selected_clusters = c("5", "10", "12c"),
+#                                          sampSet, main_population )
+# {
+#   output_df_main_population <- modify_data_for_Venn(de.results.any, flag= 'm2', selected_clusters = selected_clusters)
+#   # a large dataframe that merges the DE results for several clusters
+# 
+#   # Apply the function to the data frame
+#   aggregated_data <- output_df_main_population %>%
+#     group_by(ensemble_id) %>%
+#     do(aggregate_rows(.)) %>%
+#     ungroup()
+# 
+#   write.csv(aggregated_data, file = paste0("Results/", sampSet, "_DE_edgeR_", main_population, ".csv"),
+#             row.names = FALSE)
+# 
+#   return(aggregated_data)
+# }
+# 
+# 
+# # add UP DOWN NO lable to DE genes' results
+# Create_Set <- function(Data){
+#   DE_subset <- Data[Data$diffexpressed != "NO",]
+#   # keep the DE genes are up-regulated or down-regulateds
+# 
+#   # remove any DE genes whose symbol column is NA or empty
+#   DE_subset <- DE_subset[!is.na(DE_subset$symbol),]
+#   DE_subset <- DE_subset[DE_subset$symbol != "",]
+# 
+#   # check if any DE genes whose symbol column start with ENSSSCG, and remove those
+#   DE_subset <- DE_subset[!grepl("ENSSSCG", DE_subset$symbol, fixed = TRUE),]
+#   # fixed logical. If TRUE, pattern is a string to be matched as is. Overrides all conflicting arguments.
+#   Set <- DE_subset$diffexpressed == "UP"
+#   # give up regulated genes value 1
+#   Set[Set == TRUE] <- 1
+#    # give non up-regulated genes value -1
+#   Set[Set == FALSE] <- -1
+#    # add gene name for each value
+# 
+#   Set <- as.integer(Set)
+#   names(Set) <- DE_subset$symbol
+#   return(Set)
+# }
+# # return a named vector of DE genes, with 1 denote up-regulated genes, -1  denote down-regulated genes
+# 
+# # prepare input data to plot Venn Diagrams
+# # save.image(file = paste0('differential_edgeR_',sampSet,'_debug.RData'))
+
+```
+
+
+the cluster assignment is based on the slides 'Analysis of scRNA seq data on PRCV samples update 24.07.16.pptx'page 25, but delete cluster 11, 19c in run2. and add plasma cell clusters in B cells main population
+
+```{r prepare the input data of VennDiagrams by combine multiple clusters into one main population for edgeR DE results}
+# 
+# # back_up = de.results.any
+# head(as.data.frame(de.results.any[2]))
+# #
+# # typeof(de.results.any[1])
+# 
+# if(sampSet == 'run_1' )
+# {
+# 
+#   CD8TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("2", "9a", "14a"),
+#                                                  sampSet, main_population = "CD8T")
+#   # CD8TCells_Data[CD8TCells_Data$symbol == 'LGALS3',]
+#   # table(CD8TCells_Data$diffexpressed)
+# 
+#   Macrophages_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("5", "10", "12c"),
+#                                                  sampSet, main_population = "Macrophages")
+#    # table(aggregated_data$diffexpressed)
+# 
+#   CD4TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("3a", "14c", "17"),
+#                                                  sampSet, main_population = "CD4T")
+#   BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("7", "13", '1', '4', '15'),
+#                                                  sampSet, main_population = "BCells")
+#   # BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("7", "13"),
+#                                                  # sampSet, main_population = "BCells")
+#   # i add plasma cells into B Cells category since there are more DE in plasma cells, worth to have a look at their function
+# }
+# 
+# if(sampSet == 'run_2' )
+# {
+#   Macrophages_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("3", "6", "20"),
+#                                                  sampSet, main_population = "Macrophages")
+#    # table(aggregated_data$diffexpressed)
+#   CD4TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("4a", "8", "9a"),
+#                                                  sampSet, main_population = "CD4T")
+#   # BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("7", "17"),
+#   #                                                sampSet, main_population = "BCells")
+# 
+#   CD8TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("1", "9c"),
+#                                                  sampSet, main_population = "CD8T")
+#   BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c('5', '10', '12', '13', '14',
+#                                                                                     '18', "7", "17"), sampSet,
+#                                               main_population = "BCells")
+#   }
+# 
+# 
+# 
+# 
+# 
+# 
+
+
+```
+
+
+```{r plot VennDiagrams}
+
+
+
+# # install.packages("remotes")
+# # remotes::install_github("jmw86069/venndir");
+# # The development version of venndir
+# library(vctrs)
+# library(venndir)
+# 
+# set_colours <- c('#FF999A', '#B2DF8A', '#33A02C', '#A6CEE3')
+# theme_set(theme_minimal(base_size = 35))
+# 
+# 
+# 
+# 
+# DE_genes_Set = list(Macrophages=Create_Set(Macrophages_Data),
+#                  CD4_T_Cells=Create_Set(CD4TCells_Data),
+#                  CD8_T_Cells=Create_Set(CD8TCells_Data),
+#                  B_Cells=Create_Set(BCells_Data))
+# 
+# print(sapply(DE_genes_Set, length))
+# if(sum(sapply(DE_genes_Set, length)) > 0)
+# {
+#   non_empty_DE_genes_Set_flag = TRUE
+#   options("warn"=1)
+# 
+#   venndir(DE_genes_Set, poly_alpha=0.5, proportional=F, set_colors = set_colours, overlap_type="each", verbose = TRUE)
+#   # + ggtitle(paste('edgeR', sampSet, 'Venn Diagrams'))
+# 
+#   library(grid)
+#   png(filename=paste0("Results/", sampSet, "_edgeR_Venn_Diagram.png"), height=1080, width=1600)
+#   options("warn"=-1)
+#   venndir(DE_genes_Set, poly_alpha=0.5, proportional=F, set_colors = set_colours, font_cex = c(3,2,2), overlap_type="each")
+#   # Add a title using grid package
+#   grid.text(paste0(sampSet, " edgeR Venn Diagram"), x = 0.5, y = 0.95, gp = gpar(fontsize = 20))
+# 
+#   dev.off()
+# }else
+# {
+#   print(paste('skip plot venn diagramm because there is no DE genes inside each main population'))
+#   non_empty_DE_genes_Set_flag = FALSE
+# }
+# 
+# 
+# 
+
+```
+
+create tables of shared genes to accompany venn diagrams
+```{r create shared-gene-tables}
+# 
+# library(dplyr)
+# 
+# #red for up, blue for down , purple for mix
+# #since changed to append up, down, mixed, to use Excel's conditional formatting
+# set_gene_colour <- function(n_v){
+#   colour_vector <- c()
+#   for(value in n_v){
+#   if(length(value) == 0){
+#     colour <- "NA"
+#     next
+#   }
+#   if(any(1==value)){
+#     colour <- "-Up"}
+#   if(any(-1==value)){
+#     colour <- "-Down"}
+#   if(any(1==value) & any(-1==value)){
+#     colour <- "-Mixed"}
+#     colour_vector <- c(colour_vector, colour)
+#   }
+#   return(colour_vector)
+# }
+# 
+# #create function to convert sets into lists of genes for each possible combination, colour by up or down regulation (purple for both)
+# #convert 4 sets into 15 sets, numerical into vector
+# set_to_df <- function(setlist)
+#   {
+#   #chain intersects to get genes in all four
+#   All_4_names <- intersect(intersect(intersect(names(setlist$Macrophages),
+#                                                names(setlist$CD4_T_Cells)),
+#                                      names(setlist$CD8_T_Cells)),
+#                            names(setlist$B_Cells))
+#   # intersect(x, y) finds all rows in both x and y.
+# 
+#   All_4 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% All_4_names],
+#              setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% All_4_names],
+#              setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% All_4_names],
+#              setlist$B_Cells[names(setlist$B_Cells) %in% All_4_names])
+# 
+#   # retrieve DE genes that only exist in one of these 4 main cell populations
+#   Macro_only_DE_genes  <-  setdiff(names(setlist$Macrophages),
+#   c(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells), names(setlist$B_Cells)))
+#   Macro_only <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_only_DE_genes])
+#   # setdiff(x, y) finds all rows in x that aren't in y.
+#   # find DE genes in Macrophages but not in reaming 3 main cell populations then output the rows where such genes locate
+# 
+# 
+#   CD4_only <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% setdiff(names(setlist$CD4_T_Cells), c(names(setlist$Macrophages), names(setlist$CD8_T_Cells), names(setlist$B_Cells)))])
+# 
+#   CD8_only <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% setdiff(names(setlist$CD8_T_Cells), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells), names(setlist$B_Cells)))])
+# 
+#   B_only <- bind_rows(setlist$B_Cells[names(setlist$B_Cells) %in% setdiff(names(setlist$B_Cells), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)))])
+# 
+#   # retrieve DE genes that only exist in 2 of these 4 main cell populations, there are 6 different combinations
+#   Macro_CD4_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), c(names(setlist$CD8_T_Cells), names(setlist$B_Cells)))
+# 
+#   Macro_CD4 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_names], setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_names])
+# 
+#   Macro_CD8_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$CD8_T_Cells)), c(names(setlist$CD4_T_Cells), names(setlist$B_Cells)))
+# 
+#   Macro_CD8 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD8_names], setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD8_names])
+#   #
+#   Macro_B_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$B_Cells)), c(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)))
+# 
+#   Macro_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_B_names], setlist$B_Cells[names(setlist$B_Cells) %in% Macro_B_names])
+#   #
+#   CD4_CD8_names <- setdiff(intersect(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)), c(names(setlist$Macrophages), names(setlist$B_Cells)))
+# 
+#   CD4_CD8 <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD4_CD8_names], setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_CD8_names])
+#   #
+#   CD4_B_names <- setdiff(intersect(names(setlist$CD4_T_Cells), names(setlist$B_Cells)), c(names(setlist$Macrophages), names(setlist$CD8_T_Cells)))
+#   CD4_B <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_B_names], setlist$B_Cells[names(setlist$B_Cells) %in% CD4_B_names])
+#   #
+#   CD8_B_names <-setdiff(intersect(names(setlist$B_Cells), names(setlist$CD8_T_Cells)), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells)))
+#   CD8_B <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD8_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% CD8_B_names])
+# 
+# 
+#   # # retrieve DE genes that only exist in 3 of these 4 main cell populations,
+#   # there are 3 possible combinations
+#   Macro_CD4_CD8_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), names(setlist$CD8_T_Cells)), names(setlist$B_Cells))
+#   Macro_CD4_CD8 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_CD8_names],setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_CD8_names],setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD4_CD8_names])
+#   #
+#   Macro_CD4_B_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), names(setlist$B_Cells)), names(setlist$CD8_T_Cells))
+#   Macro_CD4_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_B_names],setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% Macro_CD4_B_names])
+#   #
+#   Macro_CD8_B_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD8_T_Cells)), names(setlist$B_Cells)), names(setlist$CD4_T_Cells))
+#   Macro_CD8_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD8_B_names],setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD8_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% Macro_CD8_B_names])
+#   #
+#   CD4_CD8_B_names <- setdiff(intersect(intersect(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)), names(setlist$B_Cells)), names(setlist$Macrophages))
+#   CD4_CD8_B <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_CD8_B_names],
+#                          setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD4_CD8_B_names],
+#                          setlist$B_Cells[names(setlist$B_Cells) %in% CD4_CD8_B_names])
+# 
+#   All_Combs <- list(Macro_only, CD4_only, CD8_only, B_only, Macro_CD4, Macro_CD8, Macro_B, CD4_CD8, CD4_B, CD8_B, Macro_CD4_CD8, Macro_CD4_B, Macro_CD8_B, CD4_CD8_B, All_4)
+#   All_Names <- c("Macrophages Only", "CD4 T Cells Only", "CD8 T Cells Only", "B Cells Only", "Macrophages/CD4 T Cells",  "Macrophages/CD8 T Cells", "Macrophages/B Cells", "CD4 T Cells/CD8 T Cells", "CD4 T Cells/B Cells", "CD8 T Cells/B Cells", "Macrophages/CD4 T Cells/CD8 T Cells", "Macrophages/CD4 T Cells/B Cells", "Macrophages/CD8 T Cells/B Cells", "CD4 T Cells/CD8 T Cells/B Cells", "All 4")
+#   # make vectors same length (fill with NA)
+#   max.length <- max(sapply(All_Combs,length))
+#   All_Combs2 <- lapply(All_Combs, "length<-", max.length)
+#   Export_DF <- tibble(temp = 1:max.length)
+#   # Extract names and make lists of colours for export table
+#   for(i in 1:length(All_Combs2)){
+#     n_v <- All_Combs2[[i]]
+#     gene_vector <- names(n_v)
+#     colour_vector <- set_gene_colour(n_v)
+#     new_vector <- paste0(gene_vector, colour_vector)
+#     Title <- All_Names[[i]]
+#       if(length(new_vector)==0){
+#       new_vector <- rep(NA, max.length)
+#       }
+#     Export_DF[[Title]] <- new_vector
+#   }
+#   Export_DF <- Export_DF[,names(Export_DF) != "temp"]
+#   return(Export_DF)
+# 
+#   }
+# if(non_empty_DE_genes_Set_flag)
+# {
+#   setlist = DE_genes_Set
+#   write.csv(set_to_df(DE_genes_Set), paste0("Results/", sampSet, "edgeR_shared_genes_table.csv"))
+# 
+# }else
+# {
+#   print(paste('skip create shared-gene-tables because there is no DE genes inside each main population'))
+# }
+# 
+# 
+# 
+
+
+
+```
+
+
+
+
+
+# Wrapping up
+
+Save everything
+
+```{r save rds}
+
+#
+# save.image(file = paste0('differential_edgeR_',sampSet,'.RData'))
+sessionInfo()
+# saveRDS(sce_all_filt, file=paste0('sce_',sampSet,'_cluster_filt.rds'))
+
+
+
+
+```
 
