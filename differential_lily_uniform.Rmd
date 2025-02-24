@@ -566,7 +566,7 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
 }
 
 direct_t_test(DPI_1, selected_DPI = "DPI_1")
-direct_t_test(DPI_12, selected_DPI = "DPI_1")
+direct_t_test(DPI_12, selected_DPI = "DPI_12")
 
 visulize_abundance <- function(sce_all_filt, annot)
 {
@@ -582,27 +582,52 @@ visulize_abundance <- function(sce_all_filt, annot)
   
   dat$S_id <- gsub("sample_", "S", dat$sample_id ) 
   dat_annot <- merge(dat, annot[ , c("DPI", "condition", "sample_id")], by = "sample_id")
+  dat_2 = data.frame(cluster_id = colData(sce_all_filt)$cluster,
+                     long_named_cluster = colData(sce_all_filt)$long_named_cluster,
+                     cell_type = colData(sce_all_filt)$named_cluster)
+  dat_2 = unique(dat_2)  
+  
+  dat_annot <- merge(dat_annot, dat_2, by.x = "cluster", by.y = "long_named_cluster",
+                all.x = TRUE)
+
+  dat_annot$cluster_type <-  paste(dat_annot$cluster_id, dat_annot$cell_type, sep = "_")
   dat_annot$DPI <- paste0("DPI_", dat_annot$DPI)
+  colnames(dat_annot)[1] <- "type_cluster"
   
-  
-  dat_annot$cell_type <- gsub(", [0-9]*", "", dat_annot$cluster)
   p <- ggplot(data=dat_annot, aes(x=S_id, y=proportion, fill=cell_type)) +
-    geom_bar(stat="identity")
-  print(p)
-  p <- ggplot(data=dat_annot, aes(x=S_id, y=proportion, fill=cluster)) +
-    geom_bar(stat="identity")
+    geom_bar(stat="identity") + 
+    facet_wrap(DPI ~ condition,  scales="free_x") +
+    ggtitle("cell_type_composition_barplot")
+  
   print(p)
   
-  for (selected_cluster in unique(dat_annot$cluster) ) 
+  png(filename = paste0('Results/DA_edgeR_', sampSet, '_composition_barplot_cell_type.png') , height=2600, width=1800, res = 300)
+  print(p)
+  dev.off()  
+  
+  
+  p <- ggplot(data=dat_annot, aes(x=S_id, y=proportion, fill=type_cluster)) +
+    geom_bar(stat="identity") + 
+    facet_wrap(DPI ~ condition,  scales="free_x")+
+    ggtitle("cluster_composition_barplot")
+  print(p)
+  
+  png(filename = paste0('Results/DA_edgeR_', sampSet, '_composition_barplot_cluster.png') , height=3000, width=2600, res = 300)
+  print(p)
+  dev.off() 
+  
+  
+  for (selected_cluster in levels(dat_annot$cluster_id)  ) 
   {
-    cluster_dat_annot <- dat_annot[dat_annot$cluster == selected_cluster , ]
+    cluster_dat_annot <- dat_annot[dat_annot$cluster_id == selected_cluster , ]
+    selected_cluster <- unique(cluster_dat_annot$cluster_type ) 
     cluster_dat_annot$S_id <- factor(cluster_dat_annot$S_id, levels= cluster_dat_annot$S_id[order(cluster_dat_annot$condition)])
     
     # draw facet bar plots to display sample composition for each cluster
     p <- ggplot(cluster_dat_annot, aes(x=S_id, y=n_cells, fill=condition))+
       geom_bar(stat='identity') +
-      facet_wrap(~DPI,  scales="free_x")+
-      ggtitle("cell number of selected cluster", selected_cluster) +
+      facet_wrap(~ DPI,  scales="free_x")+
+      ggtitle("cell number of selected cluster", paste("cluster", selected_cluster)) +
       geom_text(aes(label=n_cells))+
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
     print(p)
@@ -610,7 +635,7 @@ visulize_abundance <- function(sce_all_filt, annot)
     p <- ggplot(cluster_dat_annot, aes(x=S_id, y=proportion, fill=condition))+
       geom_bar(stat='identity') +
       facet_wrap(~DPI,  scales="free_x") +
-      ggtitle("proportion of selected cluster", selected_cluster) +
+      ggtitle("proportion of selected cluster", paste("cluster", selected_cluster)) +
       geom_text(aes(label=round(proportion, digits = 3) ))+
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
     print(p)
@@ -621,22 +646,41 @@ visulize_abundance <- function(sce_all_filt, annot)
     DPI_dat_annot <- dat_annot[dat_annot$DPI == selected_DPI , ]
     
     # need to choose a cluster that every sample has cells in this cluster, here we choose cluster 1
-    cluster_dat_annot <- dat_annot[dat_annot$cluster == dat_annot$cluster[1] , ]
+    cluster_dat_annot <- dat_annot[dat_annot$cluster_id == 1 , ]
     cluster_dat_annot$S_id <- factor(cluster_dat_annot$S_id, levels= cluster_dat_annot$S_id[order(cluster_dat_annot$condition)])
     DPI_ordered_S_id <-  levels(cluster_dat_annot$S_id)[(levels(cluster_dat_annot$S_id) %in% unique(DPI_dat_annot$S_id))]
     
     p <- ggplot(DPI_dat_annot, aes(x=S_id, y=proportion, fill=condition))+
       geom_bar(stat='identity') +
-      facet_wrap(~cluster) + 
+      facet_wrap(~ type_cluster) + 
       scale_x_discrete(limits=DPI_ordered_S_id) +
       ggtitle("proportion of each cluster", selected_DPI) +
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  
     print(p)
+    
+    png(filename = paste0('Results/DA_edgeR_', sampSet, '_proportion_barplot_allcluster',selected_DPI, '.png') , height=5000, width=5000, res = 500)
+    print(p)
+    dev.off() 
+    
+    
+    p <- ggplot(DPI_dat_annot, aes(x=S_id, y=n_cells, fill=condition))+
+      geom_bar(stat='identity') +
+      facet_wrap(~ type_cluster) + 
+      scale_x_discrete(limits=DPI_ordered_S_id) +
+      ggtitle("proportion of each cluster", selected_DPI) +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  
+    print(p)
+    
+    png(filename = paste0('Results/DA_edgeR_', sampSet, '_ncells_barplot_allcluster',selected_DPI, '.png') , height=5000, width=5000, res = 500)
+    print(p)
+    dev.off()
+    
   }
   
   
 }
 visulize_abundance(sce_all_filt, annot)
+
 
 ```
 
@@ -1186,12 +1230,12 @@ DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 3, comparison_
 DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 3, comparison_prefix = "_t1_t2")
 
 
-DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 2, comparison_prefix = "_ctl_t2_")
-DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 2, comparison_prefix = "_ctl_t2_")
+DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 2, comparison_prefix = "_ctl_t2")
+DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 2, comparison_prefix = "_ctl_t2")
 
 
-DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 1, comparison_prefix = "_ctl_t1_")
-DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 1, comparison_prefix = "_ctl_t1_")
+DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 1, comparison_prefix = "_ctl_t1")
+DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 1, comparison_prefix = "_ctl_t1")
 
 ```
 
