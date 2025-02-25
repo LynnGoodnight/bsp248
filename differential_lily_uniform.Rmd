@@ -1162,7 +1162,7 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
     theme(strip.background = element_rect(color = "black", fill = "white"))  # Add black rectangle border
   print(p1)
   dev.off()
-  
+  return(melted_df)
   
 }
 
@@ -1221,7 +1221,7 @@ DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3, com
   
   
   summary_df <- output_DE_to_files(de.results.any, flag = paste0(comparison_prefix, '_DPI', selected_DPI))
-  DRAW_up_down_summary_barplot(summary_df, prefix = paste0(comparison_prefix, '_DPI', selected_DPI))
+  melted_df <- DRAW_up_down_summary_barplot(summary_df, prefix = paste0(comparison_prefix, '_DPI', selected_DPI))
   return(summary_df)
 }
 
