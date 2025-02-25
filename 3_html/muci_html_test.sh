@@ -66,17 +66,6 @@ sleep 2
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
 /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('test_sub_cluster.Rmd',  output_file=\"${cF}\")"  &
 
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "
-  clustK <- as.numeric(Sys.getenv('clustK'))
-  output_file <- Sys.getenv('cF')
-  rmarkdown::render('test_sub_cluster.Rmd', output_file = output_file)
-"
-
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/Rscript -e "
-  clustK <- as.numeric(Sys.getenv('clustK'))
-  output_file <- Sys.getenv('cF')
-  rmarkdown::render('test_sub_cluster.Rmd', output_file = output_file)
-"
 export clustK=120
 sleep 2
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_${sampSet}_k${clustK}.html"
