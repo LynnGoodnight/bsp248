@@ -31,7 +31,7 @@ library(pathview)
 library(clusterProfiler)
 library(org.Ss.eg.db)
 library(ggplot2)
-
+library(dplyr)
 ```
 
 
@@ -498,7 +498,7 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
       
       
       # draw a bubble plot that only contain shared sig GO across 3 cell types
-      library(dplyr)
+
       # Group by 'GO_ID' and count the number of unique cell types for each 'GO_ID'
       shared_GO_IDs <- GO_multiple_cell_type %>%
         group_by(KEGG_ID) %>%
