@@ -401,7 +401,7 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
         theme_bw() + 
         ylab("") + theme(axis.text.x = element_text(angle = 90)) + 
         xlab("") + facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-        ggtitle(paste(database, "enrichment dot plot for cell type: ", cell_type)) 
+        ggtitle(paste(prefix, database, "enrichment dot plot for cell type: ", cell_type)) 
       
       print(p1)
       
@@ -489,7 +489,7 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
         theme_bw() + 
         ylab("") + theme(axis.text.x = element_text(angle = 90)) + 
         xlab("") + facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-        ggtitle(paste(database, "enrichment dot plot for cell type: ", cell_type))  
+        ggtitle(paste(prefix, database, "enrichment dot plot for cell type: ", cell_type))  
       
       print(p1)
       png(filename=paste0('Results/EA_edgeR_', sampSet, "_BP_", database, "database_dotplot_mul_clusters", prefix , cell_type, '.png'), height=1400, width=1300, res = 150)
@@ -843,7 +843,7 @@ conduct_EA_main <- function(selected_method, selected_prefix)
 ```
 
 
-```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset }
+```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset , fig.width= 10, fig.height=10}
 
 
 conduct_EA_main(selected_method = "edgeR", selected_prefix = "_t1_t2_DPI12")
