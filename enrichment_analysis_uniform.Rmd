@@ -476,7 +476,7 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
                                                      reorder(KEGG_description, GeneRatio_value))
       # GO_multiple_cell_type$cell_type
       # print(table(GO_multiple_cell_type$cell_type))
-      GO_multiple_cell_type$cell_type <-  gsub("Macrophages", "M", GO_multiple_cell_type$cell_type)
+      # GO_multiple_cell_type$cell_type <-  gsub("Macrophages", "M", GO_multiple_cell_type$cell_type)
       # print(table(GO_multiple_cell_type$cell_type))
       
       # draw dot plot for all cell types that have significant GO terms, including all GO terms
@@ -763,7 +763,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
 ```
 
 
-```{r draw dot plots contain each cluster as one column, and group columns based on main cell population, using GO dataset }
+```{r draw dot plots contain each cluster as one column, and group columns based on main cell population, using GO dataset, _t1_t2_DPI12}
 
 # obtain clusters id belong to same cell type
 df_cell_type_cluster <- read.csv("munual_annotation.csv", header = FALSE)
@@ -774,39 +774,68 @@ df_grouped <- df_cell_type_cluster %>%
   ungroup()
 
 
-selected_method = "edgeR"
-selected_prefix <- "_t1_t2_DPI12"
-selected_file_path <- paste0('Results/DE_', selected_method, '_', sampSet, selected_prefix, '_annotated_cluster_')
 
 
-
-selected_database <- "GO"
-for (selected_cell_types in df_grouped$annotated_type) 
+conduct_EA_main <- function(selected_method, selected_prefix)
 {
-  GO_multiple_cell_type <- NULL
-  print(selected_cell_types)
-  selected_Cluster <- as.character(df_grouped[df_grouped$annotated_type == 
-                                                selected_cell_types, "cluster_numbers"])
-  selected_Cluster <-  strsplit(selected_Cluster, split = ", ")[[1]] 
-  print(selected_Cluster)
-  GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
-                                                            GO_multiple_cell_type, database = selected_database,
-                                                            cell_type = selected_cell_types, method = selected_method,
-                                                            universal_file_path = selected_file_path,
-                                                            combine_flag = FALSE, id_type = "symbol")
-  if(is.null(GO_multiple_cell_type))
-  {
-    print(paste("no enriched", selected_database, "term in cell type: ", selected_cell_types))
+  selected_file_path <- paste0('Results/DE_', selected_method, '_', sampSet, selected_prefix, '_annotated_cluster_')
     
-  }else
+  selected_database <- "GO"
+  for (selected_cell_types in df_grouped$annotated_type) 
   {
-    write.table(GO_multiple_cell_type, paste0("Results/EA_edgeR_", sampSet, "_BP_", selected_database, "database_dotplot_mul_clusters", selected_prefix, selected_cell_types, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
-
-    draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database, cell_type = selected_cell_types, prefix= selected_prefix)
-    
+    GO_multiple_cell_type <- NULL
+    print(selected_cell_types)
+    selected_Cluster <- as.character(df_grouped[df_grouped$annotated_type == 
+                                                  selected_cell_types, "cluster_numbers"])
+    selected_Cluster <-  strsplit(selected_Cluster, split = ", ")[[1]] 
+    print(selected_Cluster)
+    GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
+                                                              GO_multiple_cell_type, database = selected_database,
+                                                              cell_type = selected_cell_types, method = selected_method,
+                                                              universal_file_path = selected_file_path,
+                                                              combine_flag = FALSE, id_type = "symbol")
+    if(is.null(GO_multiple_cell_type))
+    {
+      print(paste("no enriched", selected_database, "term in cell type: ", selected_cell_types))
+      
+    }else
+    {
+      write.table(GO_multiple_cell_type, paste0("Results/EA_edgeR_", sampSet, "_BP_", selected_database, "database_dotplot_mul_clusters", selected_prefix, selected_cell_types, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+  
+      draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database, cell_type = selected_cell_types, prefix= selected_prefix)
+      
+    }
   }
+  
+  selected_database <- "KEGG"
+  
+  for (selected_cell_types in df_grouped$annotated_type) 
+  {
+    GO_multiple_cell_type <- NULL
+    print(selected_cell_types)
+    selected_Cluster <- as.character(df_grouped[df_grouped$annotated_type == 
+                                                  selected_cell_types, "cluster_numbers"])
+    selected_Cluster <-  strsplit(selected_Cluster, split = ", ")[[1]] 
+    print(selected_Cluster)
+    GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
+                                                              GO_multiple_cell_type, database = selected_database,
+                                                              cell_type = selected_cell_types, method = selected_method,
+                                                              universal_file_path = selected_file_path,
+                                                              combine_flag = FALSE, id_type = "symbol")
+    if(is.null(GO_multiple_cell_type))
+    {
+      print(paste("skip output table and draw plots since no enriched", selected_database, "term in cell type: ", selected_cell_types))
+      
+    }else
+    {
+      write.table(GO_multiple_cell_type, paste0("Results/EA_edgeR_", sampSet, "_BP_", selected_database, "database_dotplot_mul_clusters", selected_prefix, selected_cell_types, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+  
+      draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database, cell_type = selected_cell_types, prefix= selected_prefix)
+      
+    }
+  }
+   
 }
- 
 
 
 
@@ -815,36 +844,17 @@ for (selected_cell_types in df_grouped$annotated_type)
 
 
 ```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset }
-selected_database <- "KEGG"
 
-for (selected_cell_types in df_grouped$annotated_type) 
-{
-  GO_multiple_cell_type <- NULL
-  print(selected_cell_types)
-  selected_Cluster <- as.character(df_grouped[df_grouped$annotated_type == 
-                                                selected_cell_types, "cluster_numbers"])
-  selected_Cluster <-  strsplit(selected_Cluster, split = ", ")[[1]] 
-  print(selected_Cluster)
-  GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
-                                                            GO_multiple_cell_type, database = selected_database,
-                                                            cell_type = selected_cell_types, method = selected_method,
-                                                            universal_file_path = selected_file_path,
-                                                            combine_flag = FALSE, id_type = "symbol")
-  if(is.null(GO_multiple_cell_type))
-  {
-    print(paste("skip output table and draw plots since no enriched", selected_database, "term in cell type: ", selected_cell_types))
-    
-  }else
-  {
-    write.table(GO_multiple_cell_type, paste0("Results/EA_edgeR_", sampSet, "_BP_", selected_database, "database_dotplot_mul_clusters", selected_prefix, selected_cell_types, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
 
-    draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database, cell_type = selected_cell_types, prefix= selected_prefix)
-    
-  }
-}
+conduct_EA_main(selected_method = "edgeR", selected_prefix = "_t1_t2_DPI12")
+conduct_EA_main(selected_method = "edgeR", selected_prefix = "_t1_t2_DPI1")
  
 
+conduct_EA_main(selected_method = "edgeR", selected_prefix = "_ctl_t2_DPI12")
+conduct_EA_main(selected_method = "edgeR", selected_prefix = "_ctl_t2_DPI1")
 
+conduct_EA_main(selected_method = "edgeR", selected_prefix = "_ctl_t1_DPI12")
+conduct_EA_main(selected_method = "edgeR", selected_prefix = "_ctl_t1_DPI1")
 
 ```
 
