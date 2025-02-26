@@ -452,7 +452,7 @@ conduct_DA <- function(subsets, selected_comparison = 3)
     restab <- res$table
     
     # print(head(restab$PValue))
-    restab$FDR <- p.adjust(restab$PValue, method='BH')
+    restab$FDR <- p.adjust(restab$PValue, method='fdr')
     restab$comparison <- colnames(contrasts)[selected_comparison]  
     # print(head(restab, 10))
     

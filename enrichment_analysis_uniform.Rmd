@@ -88,7 +88,7 @@ library(dplyr)
 #                       keyType = "SYMBOL",
 #                       OrgDb = org.Ss.eg.db, 
 #                       ont = "BP", 
-#                       pAdjustMethod = "BH", 
+#                       pAdjustMethod = "fdr", 
 #                       qvalueCutoff = 0.05, 
 #                       readable = TRUE)
 #       
@@ -344,6 +344,7 @@ library(dplyr)
 
 ```{r set functions}
 
+
 draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO", 
                                        kegg_immune = "", prefix = "_t1_t2_DPI12_",
                                        cell_type = selected_cell_types)
@@ -400,7 +401,7 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
         theme_bw() + 
         ylab("") + theme(axis.text.x = element_text(angle = 90)) + 
         xlab("") + facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-        ggtitle("GO enrichment dot plot per cell type") 
+        ggtitle(paste(database, "enrichment dot plot for cell type: ", cell_type)) 
       
       print(p1)
       
@@ -474,9 +475,9 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
       GO_multiple_cell_type$KEGG_description <- with(GO_multiple_cell_type, 
                                                      reorder(KEGG_description, GeneRatio_value))
       # GO_multiple_cell_type$cell_type
-      print(table(GO_multiple_cell_type$cell_type))
+      # print(table(GO_multiple_cell_type$cell_type))
       GO_multiple_cell_type$cell_type <-  gsub("Macrophages", "M", GO_multiple_cell_type$cell_type)
-      print(table(GO_multiple_cell_type$cell_type))
+      # print(table(GO_multiple_cell_type$cell_type))
       
       # draw dot plot for all cell types that have significant GO terms, including all GO terms
       p1 <- ggplot(data = GO_multiple_cell_type, aes(x = named_cluster, y = KEGG_description, 
@@ -488,57 +489,57 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
         theme_bw() + 
         ylab("") + theme(axis.text.x = element_text(angle = 90)) + 
         xlab("") + facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-        ggtitle(paste("KEGG enrichment dot plot per cell type", kegg_immune)) 
+        ggtitle(paste(database, "enrichment dot plot for cell type: ", cell_type))  
       
+      print(p1)
+      png(filename=paste0('Results/EA_edgeR_', sampSet, "_BP_", database, "database_dotplot_mul_clusters", prefix , cell_type, '.png'), height=1400, width=1300, res = 150)
       
-      png(filename=paste0('Results/', sampSet, '_', method,'_KEGG', kegg_immune, '_dot_plot_mul_cluster.png'),
-          height=1400, width=1300, res = 150)
       print(p1)
       dev.off()
       
-      
+      ######################################## 
       # draw a bubble plot that only contain shared sig GO across 3 cell types
 
       # Group by 'GO_ID' and count the number of unique cell types for each 'GO_ID'
-      shared_GO_IDs <- GO_multiple_cell_type %>%
-        group_by(KEGG_ID) %>%
-        filter(n_distinct(cell_type) == 4)  # Only keep GO_IDs with all 3 cell types
-      if(nrow(shared_GO_IDs) == 0)
-      {
-        print(paste("no shared KEGG pathways in 4 main populations", kegg_immune))
-        return(shared_GO_IDs)
-      }
-      
-      head(GO_multiple_cell_type)
-      table(GO_multiple_cell_type$cell_type)
-      shared_GO_IDs$KEGG_description <- with(shared_GO_IDs,
-                                             reorder(KEGG_description, GeneRatio_value))
-      head(shared_GO_IDs)
-      if(kegg_immune == "")
-      {
-        write.table(shared_GO_IDs, paste0("Results/", sampSet, "_BP", "_edgeR_KEGG_dotplot_mul_clusters_shared.tsv"), sep="\t", quote=FALSE, row.names = FALSE)
-        
-      }else
-      {
-        write.table(shared_GO_IDs, paste0("Results/", sampSet, "_BP", "_edgeR_KEGG", kegg_immune, "_dotplot_mul_clusters_shared.tsv"), sep="\t", quote=FALSE, row.names = FALSE)
-        
-      }
-      
-      
-      # draw dot plot for all cell types that have significant GO terms, only including shared GO terms
-      p1 <- ggplot(data = shared_GO_IDs, aes(x = named_cluster, y = KEGG_description,
-                                             color = `p.adjust`, size = `GeneRatio_value`)) +
-        geom_point() +
-        scale_color_gradient(low = "red", high = "blue") +
-        theme_bw() +
-        ylab("") + theme(axis.text.x = element_text(angle = 90)) +
-        xlab("") + facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-        ggtitle(paste("shared KEGG enrichment dot plot per cell type", kegg_immune))
-      
+      # shared_GO_IDs <- GO_multiple_cell_type %>%
+      #   group_by(KEGG_ID) %>%
+      #   filter(n_distinct(cell_type) == 4)  # Only keep GO_IDs with all 3 cell types
+      # if(nrow(shared_GO_IDs) == 0)
+      # {
+      #   print(paste("no shared KEGG pathways in 4 main populations", kegg_immune))
+      #   return(shared_GO_IDs)
+      # }
+      # 
+      # head(GO_multiple_cell_type)
+      # table(GO_multiple_cell_type$cell_type)
+      # shared_GO_IDs$KEGG_description <- with(shared_GO_IDs,
+      #                                        reorder(KEGG_description, GeneRatio_value))
+      # head(shared_GO_IDs)
+      # if(kegg_immune == "")
+      # {
+      #   write.table(shared_GO_IDs, paste0("Results/", sampSet, "_BP", "_edgeR_KEGG_dotplot_mul_clusters_shared.tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+      #   
+      # }else
+      # {
+      #   write.table(shared_GO_IDs, paste0("Results/", sampSet, "_BP", "_edgeR_KEGG", kegg_immune, "_dotplot_mul_clusters_shared.tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+      #   
+      # }
+      # 
+      # 
+      # # draw dot plot for all cell types that have significant GO terms, only including shared GO terms
+      # p1 <- ggplot(data = shared_GO_IDs, aes(x = named_cluster, y = KEGG_description,
+      #                                        color = `p.adjust`, size = `GeneRatio_value`)) +
+      #   geom_point() +
+      #   scale_color_gradient(low = "red", high = "blue") +
+      #   theme_bw() +
+      #   ylab("") + theme(axis.text.x = element_text(angle = 90)) +
+      #   xlab("") + facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
+      #   ggtitle(paste("shared KEGG enrichment dot plot per cell type", kegg_immune))
+      # 
+      # # print(p1)
+      # png(filename=paste0('Results/', sampSet, '_', method, '_KEGG', kegg_immune, '_dot_plot_mul_clusters_shared.png'), height=1080, width=1080, res = 120)
       # print(p1)
-      png(filename=paste0('Results/', sampSet, '_', method, '_KEGG', kegg_immune, '_dot_plot_mul_clusters_shared.png'), height=1080, width=1080, res = 120)
-      print(p1)
-      dev.off()
+      # dev.off()
       
       
       
@@ -655,7 +656,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
                         OrgDb = org.Ss.eg.db, 
                         keyType = "ENTREZID",
                         ont = "BP", 
-                        pAdjustMethod = "BH",
+                        pAdjustMethod = "fdr",
                         readable = TRUE)        
 
         # keyType = "ncbi-geneid",       
@@ -679,38 +680,35 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
       if(database == "KEGG")
       {
         ## Run GO enrichment analysis, KEGG over-representation analysis 
-        
-        if(id_type == "entrez")
-        {
         KEGG_ORA <- enrichKEGG(gene = sig_ENTREZID,
                                organism = 'ssc',  keyType = "ncbi-geneid",
                                universe = all_ENTREZID, pvalueCutoff = 0.05,
-                               qvalueCutoff = 0.2)          
-        }
+                               pAdjustMethod = "fdr",
+                               qvalueCutoff = 0.2)         
 
         # 	KEGG only includes genes that are mapped to known pathways. If a gene in your background is not annotated in KEGG (e.g., novel genes or genes with unknown functions), it will not be used in the analysis.
         #	This is a common issue for non-model organisms like pigs, as the KEGG annotation for pigs may be incomplete compared to more studied species like humans or mice.
         
         
-        head(KEGG_ORA)
+
         KEGG_ORA <- setReadable(KEGG_ORA, OrgDb = org.Ss.eg.db, keyType="ENTREZID")
-        head(KEGG_ORA[1:4])
-        
-        if(nrow(data.frame(KEGG_ORA)) == 0)
+
+        GO_result_df <- KEGG_ORA@result
+        if(nrow(GO_result_df) == 0)
         {
           print(paste('no enriched KEGG category in KEGG database', file_path))
           next
         }
-        GO_result_df <- KEGG_ORA@result
-        head(KEGG_ORA@result,3)        
+
+            
       }
       
     }
     
-    GO_result_df$p.adjust <- GO_result_df$pvalue
+    # GO_result_df$p.adjust <- GO_result_df$pvalue
     # when we use pvalue instead of p.adjust value
-    GO_result_df_sig <- GO_result_df[(GO_result_df$p.adjust < 0.05), ]
-    # GO_result_df_sig <- GO_result_df[(GO_result_df$p.adjust < 0.3), ]
+    # GO_result_df_sig <- GO_result_df[(GO_result_df$p.adjust < 0.05), ]
+    GO_result_df_sig <- GO_result_df[(GO_result_df$p.adjust < 0.4), ]
     
     if(nrow(GO_result_df_sig) == 0) 
     {
@@ -721,6 +719,8 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
     GO_result_df_sig$cell_type <- cell_type
     GO_result_df_sig$cluster <- names(file_list)[i]
     
+    
+    ######################################## 
     # check if there is a GO term contain superfamily which is too long
     pos <- grep('superfamily', GO_result_df_sig$Description)
     if(length(pos) == 1)
@@ -728,7 +728,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
       print('find it')
       print(GO_result_df_sig$Description[pos])
     }
-    
+    ######################################## 
     combined_GO_sig_df <- rbind(combined_GO_sig_df, GO_result_df_sig)
     
     
@@ -760,7 +760,6 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
   
 }
 
-
 ```
 
 
@@ -776,10 +775,12 @@ df_grouped <- df_cell_type_cluster %>%
 
 
 selected_method = "edgeR"
-selected_database <- "GO"
 selected_prefix <- "_t1_t2_DPI12"
 selected_file_path <- paste0('Results/DE_', selected_method, '_', sampSet, selected_prefix, '_annotated_cluster_')
 
+
+
+selected_database <- "GO"
 for (selected_cell_types in df_grouped$annotated_type) 
 {
   GO_multiple_cell_type <- NULL
@@ -813,147 +814,137 @@ for (selected_cell_types in df_grouped$annotated_type)
 ```
 
 
-<!-- ```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset } -->
-<!-- # save.image(file = paste0('advanced_analysis_debug.RData')) -->
+```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset }
+selected_database <- "KEGG"
 
-<!-- GO_multiple_cell_type <- NULL -->
-<!-- # setwd("/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/preprocess") -->
+for (selected_cell_types in df_grouped$annotated_type) 
+{
+  GO_multiple_cell_type <- NULL
+  print(selected_cell_types)
+  selected_Cluster <- as.character(df_grouped[df_grouped$annotated_type == 
+                                                selected_cell_types, "cluster_numbers"])
+  selected_Cluster <-  strsplit(selected_Cluster, split = ", ")[[1]] 
+  print(selected_Cluster)
+  GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
+                                                            GO_multiple_cell_type, database = selected_database,
+                                                            cell_type = selected_cell_types, method = selected_method,
+                                                            universal_file_path = selected_file_path,
+                                                            combine_flag = FALSE, id_type = "symbol")
+  if(is.null(GO_multiple_cell_type))
+  {
+    print(paste("skip output table and draw plots since no enriched", selected_database, "term in cell type: ", selected_cell_types))
+    
+  }else
+  {
+    write.table(GO_multiple_cell_type, paste0("Results/EA_edgeR_", sampSet, "_BP_", selected_database, "database_dotplot_mul_clusters", selected_prefix, selected_cell_types, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
 
-<!-- if(sampSet == 'run_2' ) -->
-<!-- { -->
-<!--   GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(selected_cluster = c("1", "9c"), -->
-<!--                                                               GO_multiple_cell_type, -->
-<!--                                                               cell_type = "CD8T", method = "edgeR", -->
-<!--                                                               universal_file_path = universal_file_path, -->
-<!--                                                               combine_flag = FALSE, selected_database = "KEGG") -->
-
-
-<!--   GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(selected_cluster = c("3", "6",  "20"), -->
-<!--                                                               GO_multiple_cell_type, -->
-<!--                                                               cell_type = "Macrophages", method = "edgeR",  -->
-<!--                                                               universal_file_path = universal_file_path, -->
-<!--                                                               combine_flag = FALSE, selected_database = "KEGG") -->
-
-<!--   GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(selected_cluster = c("4a", "8", "9a"), -->
-<!--                                                               GO_multiple_cell_type, -->
-<!--                                                               cell_type = "CD4T", method = "edgeR",  -->
-<!--                                                               universal_file_path =universal_file_path, -->
-<!--                                                               combine_flag = FALSE, selected_database = "KEGG") -->
-
-<!--   GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(selected_cluster = c('5', '10', '12', '13', '14', -->
-<!--                                                                                    '18', "7", "17"), -->
-<!--                                                               GO_multiple_cell_type, -->
-<!--                                                               cell_type = "BCells", method = "edgeR",  -->
-<!--                                                               universal_file_path =universal_file_path, -->
-<!--                                                               combine_flag = FALSE, selected_database = "KEGG") -->
+    draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database, cell_type = selected_cell_types, prefix= selected_prefix)
+    
+  }
+}
+ 
 
 
-<!-- } -->
 
-<!-- # head(GO_multiple_cell_type) -->
-<!-- write.table(GO_multiple_cell_type, paste0("Results/", sampSet, "_BP", "_edgeR_KEGG_dotplot_mul_clusters.tsv"), sep="\t", quote=FALSE, row.names = FALSE) -->
+```
 
-<!-- draw_dot_plots_mul_cluster(GO_multiple_cell_type, selected_database = "KEGG") -->
+```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset and select only immune related KEGG ids}
 
-<!-- ``` -->
+library(readxl)
+setwd("/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/references/")
+file_path_selected_keggids <- c("run_2_edgeR_KEGG_dotplot_combined_WG_selected.xlsx",
+                                         "run_2_edgeR_KEGG_dotplot_combined_shared_WG_selected.xlsx")
 
-<!-- ```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset and select only immune related KEGG ids} -->
+selected_keggids <- NULL
+for (i in 1:length(file_path_selected_keggids))
+{
+  selected_keggi_df <- as.data.frame(read_excel(file_path_selected_keggids[i]) )
 
-<!-- library(readxl) -->
-<!-- setwd("/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/references/") -->
-<!-- file_path_selected_keggids <- c("run_2_edgeR_KEGG_dotplot_combined_WG_selected.xlsx", -->
-<!--                                          "run_2_edgeR_KEGG_dotplot_combined_shared_WG_selected.xlsx") -->
+  head(selected_keggi_df)
+  selected_keggi_df <- selected_keggi_df[!is.na(selected_keggi_df$keep) , ]
+  print(length(selected_keggi_df$ID))
+  selected_keggids <- c(selected_keggids, selected_keggi_df$ID)
+}
+# length(selected_keggids)
+selected_keggids <- unique(selected_keggids)
+nrow(GO_multiple_cell_type)
+# table(GO_multiple_cell_type$ID %in% selected_keggids)
 
-<!-- selected_keggids <- NULL -->
-<!-- for (i in 1:length(file_path_selected_keggids))  -->
-<!-- { -->
-<!--   selected_keggi_df <- as.data.frame(read_excel(file_path_selected_keggids[i]) ) -->
+GO_multiple_cell_type <- GO_multiple_cell_type[(GO_multiple_cell_type$ID %in% selected_keggids) , ]
+nrow(GO_multiple_cell_type)
+# head(GO_multiple_cell_type)
+setwd(work_dir)
 
-<!--   head(selected_keggi_df) -->
-<!--   selected_keggi_df <- selected_keggi_df[!is.na(selected_keggi_df$keep) , ] -->
-<!--   print(length(selected_keggi_df$ID)) -->
-<!--   selected_keggids <- c(selected_keggids, selected_keggi_df$ID) -->
-<!-- } -->
-<!-- # length(selected_keggids) -->
-<!-- selected_keggids <- unique(selected_keggids) -->
-<!-- nrow(GO_multiple_cell_type) -->
-<!-- # table(GO_multiple_cell_type$ID %in% selected_keggids) -->
+write.table(GO_multiple_cell_type, paste0("Results/", sampSet, "_BP", "_edgeR_KEGG_manual_select_dotplot_mul_clusters.tsv"), sep="\t", quote=FALSE, row.names = FALSE)
 
-<!-- GO_multiple_cell_type <- GO_multiple_cell_type[(GO_multiple_cell_type$ID %in% selected_keggids) , ] -->
-<!-- nrow(GO_multiple_cell_type) -->
-<!-- # head(GO_multiple_cell_type) -->
-<!-- setwd(work_dir) -->
+draw_dot_plots_mul_cluster(GO_multiple_cell_type, selected_database = "KEGG", kegg_immune = "manual_select")
 
-<!-- write.table(GO_multiple_cell_type, paste0("Results/", sampSet, "_BP", "_edgeR_KEGG_manual_select_dotplot_mul_clusters.tsv"), sep="\t", quote=FALSE, row.names = FALSE) -->
-
-<!-- draw_dot_plots_mul_cluster(GO_multiple_cell_type, selected_database = "KEGG", kegg_immune = "manual_select") -->
-
-<!-- ``` -->
+```
 
 
 <!-- ```{r use enrichGO to plot individual GO dot plot for each cluster in edgeR DE results, fig.width= 8, fig.height=16} -->
 
-<!-- #  -->
+<!-- # -->
 <!-- # # Load libraries -->
 <!-- # library(DOSE) -->
 <!-- # library(pathview) -->
 <!-- # library(clusterProfiler) -->
 <!-- # library(org.Ss.eg.db) -->
-<!-- #  -->
+<!-- # -->
 <!-- # method = "edgeR" -->
 <!-- # if(method == "edgeR") -->
 <!-- # { -->
 <!-- #    file_list <- list.files(path = "v1.10/Results/", pattern = "run_2_edgeR_annotated_DE_cluster_.*\\.csv", full.names = TRUE) -->
 <!-- # } -->
-<!-- #  -->
-<!-- #  -->
-<!-- # for (file_path in file_list)  -->
+<!-- # -->
+<!-- # -->
+<!-- # for (file_path in file_list) -->
 <!-- # { -->
 <!-- # res_ids = read.csv(file_path, header=TRUE) -->
 <!-- # if(method == "edgeR") -->
 <!-- # { -->
-<!-- #  -->
-<!-- #  -->
-<!-- #   ## Create background dataset for hypergeometric testing using all genes tested for significance in the results                  -->
+<!-- # -->
+<!-- # -->
+<!-- #   ## Create background dataset for hypergeometric testing using all genes tested for significance in the results -->
 <!-- #   allOE_genes <- as.character(res_ids$symbol) -->
-<!-- #    -->
+<!-- # -->
 <!-- #   ## Extract significant results -->
 <!-- #   sigOE <- dplyr::filter(res_ids, p_adjust < 0.05) -->
 <!-- #   head(sigOE) -->
 <!-- #   sigOE_genes <- as.character(sigOE$symbol) -->
-<!-- #    -->
+<!-- # -->
 <!-- # }else if(method == "nebula") -->
 <!-- # { -->
 <!-- #   res_ids = read.csv("Results/run_1_DE_nebula_CD8T.csv", header=TRUE) -->
-<!-- #    -->
-<!-- #   ## Create background dataset for hypergeometric testing using all genes tested for significance in the results                  -->
+<!-- # -->
+<!-- #   ## Create background dataset for hypergeometric testing using all genes tested for significance in the results -->
 <!-- #   allOE_genes <- as.character(res_ids$ID) -->
-<!-- #    -->
+<!-- # -->
 <!-- #   ## Extract significant results -->
 <!-- #   sigOE <- dplyr::filter(res_ids, adj.P.Val < 0.0005) -->
 <!-- #   head(sigOE) -->
 <!-- #   sigOE_genes <- as.character(sigOE$ID) -->
-<!-- #    -->
+<!-- # -->
 <!-- # } -->
-<!-- # # some significant DE genes have low fold change, so not be considered up or down,  -->
+<!-- # # some significant DE genes have low fold change, so not be considered up or down, -->
 <!-- # # so length of sigOE_genes is not equal to the sum of up+down -->
 <!-- # if(length(sigOE_genes) > 0) -->
 <!-- # { -->
 <!-- #   # print(paste0("enough DE genes",length(sigOE_genes), file_path)) -->
-<!-- # ## Run GO enrichment analysis  -->
-<!-- # ego <- enrichGO(gene = sigOE_genes,  -->
+<!-- # ## Run GO enrichment analysis -->
+<!-- # ego <- enrichGO(gene = sigOE_genes, -->
 <!-- #                 universe = allOE_genes, -->
 <!-- #                 keyType = "SYMBOL", -->
-<!-- #                 OrgDb = org.Ss.eg.db,  -->
-<!-- #                 ont = "BP",  -->
-<!-- #                 pAdjustMethod = "BH",  -->
-<!-- #                 qvalueCutoff = 0.05,  -->
+<!-- #                 OrgDb = org.Ss.eg.db, -->
+<!-- #                 ont = "BP", -->
+<!-- #                 pAdjustMethod = "fdr", -->
+<!-- #                 qvalueCutoff = 0.05, -->
 <!-- #                 readable = TRUE) -->
-<!-- #  -->
-<!-- #  -->
+<!-- # -->
+<!-- # -->
 <!-- # ## Output results from GO analysis to a table -->
 <!-- # cluster_summary <- data.frame(ego) -->
-<!-- #  -->
+<!-- # -->
 <!-- # # print(head(cluster_summary)) -->
 <!-- # # write.csv(cluster_summary, "test.csv") -->
 <!-- # if(nrow(cluster_summary) > 0) -->
@@ -962,24 +953,24 @@ for (selected_cell_types in df_grouped$annotated_type)
 <!-- #   print(p1) -->
 <!-- #   # png(filename='test.png', height=1500, width=700) -->
 <!-- #   # print(p1) -->
-<!-- #   # dev.off()   -->
+<!-- #   # dev.off() -->
 <!-- # }else -->
 <!-- # { -->
 <!-- #   print(paste("fail to draw GO dot plots, since 0 enriched GO found", file_path)) -->
-<!-- #    -->
+<!-- # -->
 <!-- # } -->
-<!-- #  -->
+<!-- # -->
 <!-- # }else -->
 <!-- # { -->
 <!-- #   print(paste("fail for GO enrichment analysis, since DE genes number less than 0", file_path)) -->
-<!-- #    -->
+<!-- # -->
 <!-- # } -->
-<!-- #  -->
+<!-- # -->
 <!-- # } -->
-<!-- #  -->
-<!-- #    -->
-<!-- #  -->
-<!-- #  -->
+<!-- # -->
+<!-- # -->
+<!-- # -->
+<!-- # -->
 
 <!-- ``` -->
 
@@ -1028,7 +1019,7 @@ for (selected_cell_types in df_grouped$annotated_type)
 <!-- #              pvalueCutoff = 0.05,  -->
 <!-- #              verbose = TRUE,  -->
 <!-- #              OrgDb = organism,  -->
-<!-- #              pAdjustMethod = "none") -->
+<!-- #              pAdjustMethod = "fdr") -->
 <!-- # # Warning messages: -->
 <!-- # # 1: In preparePathwaysAndStats(pathways, stats, minSize, maxSize, gseaParam,  : -->
 <!-- # # There are duplicate gene names, fgsea may produce unexpected results. -->
