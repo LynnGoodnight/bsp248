@@ -843,7 +843,7 @@ conduct_EA_main <- function(selected_method, selected_prefix)
 ```
 
 
-```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset , fig.width= 10, fig.height=10}
+```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset , fig.width= 10}
 
 
 conduct_EA_main(selected_method = "edgeR", selected_prefix = "_t1_t2_DPI12")
