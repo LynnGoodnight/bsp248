@@ -849,35 +849,35 @@ for (selected_cell_types in df_grouped$annotated_type)
 ```
 
 ```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset and select only immune related KEGG ids}
-
-library(readxl)
-setwd("/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/references/")
-file_path_selected_keggids <- c("run_2_edgeR_KEGG_dotplot_combined_WG_selected.xlsx",
-                                         "run_2_edgeR_KEGG_dotplot_combined_shared_WG_selected.xlsx")
-
-selected_keggids <- NULL
-for (i in 1:length(file_path_selected_keggids))
-{
-  selected_keggi_df <- as.data.frame(read_excel(file_path_selected_keggids[i]) )
-
-  head(selected_keggi_df)
-  selected_keggi_df <- selected_keggi_df[!is.na(selected_keggi_df$keep) , ]
-  print(length(selected_keggi_df$ID))
-  selected_keggids <- c(selected_keggids, selected_keggi_df$ID)
-}
-# length(selected_keggids)
-selected_keggids <- unique(selected_keggids)
-nrow(GO_multiple_cell_type)
-# table(GO_multiple_cell_type$ID %in% selected_keggids)
-
-GO_multiple_cell_type <- GO_multiple_cell_type[(GO_multiple_cell_type$ID %in% selected_keggids) , ]
-nrow(GO_multiple_cell_type)
-# head(GO_multiple_cell_type)
-setwd(work_dir)
-
-write.table(GO_multiple_cell_type, paste0("Results/", sampSet, "_BP", "_edgeR_KEGG_manual_select_dotplot_mul_clusters.tsv"), sep="\t", quote=FALSE, row.names = FALSE)
-
-draw_dot_plots_mul_cluster(GO_multiple_cell_type, selected_database = "KEGG", kegg_immune = "manual_select")
+# 
+# library(readxl)
+# setwd("/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/references/")
+# file_path_selected_keggids <- c("run_2_edgeR_KEGG_dotplot_combined_WG_selected.xlsx",
+#                                          "run_2_edgeR_KEGG_dotplot_combined_shared_WG_selected.xlsx")
+# 
+# selected_keggids <- NULL
+# for (i in 1:length(file_path_selected_keggids))
+# {
+#   selected_keggi_df <- as.data.frame(read_excel(file_path_selected_keggids[i]) )
+# 
+#   head(selected_keggi_df)
+#   selected_keggi_df <- selected_keggi_df[!is.na(selected_keggi_df$keep) , ]
+#   print(length(selected_keggi_df$ID))
+#   selected_keggids <- c(selected_keggids, selected_keggi_df$ID)
+# }
+# # length(selected_keggids)
+# selected_keggids <- unique(selected_keggids)
+# nrow(GO_multiple_cell_type)
+# # table(GO_multiple_cell_type$ID %in% selected_keggids)
+# 
+# GO_multiple_cell_type <- GO_multiple_cell_type[(GO_multiple_cell_type$ID %in% selected_keggids) , ]
+# nrow(GO_multiple_cell_type)
+# # head(GO_multiple_cell_type)
+# setwd(work_dir)
+# 
+# write.table(GO_multiple_cell_type, paste0("Results/", sampSet, "_BP", "_edgeR_KEGG_manual_select_dotplot_mul_clusters.tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+# 
+# draw_dot_plots_mul_cluster(GO_multiple_cell_type, selected_database = "KEGG", kegg_immune = "manual_select")
 
 ```
 
