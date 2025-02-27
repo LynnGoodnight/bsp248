@@ -992,7 +992,7 @@ output_DE_to_files <- function(de.results.any, flag= 't1_t2_DPI1_')
   return(summary_df)
 }  
 
-pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprstotal=40,
+pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
                                 selected_comparison = 3)
 {
   sc <- sce[,sce$cluster==clust]
@@ -1009,62 +1009,69 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, coeffs, filtexprsmin=20, filtexprsto
   if(length(which(table(y$samples$condition) < 2)) > 0)
   {
     return('insufficient cells per condition')
-  }else{
-    keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
-                         min.total.count=filtexprstotal)
-    # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
-    # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
-    # filter genes that has total counts below 40 across all samples
-    
-    y <- y[keep,]
-    
-    remain_genes <- rownames(y)
-    
-    print(paste("after fitering low-expressed genes, genes retained in cluster", clust, "is", 
-                length(remain_genes)) )
-    # those retained genes will be statistically tested to see whether differentially expressed 
-    
-    y <- calcNormFactors(y)
-    # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter 
-    y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
-    
-    # par(mfrow=c(2,3))
-    for (i in 1:ncol(y)) {
-      # plotMD(y, column=i, main=clust)
-      
-    }
-    
-    design <- model.matrix(~ 0 + condition, y$samples)
-    # print(design)
-    # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
-    contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1, control_PRCV =  conditioncontrol-conditionPRCV, H1N1_PRCV = conditionH1N1-conditionPRCV, levels = design)
-    
-    
-    # print(contrasts)
-    
-    tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
-    if(is(tc, 'error') | is(tc, 'warning'))
-    {
-      return(paste(tc))
-    }else
-    {
-      y <- estimateDisp(y, design)
-      # The NB dispersion is estimated using the estimateDisp function and visualized with plotBCV.
-      # plotBCV(y, main=clust)
-      fit <- glmQLFit(y, design, robust=TRUE)
-      # estimate quasi-likelihood (QL) dispersions, visualized with plotQLDisp.
-      # plotQLDisp(fit)
-      res <- glmQLFTest(fit, contrast=contrasts[, selected_comparison])
-      
-      # We then perform quasi-likelihood F-test for contrast 2 conditions.
-      # topTags(res)
-      restab <- res$table
-      restab$comparison <- colnames(contrasts)[selected_comparison]  
-      # print(head(restab))        
-      return(restab)
-    }
   }
+  
+  keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
+                       min.total.count=filtexprstotal)
+  # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
+  # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
+  # filter genes that has total counts below 40 across all samples
+  
+  y <- y[keep,]
+  
+  remain_genes <- rownames(y)
+  
+  print(paste("after fitering low-expressed genes, genes retained in cluster", clust, "is", 
+              length(remain_genes)) )
+  # those retained genes will be statistically tested to see whether differentially expressed 
+  
+  y <- calcNormFactors(y)
+  # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter 
+  y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
+  
+  # par(mfrow=c(2,3))
+  for (i in 1:ncol(y)) {
+    # plotMD(y, column=i, main=clust)
+    
+  }
+
+  limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
+                  col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
+                  main = paste('cluster:', clust))
+  
+  design <- model.matrix(~ 0 + condition, y$samples)
+  # print(design)
+  # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
+  contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1, control_PRCV =  conditioncontrol-conditionPRCV, H1N1_PRCV = conditionH1N1-conditionPRCV, levels = design)
+  
+  
+  # print(contrasts)
+  
+  tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
+  if(is(tc, 'error') | is(tc, 'warning'))
+  {
+    return(paste(tc))
+  }else
+  {
+    y <- estimateDisp(y, design)
+    # The NB dispersion is estimated using the estimateDisp function and visualized with plotBCV.
+    # plotBCV(y, main=clust)
+    fit <- glmQLFit(y, design, robust=TRUE)
+    # estimate quasi-likelihood (QL) dispersions, visualized with plotQLDisp.
+    # plotQLDisp(fit)
+    res <- glmQLFTest(fit, contrast=contrasts[, selected_comparison])
+    
+    # We then perform quasi-likelihood F-test for contrast 2 conditions.
+    # topTags(res)
+    restab <- res$table
+    restab$comparison <- colnames(contrasts)[selected_comparison]  
+    # print(head(restab))        
+    return(restab)
+    
+  }
+
 }
+
 ```
 
 
@@ -1172,7 +1179,7 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
 
 ```{r apply method 2 conduct DE analysis between 2 virus condition for each cluster and output formal DE results,  fig.width= 12}
 
-DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3, comparison_prefix = "t1_t2")
+DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, comparison_prefix = "t1_t2")
 {
   # at this stage, sce_all_filt contain 30077 genes, 37511 cells, 8 samples, 21 clusters
   
@@ -1182,7 +1189,8 @@ DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3, com
   # head(colData(sce_all_filt)) 
   
   # merge 4 control samples as one group
-  sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$cull_date == selected_DPI) | (sce_all_filt$cull_date != selected_DPI & sce_all_filt$condition == "control")]
+  sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$cull_date == selected_DPI) 
+                                            | (sce_all_filt$cull_date != selected_DPI & sce_all_filt$condition == "control")]
   
   # not merge 4 control samples as one group  
   # sce_all_filt_DPI_selected <- sce_all_filt[ , sce_all_filt$cull_date == selected_DPI]
@@ -1191,7 +1199,7 @@ DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3, com
   # pooling/sum counts from all cells within each cluster for each sample 
   # Differential expression will then be analysed based on each sample-cluster pair
   summed <- aggregateAcrossCells(sce_all_filt_DPI_selected, 
-                                 id=colData(sce_all_filt_DPI_selected)[,c("cluster", "Sample")])
+                                 id=colData(sce_all_filt_DPI_selected)[ ,c("cluster", "Sample")])
   
   
   # inside summed@assays@data@listData[["counts"]], the resulting columns should be 21*8=168 (168 sample-cluster pairs) rather than 167, is there a mistake? no, it's because a few samples have 0 cell in certain clusters.
@@ -1214,28 +1222,26 @@ DE_analysis <- function(sce_all_filt, selected_DPI, selected_comparison = 3, com
   
   for(i in clusts)
   {
-    de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt, selected_comparison = 3)
+    de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt, 
+                                               selected_comparison = Select_comparison)
   }
   length(de.results.any)
-  
-  
-  
+
   summary_df <- output_DE_to_files(de.results.any, flag = paste0(comparison_prefix, '_DPI', selected_DPI))
   melted_df <- DRAW_up_down_summary_barplot(summary_df, prefix = paste0(comparison_prefix, '_DPI', selected_DPI))
   return(summary_df)
 }
-
 # compare between 2 virus in same DPI
-DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 3, comparison_prefix = "_t1_t2")
-DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 3, comparison_prefix = "_t1_t2")
+DE_analysis(sce_all_filt, selected_DPI = 1,  Select_comparison= 3, comparison_prefix = "_t1_t2")
+DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 3, comparison_prefix = "_t1_t2")
 
 
-DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 2, comparison_prefix = "_ctl_t2")
-DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 2, comparison_prefix = "_ctl_t2")
+DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 2, comparison_prefix = "_ctl_t2")
+DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 2, comparison_prefix = "_ctl_t2")
 
 
-DE_analysis(sce_all_filt, selected_DPI = 1, selected_comparison = 1, comparison_prefix = "_ctl_t1")
-DE_analysis(sce_all_filt, selected_DPI = 12, selected_comparison = 1, comparison_prefix = "_ctl_t1")
+DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 1, comparison_prefix = "_ctl_t1")
+DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 1, comparison_prefix = "_ctl_t1")
 
 ```
 
