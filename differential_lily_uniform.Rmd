@@ -177,9 +177,7 @@ sce_all_filt
 
 colData(sce_filt)[,c('named_cluster', 'long_named_cluster', 'verbose_cluster', 'EXP_celltype')] <- colData(sce_all_filt)[, c('named_cluster', 'long_named_cluster', 'verbose_cluster', 'EXP_celltype')]
 
-# # Update shiny app with filtered data for easier visualization and identification. For easier visualization in app, pre-convert counts metrics to log scale. 
-saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected_named_with_subcluster.rds'))
-saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_named_subcluster.rds'))
+
 
 ```
 
@@ -334,6 +332,9 @@ add a bubbleplot of defining genes
 sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
 sce_filt  <- sce_filt[, sce_filt$Sample != "sample_20"]
 
+# # Update shiny app with filtered data for easier visualization and identification. For easier visualization in app, pre-convert counts metrics to log scale. 
+saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected_named_with_subcluster.rds'))
+saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_named_subcluster.rds'))
 ```
 
 
