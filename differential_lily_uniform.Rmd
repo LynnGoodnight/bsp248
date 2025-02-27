@@ -323,7 +323,7 @@ add a bubbleplot of defining genes
 
 
 
-```{r exclude NK cells and suspicious cluster 19}
+```{r exclude suspicious clusters and bad quality samples}
 # if(sampSet == 'run_1' )
 # {
 #   sce_all_filt <- sce_all_filt[,!sce_all_filt$cluster %in% c('9b', '14b', '19')]
@@ -1038,7 +1038,7 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
   limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
                   col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
                   main = paste('cluster:', clust))
-  
+  # print(p)
   design <- model.matrix(~ 0 + condition, y$samples)
   # print(design)
   # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
@@ -1214,6 +1214,56 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
   # dim(summed.filt)
   # head(summed.filt@colData)
   
+  #######################################################################
+  # plot MDS for all valid samples-cluster pair
+  sc <- summed.filt
+  
+  colData(sc) <- colData(sc)[ , c("Sample", "condition", "run", "cull_date", "animal_id", "cluster",
+                                  "named_cluster", "ncells" )]
+  # head(colData(sc))
+  # colnames(colData(sc))
+  rownames(colData(sc)) <- paste(colData(sc)$Sample, colData(sc)$cluster, sep = "_cluster")
+  
+  # retrieve 8 samples in cluster 1
+  y <- DGEList(counts=counts(sc), samples=colData(sc))
+  
+  
+  keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
+                       min.total.count=filtexprstotal)
+  # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
+  # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
+  # filter genes that has total counts below 40 across all samples
+  
+  y <- y[keep,]
+  
+  remain_genes <- rownames(y)
+  
+  print(paste("after fitering low-expressed genes, genes retained in all cluster is", 
+              length(remain_genes)) )
+  # those retained genes will be statistically tested to see whether differentially expressed 
+  
+  y <- calcNormFactors(y)
+  # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter 
+  y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
+  
+
+
+  cluster <- as.factor(y$samples$cluster)
+
+  limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$cluster ,
+                  col = c(1:length(unique(cluster)))[cluster],
+                  main = "MDS")
+  # print(p)
+  #######################################################################
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   clusts <- as.character(levels(factor(summed.filt$cluster)))
   de.results.any <- vector('list', length(clusts))
@@ -1226,11 +1276,14 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
                                                selected_comparison = Select_comparison)
   }
   length(de.results.any)
-
+  
+  
+  
   summary_df <- output_DE_to_files(de.results.any, flag = paste0(comparison_prefix, '_DPI', selected_DPI))
   melted_df <- DRAW_up_down_summary_barplot(summary_df, prefix = paste0(comparison_prefix, '_DPI', selected_DPI))
   return(summary_df)
 }
+
 # compare between 2 virus in same DPI
 DE_analysis(sce_all_filt, selected_DPI = 1,  Select_comparison= 3, comparison_prefix = "_t1_t2")
 DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 3, comparison_prefix = "_t1_t2")
