@@ -1003,15 +1003,15 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
 ```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset , fig.width= 12}
 
 
-conduct_EA_main(selected_method = "edgeR", selected_prefix = "_t1_t2_DPI12")
-conduct_EA_main(selected_method = "edgeR", selected_prefix = "_t1_t2_DPI1")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_t1_t2_DPI12")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_t1_t2_DPI1")
  
 
-conduct_EA_main(selected_method = "edgeR", selected_prefix = "_ctl_t2_DPI12")
-conduct_EA_main(selected_method = "edgeR", selected_prefix = "_ctl_t2_DPI1")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_t2_DPI12")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_t2_DPI1")
 
-conduct_EA_main(selected_method = "edgeR", selected_prefix = "_ctl_t1_DPI12")
-conduct_EA_main(selected_method = "edgeR", selected_prefix = "_ctl_t1_DPI1")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_t1_DPI12")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_t1_DPI1")
 
 ```
 
