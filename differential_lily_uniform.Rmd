@@ -1227,9 +1227,8 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
   # retrieve 8 samples in cluster 1
   y <- DGEList(counts=counts(sc), samples=colData(sc))
   
-  
-  keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
-                       min.total.count=filtexprstotal)
+  keep <- filterByExpr(y, group=sc$condition, min.count=20,
+                       min.total.count=40)
   # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
   # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
   # filter genes that has total counts below 40 across all samples
