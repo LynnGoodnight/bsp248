@@ -1180,7 +1180,7 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
 ```
 
 
-```{r apply method 2 conduct DE analysis between 2 virus condition for each cluster and output formal DE results,  fig.width= 12}
+```{r apply method 2 conduct DE analysis between 2 virus condition for each cluster and output formal DE results,  fig.width= 12, fig.height=8}
 
 DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, comparison_prefix = "t1_t2")
 {
