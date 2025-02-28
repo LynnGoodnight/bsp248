@@ -544,11 +544,14 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
     cell_type <- df_cluster_number_name[ selected_cluster, "named_cluster" ]
 
     p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
-                    color = "sample_id") +
-      ggtitle(paste("proportion of cluster", selected_cluster, cell_type, "across condition", selected_DPI))  +
+                    fill = "sample_id", color = "sample_id", size = 3) +
+      ggtitle(paste("proportion of cluster", selected_cluster, 
+                    cell_type, "across condition", selected_DPI))  +
+      guides(color = guide_legend(override.aes = list(size = 10))) +
       stat_compare_means(comparisons = my_comparisons,
                          method = "t.test")
     print(p)
+
     
     # p <-  ggboxplot(df_pro_one, x = "condition", y = "proportion",
     #           color = "condition")  + ggtitle( paste("proportion of cluster", selected_cluster, "across condition")) +
@@ -1254,8 +1257,9 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
 
   limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$cluster ,
                   col = c(1:length(unique(cluster)))[cluster],
-                  main = "MDS")
+                  main = paste(selected_DPI, "MDS"))
   # print(p)
+  
   #######################################################################
   
   
