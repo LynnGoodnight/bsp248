@@ -509,7 +509,7 @@ DA_ctl_t2 <- conduct_DA(subsets, selected_comparison = 2)
 output_DA_excel(DA_ctl_t2, file_name_tag='_ctl_t2_')
 ```
 
-```{r draw dot plots to direct visulize and compare cluster proportion between condition, fig.width= 10}
+```{r draw dot plots to direct visulize and compare cluster proportion between condition, fig.width= 10, fig.height= 8}
 # draw dot plots to direct visualize and compare cluster proportion between condition
 direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
 {
@@ -1012,9 +1012,10 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
   # retrieve 8 samples in cluster 1
   y <- DGEList(counts=counts(sc), samples=colData(sc))
   
-  if(length(which(table(y$samples$condition) < 2)) > 0)
+  if(length(which(table(y$samples$condition) < 3)) > 0)
   {
-    return('insufficient cells per condition')
+    # if repelicates under any condition less than 3, we don't obtain enough repelicates for valid statistic test
+    return("one or more condition contain less than 3 samples after fitering sample whose cell number < 10")
   }
   
   keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
