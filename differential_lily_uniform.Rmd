@@ -333,10 +333,10 @@ sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
 sce_filt  <- sce_filt[, sce_filt$Sample != "sample_20"]
 
 # # Update shiny app with filtered data for easier visualization and identification. For easier visualization in app, pre-convert counts metrics to log scale. 
-saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected_named_with_subcluster.rds'))
+saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected', '_with_named_subcluster.rds'))
 saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_named_subcluster.rds'))
 
-save.image(file = paste0('differential_annotated.RData'))
+# save.image(file = paste0('differential_annotated.RData'))
 ```
 
 
@@ -532,7 +532,7 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
   
   for (selected_cluster in 1:n_cluster) 
   {
-    print(selected_cluster)
+    # print(selected_cluster)
     df_pro_one <- df_pro_condition[ , c("sample_id", "condition", as.character(selected_cluster))]
     colnames(df_pro_one)[3] <- "proportion"
     compare_means(proportion ~ condition,  data = df_pro_one, 
@@ -542,16 +542,38 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
     library(ggrepel)
     my_comparisons <- list( c("PRCV", "H1N1"), c("PRCV", "control"), c("control", "H1N1") )
     cell_type <- df_cluster_number_name[ selected_cluster, "named_cluster" ]
-
+    
+    View(df_pro_one)
+    colnames(df_pro_one)
     p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
-                    fill = "sample_id", color = "sample_id", size = 3) +
+                    fill = "sample_id", color = "sample_id", 
+                     size = 3) +
+      geom_text(aes(label = S_id) , hjust = 1, nudge_x = 0.05,
+               size = 2)+
       ggtitle(paste("proportion of cluster", selected_cluster, 
                     cell_type, "across condition", selected_DPI))  +
       guides(color = guide_legend(override.aes = list(size = 10))) +
       stat_compare_means(comparisons = my_comparisons,
-                         method = "t.test")
+                         method = "t.test") 
+  
+    
     print(p)
-
+    library(ggpubr)
+    
+    p <- ggdotplot(
+      df_pro_one, 
+      x = "condition", 
+      y = "proportion",
+      color = "sample_id",  # Keeps the color by sample_id
+      fill = "sample_id",   # Fills the dots with sample_id color
+      size = 5              # Increases dot size
+    ) +
+      ggtitle(paste("proportion of cluster", selected_cluster, cell_type, "across condition", selected_DPI)) +
+      
+      # Add statistical comparisons
+      stat_compare_means(comparisons = my_comparisons, method = "t.test") 
+    
+    print(p)
     
     # p <-  ggboxplot(df_pro_one, x = "condition", y = "proportion",
     #           color = "condition")  + ggtitle( paste("proportion of cluster", selected_cluster, "across condition")) +
@@ -560,8 +582,8 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
     #                      method = "t.test") 
     #   print(p)
     
-
-
+    
+    
     
     
   }
@@ -999,7 +1021,7 @@ output_DE_to_files <- function(de.results.any, flag= 't1_t2_DPI1_')
 }  
 
 pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
-                                selected_comparison = 3)
+                                selected_comparison = 3, DPI = 1)
 {
   sc <- sce[,sce$cluster==clust]
   
@@ -1044,7 +1066,7 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
 
   limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
                   col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
-                  main = paste('cluster:', clust))
+                  main = paste('cluster:', clust, 'in DPI', DPI))
   # print(p)
   design <- model.matrix(~ 0 + condition, y$samples)
   # print(design)
@@ -1280,7 +1302,8 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
   for(i in clusts)
   {
     de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt, 
-                                               selected_comparison = Select_comparison)
+                                               selected_comparison = Select_comparison,
+                                               DPI = selected_DPI)
   }
   length(de.results.any)
   
