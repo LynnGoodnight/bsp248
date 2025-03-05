@@ -835,7 +835,7 @@ Differential expression will then be analysed for each cluster. For this first p
 plot_volcano <- function(df_re, title) 
 {
   # here we use p values rather than p adjusted value to try
-  df_re$p_adjust <- df_re$PValue
+  # df_re$p_adjust <- df_re$PValue
   
   
   ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +

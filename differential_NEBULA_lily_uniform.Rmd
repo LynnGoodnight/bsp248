@@ -47,7 +47,7 @@ load Data
 # rm(sce_list)
 
 sce_all_filt <- readRDS(file = paste0('sce_',sampSet,'_with_named_subcluster.rds'))
-sce_filt <- readRDS(file = paste0('sce_',sampSet,'_corrected_named_with_subcluster.rds'))
+sce_filt <- readRDS(file = paste0('sce_',sampSet,'_corrected_with_named_subcluster.rds'))
 
 
 
