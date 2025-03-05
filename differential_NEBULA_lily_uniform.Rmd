@@ -1,0 +1,944 @@
+---
+title: "Differential expression NEBULA Analyses"
+author: "lily yang"
+date: "`r Sys.Date()`"
+output: html_document
+---
+## set up & Intro
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+work_dir <- Sys.getenv("work_dir")
+bsp_num <- Sys.getenv("bsp_num")
+sampSet <- Sys.getenv("sampSet")
+
+
+knitr::opts_knit$set(root.dir = work_dir)
+numcores <- 10
+```
+
+
+Following on from 'differential_all'. This script describe patterns of differential gene expression and co-expression between our experimental conditions (differential co-expression) using the nebula package. 
+
+**RAM requirements scale exponentially with CPU cores**
+
+## Load packages and data
+
+Packages
+```{r load-packages}
+library(SingleCellExperiment)
+library(scater)
+library(scran)
+library(nebula)
+# library(RcppZiggurat)
+library(ggplot2)
+library(ggrepel)
+library(gridExtra)
+library(ggplot2)
+set.seed(123)
+```
+
+load Data
+
+```{r load input data }
+# load('differential_annotated.RData')
+# 
+# ## size of saved data is too big, delete the sce_list to reduce size
+# rm(sce_list)
+
+sce_all_filt <- readRDS(file = paste0('sce_',sampSet,'_with_named_subcluster.rds'))
+sce_filt <- readRDS(file = paste0('sce_',sampSet,'_corrected_named_with_subcluster.rds'))
+
+
+
+SampleTable <- data.frame(sce_all_filt$Sample, sce_all_filt$condition)
+SampleTable <- unique(SampleTable)
+table(sce_all_filt$cluster)
+```
+
+## preprocessing and create functions
+since we removed some clusters that we don't want, here we conduct some processing step again to normalize cell size and log transform the count values, modify some rowData names to meet format requirement of CompressedGRangesList
+```{r conduct some preprocessing steps}
+
+
+# Remove forbidden rowData names (for generation of CompressedGRangesList) by change rowData names from "start" to "gene_start"
+names(rowData(sce_all_filt))[which(names(rowData(sce_all_filt))=="start")]="gene_start"
+names(rowData(sce_all_filt))[which(names(rowData(sce_all_filt))=="end")]="gene_end"
+
+#Redo normalization 
+sce_all_filt <- computePooledFactors(sce_all_filt, clusters=sce_all_filt$cluster, assay.type="counts")
+sce_all_filt <- logNormCounts(sce_all_filt)
+
+# Swap ENSEMBL IDs for HGNC where possible for easy visualization
+rownames(sce_all_filt) <- rowData(sce_all_filt)$Symbol
+
+# #Rename ISU1 condition to ensure it is used selected as control/baseline 
+# sce_all_filt$condition[sce_all_filt$condition == 'ISU1'] <- "1A-ISU1"
+# sce_all_filt$condition[sce_all_filt$condition == '135'] <- "G135"
+
+# # Create IFI6 column to use as predictor
+# colData(sce_all_filt)$IFI6_logcounts <- as.vector(logcounts(sce_all_filt['IFI6' ,]))
+
+
+
+# Set gglot settings
+theme_set(theme_minimal(base_size = 20))
+
+
+```
+
+
+
+create functions to reduce repeat coding
+```{r create functions to reduce repeat coding}
+#run NEBULA
+run_NEBULA <- function(SCE, predictors, pred_string) 
+{
+  scedata <- scToNeb(obj = SCE, id = "Sample", pred = predictors, offset="sum_counts")
+  df = model.matrix(pred_string, data=scedata$pred)
+  re = nebula(scedata$count, scedata$id, pred=df, offset=scedata$offset, method='HL', ncore=numcores)
+  return(re)
+}
+
+y_limit <- 1.0e-20
+# modify dataframe of results, identify up/down regulated genes
+mod_data <- function(df_re) 
+{
+  names(df_re) <- c("ID", "logFC", "AveExpr", "adj.P.Val")
+  # add a column of NAs
+  df_re$diffexpressed <- "NO"
+  # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP"
+  df_re$diffexpressed[df_re$logFC > 0.6 & df_re$adj.P.Val < 0.05] <- "UP"
+  # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
+  df_re$diffexpressed[df_re$logFC < -0.6 & df_re$adj.P.Val < 0.05] <- "DOWN"
+  df_re$delabel <- NA
+  df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$ID[df_re$diffexpressed != "NO"]
+  # for row/gene who up/down, its delabel column will store the gene symbol again
+  # for row/gene who is not DE, its delabel column is NA
+  # Set p-value floor
+  df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit
+  return(df_re)
+}
+# mod_data2 is used for co-expression analysis
+mod_data2 <- function(df_re) {
+  names(df_re) <- c("ID", "logFC", "AveExpr", "adj.P.Val")
+  # add a column of NAs
+  df_re$diffexpressed <- "NO"
+  # if log2Foldchange > 0.3 and pvalue < 0.05, set as "UP"
+  df_re$diffexpressed[df_re$logFC > 0.3 & df_re$adj.P.Val < 0.05] <- "UP"
+  # if log2Foldchange < -0.3 and pvalue < 0.05, set as "DOWN"
+  df_re$diffexpressed[df_re$logFC < -0.3 & df_re$adj.P.Val < 0.05] <- "DOWN"
+  df_re$delabel <- NA
+  df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$ID[df_re$diffexpressed != "NO"]
+  # Set p-value floor
+  df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit
+  return(df_re)
+}
+
+
+#  Create volcano plot
+plot_volcano <- function(df_re, title) 
+{
+  ggplot(data=df_re, aes(x = logFC, y = -log10(adj.P.Val), col=diffexpressed, label=delabel)) +
+  geom_point() +
+  geom_text_repel(size=7) +    
+  labs(title=title) +
+  geom_vline(xintercept=c(-0.6, 0.6), col="red") +
+  geom_hline(yintercept=-log10(0.05), col="red") +
+  scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")
+    # xlim(-3, 3) + ylim(0, -log10(y_limit)) +
+}
+plot_volcano2 <- function(df_re, title) {
+  ggplot(data=df_re, aes(x = logFC, y = -log10(adj.P.Val), col=diffexpressed, label=delabel)) +
+  geom_point() +
+    xlim(-3, 3) + ylim(0, -log10(y_limit)) +
+    geom_text_repel(size=7) +    
+  labs(title=title) +
+  geom_vline(xintercept=c(-0.3, 0.3), col="red") +
+  geom_hline(yintercept=-log10(0.05), col="red") +
+  scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")
+
+}
+
+```
+
+## identify DE genes across all cells and co-expression
+
+identify DE genes between 2 conditions across all cells
+
+```{r find out DE genes between 2 conditions across all cells all clusters}
+
+# for simplicity, 
+sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$cull_date == selected_DPI) 
+                                          | (sce_all_filt$cull_date != selected_DPI & sce_all_filt$condition == "control")]
+
+file_path <- paste0('Results/DE_NEBULA_', sampSet, '_all_clusters_results.rds')
+if(file.exists(file_path))
+{
+  broad_re <- readRDS(file_path)
+}else
+{
+  broad_re <- run_NEBULA(SCE=sce_all_filt, predictors=c("named_cluster", "condition"), pred_string=~named_cluster + condition)
+  saveRDS(broad_re,file_path)
+  
+}
+
+y_limit <- 1.0e-20
+# Condition
+broad_Data <- data.frame(broad_re$summary$gene,
+                               broad_re$summary$logFC_conditionG135,
+                               broad_re$summary$se_conditionG135,
+                               p.adjust(broad_re$summary$p_conditionG135, "BH"))
+broad_Data <- mod_data(broad_Data)
+broad_genes <- broad_Data$delabel[!is.na(broad_Data$delabel)]
+# many DE genes don't have gene symbols
+# broad_genes only stores the gene symbols who are DE, but many DE genes don't have gene symbols now, maybe due to insufficient reference genome annotation
+# test <- broad_Data[!is.na(broad_Data$delabel),]
+# 
+p1 <- plot_volcano(df_re=broad_Data, title= paste(sampSet,"DE genes between 2 conditions across all cells"))
+
+
+file_path <- paste0('Results/', sampSet,'_DE_NEBULA_total.png', height=1080, width=2160)
+#plot and save
+png(filename=file_path)
+print(p1)
+dev.off()
+
+
+# ouput DE genes into csv
+output_df <- broad_Data[order(broad_Data$`adj.P.Val`),]
+write.table(output_df, 
+            file=paste0('Results/', sampSet,'_DE_NEBULA_total', '.csv'), 
+            sep=',', quote=FALSE, row.names = FALSE)
+
+    
+```
+
+
+<!-- find out IFI6 co-expressed genes by use NEBULA to calculate corresponding correlation values between other gene with IFI6 -->
+
+<!-- ```{r find out IFI6 co-expressed genes across all cells-broad} -->
+<!-- co_expression_NEBULA <- function(sce_all_filt, target_gene = 'IFI6', target_value = "IFI6_logcounts" , pred_string_1, file_name_tag = 'broad') -->
+<!-- { -->
+<!--   IFI6_broad_SCE <- sce_all_filt[!rownames(sce_all_filt) %in% c(target_gene) ,] -->
+<!--   file_name <- paste0(file_name_tag,'_NEBULA_results_', target_gene, '.rds') -->
+<!--   if(file.exists(file_name)) -->
+<!--   { -->
+<!--     IFI6_broad_re <- readRDS(file_name) -->
+<!--   }else -->
+<!--   { -->
+<!--     IFI6_broad_re <- run_NEBULA(SCE=IFI6_broad_SCE, predictors=c("named_cluster", target_value), pred_string = pred_string_1) -->
+<!--     saveRDS(IFI6_broad_re,file = file_name) -->
+<!--   }   -->
+
+<!--   y_limit <- 1.0e-100 -->
+<!--   # plot IFI6 -->
+<!--   IFI6_broad_Data <- data.frame(IFI6_broad_re$summary$gene, -->
+<!--                                 IFI6_broad_re$summary$logFC_IFI6_logcounts, -->
+<!--                                 IFI6_broad_re$summary$se_IFI6_logcounts, -->
+<!--                                 p.adjust(IFI6_broad_re$summary$p_IFI6_logcounts, -->
+<!--                                          "BH")) -->
+<!--   # this should output the IFI6 co-expressed genes in each cell type, but i don't fully understand what does 'IFI6_broad_re$summary$p_IFI6_logcounts' mean, what other column 'p_named_clusterPlasma Cells' mean -->
+<!--   IFI6_broad_Data <- mod_data2(IFI6_broad_Data) -->
+<!--   IFI6_broad_genes <- IFI6_broad_Data$delabel[!is.na(IFI6_broad_Data$delabel)] -->
+
+<!--   png(filename=paste0('Results/NEBULA_', file_name_tag, '_', target_gene, '.png'), height=1080, width=1080) -->
+<!--   plot_volcano2(df_re=IFI6_broad_Data, title=paste("all cells,",target_gene)) -->
+<!--   dev.off() -->
+
+<!--   # ouput DE genes into csv -->
+<!--   output_df <- IFI6_broad_Data[order(IFI6_broad_Data$`adj.P.Val`),] -->
+<!--   write.table(output_df, -->
+<!--               file=paste0('Results/', sampSet,'_DE_nebula_', file_name_tag, -->
+<!--                           target_gene,'.csv'), sep=',', quote=FALSE, -->
+<!--               row.names =FALSE) -->
+
+<!--   return(IFI6_broad_re) -->
+<!-- } -->
+
+<!-- IFI6_broad_re <- co_expression_NEBULA(sce_all_filt, target_gene = 'IFI6', target_value = "IFI6_logcounts" , pred_string_1 = ~named_cluster+IFI6_logcounts, -->
+<!--                                       file_name_tag = 'broad') -->
+
+
+<!-- ``` -->
+
+<!-- ```{r find out IFI6 co-expressed genes across all cells-broad} -->
+<!-- IFI6_broad_SCE <- sce_all_filt[!rownames(sce_all_filt) %in% c('IFI6') ,] -->
+
+<!-- IFI6_broad_re <- run_NEBULA(SCE=IFI6_broad_SCE, predictors=c("named_cluster", "IFI6_logcounts"), pred_string=~named_cluster+IFI6_logcounts) -->
+
+<!-- y_limit <- 1.0e-100 -->
+<!-- # plot IFI6 -->
+<!-- IFI6_broad_Data <- data.frame(IFI6_broad_re$summary$gene, IFI6_broad_re$summary$logFC_IFI6_logcounts, IFI6_broad_re$summary$se_IFI6_logcounts, p.adjust(IFI6_broad_re$summary$p_IFI6_logcounts, "BH")) -->
+<!-- IFI6_broad_Data <- mod_data2(IFI6_broad_Data) -->
+<!-- IFI6_broad_genes <- IFI6_broad_Data$delabel[!is.na(IFI6_broad_Data$delabel)] -->
+
+<!-- png(filename='Results/NEBULA_broad_IFI6.png', height=1080, width=1080) -->
+<!-- plot_volcano2(df_re=IFI6_broad_Data, title="all cells, IFI6") -->
+<!-- dev.off() -->
+<!-- ``` -->
+
+
+```{r save image after DE analysis across broad finish, eval=FALSE}
+
+# save.image(file = paste0(sampSet, '_differential_NEBULA_total.RData'))
+```
+
+## identify DE genes within each main cell population and each cluster
+
+Now try identify DE genes between 2 conditions within each main cell population (Macrophages, CD8 T cells, CD4 T cells, B cells)
+
+#### run 1:
+within cluster, Macrophages population (Macrophages)
+within cluster, CD8 T cells population (CD8 T + mitotic CD8 T)
+within cluster, CD4 T cells population (CD4 T + mitotic CD4 T)
+within cluster, B cells population (B cells)
+see meeting slides of 25th june 
+
+#### run 2:
+within cluster, Macrophages population (Macrophages)
+within cluster, CD8 T cells population (CD8 T + mitotic CD8 T)
+within cluster, CD4 T cells population (CD4 T + mitotic CD4 T)
+within cluster, B cells population (B cells)
+see meeting slides of 25th june 
+
+<!-- # ```{r NEBULA-Tregs} -->
+<!-- # Tregs_dataSCE <- sce_all_filt[, sce_all_filt$cluster %in% c("10")] -->
+<!-- # # Remove zero genes -->
+<!-- # Tregs_dataSCE <- Tregs_dataSCE[rowSums(counts(Tregs_dataSCE)) != 0, ] -->
+<!-- #  -->
+<!-- # Tregs_re <- run_NEBULA(SCE=Tregs_dataSCE, predictors=c("condition"), pred_string=~condition) -->
+<!-- #  -->
+<!-- # y_limit <- 1.0e-10 -->
+<!-- # # Tregs Infected -->
+<!-- # PH1N1_Tregs_Data <- data.frame(Tregs_re$summary$gene, Tregs_re$summary$logFC_conditionpH1N1, Tregs_re$summary$se_conditionpH1N1, p.adjust(Tregs_re$summary$p_conditionpH1N1, "BH")) -->
+<!-- # PH1N1_Tregs_Data <- mod_data(PH1N1_Tregs_Data) -->
+<!-- #  -->
+<!-- # p3 <- plot_volcano(df_re=PH1N1_Tregs_Data, title="Tregs, pH1N1") -->
+<!-- #  -->
+<!-- # # Tregs vaccinated -->
+<!-- # HANP_Tregs_Data <- data.frame(Tregs_re$summary$gene, Tregs_re$summary$`logFC_conditionAd-HA/NP`, Tregs_re$summary$`se_conditionAd-HA/NP`, p.adjust(Tregs_re$summary$`p_conditionAd-HA/NP`, "BH")) -->
+<!-- # HANP_Tregs_Data <- mod_data(HANP_Tregs_Data) -->
+<!-- #  -->
+<!-- # p1 <- plot_volcano(df_re=HANP_Tregs_Data, title="Tregs, Ad-HA/NP") -->
+<!-- #  -->
+<!-- # # Tregs Vaccinated+IL1b -->
+<!-- # IL1b_Tregs_Data <- data.frame(Tregs_re$summary$gene, Tregs_re$summary$`logFC_conditionAd-HA/NP+Ad-IL1b`, Tregs_re$summary$`se_conditionAd-HA/NP+Ad-IL1b`, p.adjust(Tregs_re$summary$`p_conditionAd-HA/NP+Ad-IL1b`, "BH")) -->
+<!-- # IL1b_Tregs_Data <- mod_data(IL1b_Tregs_Data) -->
+<!-- #  -->
+<!-- # p2 <- plot_volcano(df_re=IL1b_Tregs_Data, title="Tregs, Ad-HA/NP+Ad-IL1b") -->
+<!-- #  -->
+<!-- # # Plot and save -->
+<!-- # png(filename='Results/NEBULA_Treg_condition.png', height=1080, width=2160) -->
+<!-- # grid.arrange(p1, p2, p3, nrow=1) -->
+<!-- # dev.off() -->
+<!-- # ``` -->
+
+CD8 T cells, mitotic CD8 T cells
+```{r NEBULA-CD8Tcells}
+NEBULA_DE_subset <- function(sce_all_filt, selected_cluster = c("2", "8c", "14a"), file_name_tag = 'CD8T', single_cluster_tag = FALSE)
+{
+  CD8TCells_dataSCE <- sce_all_filt[, sce_all_filt$cluster %in% selected_cluster]
+  if(dim(CD8TCells_dataSCE)[2] < 240)
+  {
+    print(paste('in cluster', selected_cluster, '8 samples have less than 240 cells in total, too few to do DE analysis'))
+    return('8 samples have less than 240 cells in total, too few to do DE analysis')
+  }  
+  # Remove genes whose counts are zero
+  CD8TCells_dataSCE <- CD8TCells_dataSCE[rowSums(counts(CD8TCells_dataSCE)) != 0, ]
+
+  file_name <- paste0('Results/',sampSet,'_DE_', file_name_tag,'_NEBULA_results.rds')
+  if(file.exists(file_name))
+  {
+    CD8TCells_re <- readRDS(file_name)
+  }else
+  {
+    if(single_cluster_tag)
+    {
+      CD8TCells_re <- run_NEBULA(SCE=CD8TCells_dataSCE, predictors="condition", pred_string=~condition)      
+    }else
+    {
+      CD8TCells_re <- run_NEBULA(SCE=CD8TCells_dataSCE, predictors=c("cluster", "condition"), pred_string=~cluster+condition)      
+    }
+
+    saveRDS(CD8TCells_re,file = file_name)
+  }  
+
+  y_limit <- 1.0e-10
+  # CD8TCells 
+  CD8TCells_Data <- data.frame(CD8TCells_re$summary$gene,
+                                     CD8TCells_re$summary$logFC_conditionG135,
+                                     CD8TCells_re$summary$se_conditionG135,
+                                p.adjust(CD8TCells_re$summary$p_conditionG135,
+                                              "BH"))
+  CD8TCells_Data <- mod_data(CD8TCells_Data)
+  CD8_genes <- CD8TCells_Data$delabel[!is.na(CD8TCells_Data$delabel)]
+  
+  p1 <- plot_volcano(df_re=CD8TCells_Data, title=paste('DE between 2 conditions in subset of', file_name_tag, sampSet))
+  # print(p1)
+
+  png(filename=paste0('Results/', sampSet, '_DE_NEBULA_', file_name_tag, '.png'), height=1080, width=2160)
+  print(p1)
+  dev.off()
+  # ouput DE genes into csv
+  output_df <- CD8TCells_Data[order(CD8TCells_Data$`adj.P.Val`),]
+  write.table(output_df,
+              file=paste0('Results/', sampSet,'_DE_nebula_', file_name_tag, 
+                          '.csv'), sep=',', quote=FALSE,
+              row.names =FALSE)
+  return(CD8TCells_re)
+
+}
+
+
+if(sampSet == 'run_1' )
+{
+  CD8TCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c("2", "8c", "14a"), file_name_tag = 'CD8T')  
+}
+  
+if(sampSet == 'run_2' )
+{
+  CD8TCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c('1', '9c'), file_name_tag = 'CD8T')
+}
+```
+
+CD4 T cells, mitotic CD4 T cells
+```{r NEBULA-CD4Tcells}
+if(sampSet == 'run_1' )
+{
+  CD4TCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c("3a", "8b", "14c", "11b", "17"), file_name_tag = 'CD4T')
+}
+if(sampSet == 'run_2' )
+{
+  CD4TCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c('4a', '8', '9a'), file_name_tag = 'CD4T')
+}
+
+```
+
+B cells
+```{r NEBULA-BCells}
+if(sampSet == 'run_1' )
+{
+  # BCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c("7", "13"), file_name_tag = 'BCell')  
+  BCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c("1", "4", "15", "7", "13"), file_name_tag = 'BCell')  
+}
+if(sampSet == 'run_2' )
+{
+  # BCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c("7", "17"), file_name_tag = 'BCell')  
+  BCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c('5', '10', '12', '13', '14', '18', "7", "17"), file_name_tag = 'BCell')  
+}
+
+```
+
+Macrophages
+```{r NEBULA-Macrophages}
+if(sampSet == 'run_1' )
+{
+  Macrophages_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c("5", "10", "12c"), file_name_tag = 'Macrophages')  
+}
+if(sampSet == 'run_2' )
+{
+  Macrophages_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c('3', '6', '15b', '19c', '20'), file_name_tag = 'Macrophages')  
+}
+
+
+```
+
+```{r NEBULA-each cluster}
+# create suitable variable to save results
+cluster_names <- unique(sce_all_filt$cluster)
+n_cluster <- length(cluster_names)
+per_cluster_re <- vector(mode='list', length = n_cluster)
+names(per_cluster_re) <- cluster_names
+cell_type_list <- data.frame(sce_all_filt$cluster, sce_all_filt$named_cluster)
+cell_type_list <- unique(cell_type_list)
+rownames(cell_type_list) <- cell_type_list$sce_all_filt.cluster
+
+for (cluster_i in cluster_names) 
+{
+  print(cluster_i)
+  NEBULA_DE_subset(sce_all_filt, selected_cluster = cluster_i, file_name_tag =  paste0('cluster_',cluster_i,'_', cell_type_list[cluster_i,2]), single_cluster_tag = TRUE) 
+  # per_cluster_re[cluster_i] <- as.list( ) 
+}
+
+
+```
+
+
+```{r subset-save}
+# save.image(file = paste0(sampSet, '_differential_NEBULA_subset.RData'))
+
+```
+
+
+## identify IFI6 co-expression within each main cell population
+<!-- identify IFI6 co-expressed genes within each main cell population (Macrophages, CD8 T cells, CD4 T cells, B cells) -->
+<!-- cell subsets, IFI6 -->
+<!-- ```{r IFI6 co-expression genes within each cell subsets} -->
+<!-- y_limit <- 1.0e-25 -->
+<!-- #Tregs IFI6 -->
+<!-- IFI6_Tregs_SCE <- Tregs_dataSCE[!rownames(Tregs_dataSCE) %in% c('IFI6') ,] -->
+
+
+<!-- IFI6_Tregs_re <- run_NEBULA(SCE=IFI6_Tregs_SCE, predictors=c("IFI6_logcounts"), pred_string=~IFI6_logcounts) -->
+
+<!-- IFI6_Tregs_Data <- data.frame(IFI6_Tregs_re$summary$gene, IFI6_Tregs_re$summary$logFC_IFI6_logcounts, IFI6_Tregs_re$summary$se_IFI6_logcounts, p.adjust(IFI6_Tregs_re$summary$p_IFI6_logcounts, "BH")) -->
+
+<!-- IFI6_Tregs_Data <- mod_data(IFI6_Tregs_Data) -->
+
+<!-- png(filename='Results/NEBULA_Tregs_IFI6.png', height=1080, width=1080) -->
+<!-- plot_volcano(df_re=IFI6_Tregs_Data, title="Tregs, IFI6") -->
+<!-- dev.off() -->
+
+<!-- # Macrophages -->
+<!-- IFI6_Macrophages_SCE <- Macrophages_dataSCE[!rownames(Macrophages_dataSCE) %in% c('IFI6') ,] -->
+
+<!-- IFI6_Macrophages_re <- run_NEBULA(SCE=IFI6_Macrophages_SCE, predictors=c("cluster", "IFI6_logcounts"), pred_string=~cluster+IFI6_logcounts) -->
+
+<!-- y_limit <- 1.0e-100 -->
+<!-- IFI6_Macrophages_Data <- data.frame(IFI6_Macrophages_re$summary$gene, IFI6_Macrophages_re$summary$logFC_IFI6_logcounts, IFI6_Macrophages_re$summary$se_IFI6_logcounts, p.adjust(IFI6_Macrophages_re$summary$p_IFI6_logcounts, "BH")) -->
+
+<!-- IFI6_Macrophages_Data <- mod_data2(IFI6_Macrophages_Data) -->
+
+<!-- png(filename='Results/NEBULA_Macrophages_IFI6.png', height=1080, width=1080) -->
+<!-- plot_volcano2(df_re=IFI6_Macrophages_Data, title="Macrophages, IFI6") -->
+<!-- dev.off() -->
+
+<!-- #CD8 T cells -->
+<!-- IFI6_CD8TCells_SCE <- CD8TCells_dataSCE[!rownames(CD8TCells_dataSCE) %in% c('IFI6') ,] -->
+
+<!-- IFI6_CD8TCells_re <- run_NEBULA(SCE=IFI6_CD8TCells_SCE, predictors=c("cluster", "IFI6_logcounts"), pred_string=~cluster+IFI6_logcounts) -->
+
+<!-- IFI6_CD8TCells_Data <- data.frame(IFI6_CD8TCells_re$summary$gene, IFI6_CD8TCells_re$summary$logFC_IFI6_logcounts, IFI6_CD8TCells_re$summary$se_IFI6_logcounts, p.adjust(IFI6_CD8TCells_re$summary$p_IFI6_logcounts, "BH")) -->
+
+<!-- IFI6_CD8TCells_Data <- mod_data2(IFI6_CD8TCells_Data) -->
+
+<!-- png(filename='Results/NEBULA_CD8TCells_IFI6.png', height=1080, width=1080) -->
+<!-- plot_volcano2(df_re=IFI6_CD8TCells_Data, title="CD8TCells, IFI6") -->
+<!-- dev.off() -->
+
+<!-- #CD4 T cells -->
+<!-- IFI6_CD4TCells_SCE <- CD4TCells_dataSCE[!rownames(CD4TCells_dataSCE) %in% c('IFI6') ,] -->
+
+<!-- IFI6_CD4TCells_re <- run_NEBULA(SCE=IFI6_CD4TCells_SCE, predictors=c("cluster", "IFI6_logcounts"), pred_string=~cluster+IFI6_logcounts) -->
+
+<!-- IFI6_CD4TCells_Data <- data.frame(IFI6_CD4TCells_re$summary$gene, IFI6_CD4TCells_re$summary$logFC_IFI6_logcounts, IFI6_CD4TCells_re$summary$se_IFI6_logcounts, p.adjust(IFI6_CD4TCells_re$summary$p_IFI6_logcounts, "BH")) -->
+
+<!-- IFI6_CD4TCells_Data <- mod_data2(IFI6_CD4TCells_Data) -->
+
+<!-- png(filename='Results/NEBULA_CD4TCells_IFI6.png', height=1080, width=1080) -->
+<!-- plot_volcano2(df_re=IFI6_CD4TCells_Data, title="CD4TCells, IFI6") -->
+<!-- dev.off() -->
+
+<!-- # B cells -->
+<!-- IFI6_BCells_SCE <- BCells_dataSCE[!rownames(BCells_dataSCE) %in% c('IFI6') ,] -->
+
+<!-- IFI6_BCells_re <- run_NEBULA(SCE=IFI6_BCells_SCE, predictors=c("cluster", "IFI6_logcounts"), pred_string=~cluster+IFI6_logcounts) -->
+
+<!-- y_limit <- 1.0e-25 -->
+<!-- IFI6_BCells_Data <- data.frame(IFI6_BCells_re$summary$gene, IFI6_BCells_re$summary$logFC_IFI6_logcounts, IFI6_BCells_re$summary$se_IFI6_logcounts, p.adjust(IFI6_BCells_re$summary$p_IFI6_logcounts, "BH")) -->
+
+<!-- IFI6_BCells_Data <- mod_data2(IFI6_BCells_Data) -->
+
+<!-- png(filename='Results/NEBULA_BCells_IFI6.png', height=1080, width=1080) -->
+<!-- plot_volcano2(df_re=IFI6_BCells_Data, title="BCells, IFI6") -->
+<!-- dev.off() -->
+
+<!-- ``` -->
+
+<!-- ```{r IFI6-save} -->
+
+<!-- save.image(file = "differential_NEBULA_IFI6_subset.RData") -->
+
+<!-- ``` -->
+
+## VennDiagrams and shared-gene-tables
+
+plot venn diagrams of shared DE genes between main cell population (Macrophages, CD8 T cells, CD4 T cells, B cells)
+
+```{r VennDiagrams functions and prepare the input data}
+Create_Set <- function(Data){
+  DE_subset <- Data[Data$diffexpressed != "NO",]
+  # keep the DE genes are up-regulated or down-regulated which is estimated by mod_data function previously
+  
+  # DE_subset <- Data[(Data$diffexpressed == "UP") | (Data$adj.P.Val < 0.01),]
+  # # keep the DE genes are up-regulated or adj.P.Val < 0.01
+  
+  # remove any DE genes whose ID column is NA or empty
+  DE_subset <- DE_subset[!is.na(DE_subset$ID),]
+  DE_subset <- DE_subset[DE_subset$ID != "",]
+
+  # check if any DE genes whose ID column start with ENSSSCG, and remove those
+  DE_subset <- DE_subset[!grepl("ENSSSCG", DE_subset$ID, fixed = TRUE),]
+  # fixed logical. If TRUE, pattern is a string to be matched as is. Overrides all conflicting arguments.
+  Set <- DE_subset$diffexpressed == "UP"
+  # give up regulated genes value 1
+  Set[Set == TRUE] <- 1
+   # give non up-regulated genes value -1
+  Set[Set == FALSE] <- -1
+   # add gene name for each value
+  
+  Set <- as.integer(Set)
+  names(Set) <- DE_subset$ID
+  return(Set)
+}
+# return a named vector of DE genes, with 1 denote up-regulated genes, -1  denote down-regulated genes 
+
+# prepare input data to plot VennDiagrams
+
+Macrophages_Data <- data.frame(Macrophages_re$summary$gene,
+                               Macrophages_re$summary$logFC_conditionG135,
+                               Macrophages_re$summary$se_conditionG135,
+                               p.adjust(Macrophages_re$summary$p_conditionG135, "BH"))
+Macrophages_Data <- mod_data(Macrophages_Data)
+
+CD4TCells_Data <- data.frame(CD4TCells_re$summary$gene,
+                               CD4TCells_re$summary$logFC_conditionG135,
+                               CD4TCells_re$summary$se_conditionG135,
+                               p.adjust(CD4TCells_re$summary$p_conditionG135, "BH"))
+CD4TCells_Data <- mod_data(CD4TCells_Data)
+
+BCells_Data <- data.frame(BCells_re$summary$gene,
+                               BCells_re$summary$logFC_conditionG135,
+                               BCells_re$summary$se_conditionG135,
+                               p.adjust(BCells_re$summary$p_conditionG135, "BH"))
+BCells_Data <- mod_data(BCells_Data)
+
+CD8TCells_Data <- data.frame(CD8TCells_re$summary$gene,
+                               CD8TCells_re$summary$logFC_conditionG135,
+                               CD8TCells_re$summary$se_conditionG135,
+                               p.adjust(CD8TCells_re$summary$p_conditionG135, "BH"))
+CD8TCells_Data <- mod_data(CD8TCells_Data)
+
+```
+
+```{r VennDiagrams}
+
+
+
+# install.packages("remotes")
+# remotes::install_github("jmw86069/venndir");
+# The development version of venndir
+library(vctrs)
+library(venndir)
+
+set_colours <- c('#FF999A', '#B2DF8A', '#33A02C', '#A6CEE3')
+theme_set(theme_minimal(base_size = 35))
+
+
+
+
+DE_genes_Set = list(Macrophages=Create_Set(Macrophages_Data),
+                 CD4_T_Cells=Create_Set(CD4TCells_Data),
+                 CD8_T_Cells=Create_Set(CD8TCells_Data),
+                 B_Cells=Create_Set(BCells_Data))
+
+options("warn"=1)
+
+venndir(DE_genes_Set, poly_alpha=0.5, proportional=F, set_colors = set_colours, overlap_type="each", verbose = TRUE)
+library(grid)
+
+png(filename=paste0("Results/", sampSet, "_NEBULA_Venn_Diagram.png"), height=1080, width=1600)
+options("warn"=-1)
+venndir(DE_genes_Set, poly_alpha=0.5, proportional=F, set_colors = set_colours, font_cex = c(3,2,2), overlap_type="each")
+# Add a title using grid package
+grid.text(paste0(sampSet, " NEBULA Venn Diagram"), x = 0.5, y = 0.95, gp = gpar(fontsize = 20))
+
+dev.off()
+```
+
+create tables of shared genes to accompany venn diagrams
+```{r shared-gene-tables}
+library(dplyr)
+
+#red for up, blue for down , purple for mix
+#since changed to append up, down, mixed, to use Excel's conditional formatting
+set_gene_colour <- function(n_v){
+  colour_vector <- c()
+  for(value in n_v){
+  if(length(value) == 0){
+    colour <- "NA"
+    next
+  }
+  if(any(1==value)){
+    colour <- "-Up"}
+  if(any(-1==value)){
+    colour <- "-Down"}
+  if(any(1==value) & any(-1==value)){
+    colour <- "-Mixed"}
+    colour_vector <- c(colour_vector, colour)
+  }
+  return(colour_vector)
+}
+
+#create function to convert sets into lists of genes for each possible combination, colour by up or down regulation (purple for both)
+#convert 4 sets into 15 sets, numerical into vector
+set_to_df <- function(setlist)
+  {
+  #chain intersects to get genes in all four
+  All_4_names <- intersect(intersect(intersect(names(setlist$Macrophages),
+                                               names(setlist$CD4_T_Cells)),
+                                     names(setlist$CD8_T_Cells)),
+                           names(setlist$B_Cells))
+  # intersect(x, y) finds all rows in both x and y.
+  
+  All_4 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% All_4_names],
+             setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% All_4_names],
+             setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% All_4_names],
+             setlist$B_Cells[names(setlist$B_Cells) %in% All_4_names])
+  
+  # retrieve DE genes that only exist in one of these 4 main cell populations
+  Macro_only_DE_genes  <-  setdiff(names(setlist$Macrophages), 
+  c(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells), names(setlist$B_Cells)))
+  Macro_only <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_only_DE_genes])
+  # setdiff(x, y) finds all rows in x that aren't in y.
+  # find DE genes in Macrophages but not in reaming 3 main cell populations then output the rows where such genes locate 
+  
+  
+  CD4_only <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% setdiff(names(setlist$CD4_T_Cells), c(names(setlist$Macrophages), names(setlist$CD8_T_Cells), names(setlist$B_Cells)))])
+  
+  CD8_only <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% setdiff(names(setlist$CD8_T_Cells), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells), names(setlist$B_Cells)))])
+  
+  B_only <- bind_rows(setlist$B_Cells[names(setlist$B_Cells) %in% setdiff(names(setlist$B_Cells), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)))])
+  
+  # retrieve DE genes that only exist in 2 of these 4 main cell populations, there are 6 different combinations
+  Macro_CD4_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), c(names(setlist$CD8_T_Cells), names(setlist$B_Cells)))
+  
+  Macro_CD4 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_names], setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_names])
+  
+  Macro_CD8_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$CD8_T_Cells)), c(names(setlist$CD4_T_Cells), names(setlist$B_Cells)))
+  
+  Macro_CD8 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD8_names], setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD8_names])
+  #
+  Macro_B_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$B_Cells)), c(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)))
+  
+  Macro_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_B_names], setlist$B_Cells[names(setlist$B_Cells) %in% Macro_B_names])
+  #
+  CD4_CD8_names <- setdiff(intersect(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)), c(names(setlist$Macrophages), names(setlist$B_Cells)))
+  
+  CD4_CD8 <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD4_CD8_names], setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_CD8_names])
+  #
+  CD4_B_names <- setdiff(intersect(names(setlist$CD4_T_Cells), names(setlist$B_Cells)), c(names(setlist$Macrophages), names(setlist$CD8_T_Cells)))
+  CD4_B <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_B_names], setlist$B_Cells[names(setlist$B_Cells) %in% CD4_B_names])
+  #
+  CD8_B_names <-setdiff(intersect(names(setlist$B_Cells), names(setlist$CD8_T_Cells)), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells)))
+  CD8_B <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD8_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% CD8_B_names])
+  
+  
+  # # retrieve DE genes that only exist in 3 of these 4 main cell populations,
+  # there are 3 possible combinations
+  Macro_CD4_CD8_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), names(setlist$CD8_T_Cells)), names(setlist$B_Cells))
+  Macro_CD4_CD8 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_CD8_names],setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_CD8_names],setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD4_CD8_names])
+  #
+  Macro_CD4_B_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), names(setlist$B_Cells)), names(setlist$CD8_T_Cells))
+  Macro_CD4_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_B_names],setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% Macro_CD4_B_names])
+  #
+  Macro_CD8_B_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD8_T_Cells)), names(setlist$B_Cells)), names(setlist$CD4_T_Cells))
+  Macro_CD8_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD8_B_names],setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD8_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% Macro_CD8_B_names])
+  #
+  CD4_CD8_B_names <- setdiff(intersect(intersect(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)), names(setlist$B_Cells)), names(setlist$Macrophages))
+  CD4_CD8_B <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_CD8_B_names],
+                         setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD4_CD8_B_names],
+                         setlist$B_Cells[names(setlist$B_Cells) %in% CD4_CD8_B_names])
+  
+  All_Combs <- list(Macro_only, CD4_only, CD8_only, B_only, Macro_CD4, Macro_CD8, Macro_B, CD4_CD8, CD4_B, CD8_B, Macro_CD4_CD8, Macro_CD4_B, Macro_CD8_B, CD4_CD8_B, All_4)
+  All_Names <- c("Macrophages Only", "CD4 T Cells Only", "CD8 T Cells Only", "B Cells Only", "Macrophages/CD4 T Cells",  "Macrophages/CD8 T Cells", "Macrophages/B Cells", "CD4 T Cells/CD8 T Cells", "CD4 T Cells/B Cells", "CD8 T Cells/B Cells", "Macrophages/CD4 T Cells/CD8 T Cells", "Macrophages/CD4 T Cells/B Cells", "Macrophages/CD8 T Cells/B Cells", "CD4 T Cells/CD8 T Cells/B Cells", "All 4")
+  # make vectors same length (fill with NA)
+  max.length <- max(sapply(All_Combs,length))
+  All_Combs2 <- lapply(All_Combs, "length<-", max.length)
+  Export_DF <- tibble(temp = 1:max.length)
+  # Extract names and make lists of colours for export table
+  for(i in 1:length(All_Combs2)){
+    n_v <- All_Combs2[[i]]
+    gene_vector <- names(n_v)
+    colour_vector <- set_gene_colour(n_v)
+    new_vector <- paste0(gene_vector, colour_vector)
+    Title <- All_Names[[i]]
+      if(length(new_vector)==0){
+      new_vector <- rep(NA, max.length)
+      }
+    Export_DF[[Title]] <- new_vector
+  }
+  Export_DF <- Export_DF[,names(Export_DF) != "temp"]
+  return(Export_DF)
+  
+  }
+setlist = DE_genes_Set
+
+write.csv(set_to_df(DE_genes_Set), paste0("Results/", sampSet, "NEBULA_shared_genes_table.csv"))
+
+
+
+
+```
+
+```{r venn-save}
+
+# save.image(file = paste0(sampSet, "_differential_NEBULA_venn.RData"))
+
+```
+
+## GO-functions
+create functions and run topGO enrichment on differential expressed genes and output plots
+
+```{r GO-functions}
+
+
+library(topGO)
+library(org.Ss.eg.db)
+
+  five_colours <- c("Macrophages_Data" = '#E31A1C', "CD4TCells_Data" ='#6DE602',
+                    "CD8TCells_Data" = '#33A02C', "BCells_Data" = '#00A7FF') 
+  #used to include 'all cells', now removed
+
+# NEBULA_Data <- list(Macrophages_Data, BCells_Data, CD4TCells_Data,
+#                     CD8TCells_Data )
+NEBULA_Data <- list("Macrophages_Data" = Macrophages_Data, 
+                    "BCells_Data" = BCells_Data, 
+                    "CD4TCells_Data" = CD4TCells_Data,
+                    "CD8TCells_Data" = CD8TCells_Data )
+  
+  
+ID_List <- c( "Macrophages_Data", "BCells_Data", "CD4TCells_Data",  "CD8TCells_Data")
+
+# Create single data frame to save NEBULA DE genes results from 4 main populations
+rm(All_NEBULA_Results)
+All_NEBULA_Results <- data.frame()
+n <- 0
+for (Data in NEBULA_Data) {
+  n <- n + 1
+  NEBULA_Results <- Data
+  ID <- ID_List[n]
+  #ID <- gsub("broad", "AllCells", ID, fixed=TRUE)
+  NEBULA_Results$dataset <- ID
+  NEBULA_Results$delabel <- NULL
+  All_NEBULA_Results <- rbind(All_NEBULA_Results, NEBULA_Results)
+}
+
+write.table(All_NEBULA_Results, 
+            paste0("Results/", sampSet, "_NEBULA_GO_input_4_population.tsv"), sep="\t", quote=FALSE, col.names=TRUE, row.names = FALSE)
+
+# genes are categorized into differentially expressed or not differentially expressed genes by this function 
+
+theme_set(theme_minimal(base_size = 25))
+categories <- c("BP", "CC", "MF")
+category <- "BP"
+
+rm(All_GO_Results)
+All_GO_Results <- data.frame()
+n <- 0
+DiffGenes <- function(selected_Score)
+{
+  return(selected_Score < 0.05)
+}
+for (main_population in c("Macrophages_Data" , "BCells_Data" , "CD4TCells_Data" ,
+                          "CD8TCells_Data" )) 
+{
+  Data  <- NEBULA_Data[[main_population]]
+  geneList <- Data$adj.P.Val
+  names(geneList) <- Data$ID
+  GO_Data <- new("topGOdata", ontology=category, allGenes=geneList, geneSel=DiffGenes, nodeSize=10, annot=annFUN.org, mapping="org.Ss.eg.db", ID="symbol")
+  # run Enrichment analysis by using the "classic" method and Fisher's exact test
+  resultFisher <- runTest(GO_Data, algorithm = "classic", statistic = "fisher")
+  
+  # resultKS <- runTest(GO_Data, algorithm = "classic", statistic = "ks")
+  #resultKS.elim <- runTest(GO_Data, algorithm = "elim", statistic = "ks") # KS returning odd errors, removed
+  
+  
+  GO_Results <- GenTable(GO_Data, classicFisher = resultFisher, orderBy = "classicFisher", ranksOf = "classicFisher", numChar=100, topNodes=30)
+  # The ‘GenTable’ function generates a summary of the results of the enrichment analysis
+  # ‘topNodes’ the number of top GO terms to be included in the table.
+  # ‘numChar’ the GO term definition will be truncated such that only the first ‘numChar’ characters are shown.
+
+  # ‘pvalCutOff’ only the genes with a p-value less than
+  #             ‘pvalCutOff’ are shown.
+  # whichTerms: character vector listing the GO terms for which the summary
+  #         should be printed.
+
+  
+  GO_Results$category <- category
+    ID <- main_population
+    GO_Results$dataset <- main_population
+
+  # to add Significant genes’ names that are annotated to specific GO terms in the ‘GO_Results’
+  # Extract the genes that pass the DiffGenes function
+  significant_genes_all <- names(geneList)[DiffGenes(geneList)]
+  
+  # Extract the genes annotated to these significant GO terms
+  significant_genes_by_GO <- list()
+  for (go_id in GO_Results$`GO.ID`) 
+  {
+    genes_in_term <- genesInTerm(GO_Data, go_id)
+    significant_genes_by_GO[[go_id]] <- intersect(genes_in_term[[1]], significant_genes_all)
+  }
+
+    
+  GO_Results$Sig_genes <- 'Sig_genes'
+  for (go_id in GO_Results$`GO.ID`) 
+  {
+    # print(go_id)
+    # print(paste(significant_genes_by_GO[[go_id]], collapse = ' ;'))
+    GO_Results[(GO_Results$`GO.ID` == go_id), 'Sig_genes'] <- paste(significant_genes_by_GO[[go_id]], 
+                                                                    collapse = ' ;')
+  }
+
+
+  # write.table(GO_Results, paste0('Results/', sampSet, "_", category, '_nebula_GO_',  ID, '.tsv'), sep='\t', quote=FALSE, col.names=NA)
+  All_GO_Results <- rbind(All_GO_Results, GO_Results)
+  
+  
+  
+  # plot bubble plot for each main population
+  GO_Results$dataset <- as.factor(GO_Results$dataset)
+
+  GO_Results <- GO_Results[GO_Results$Significant > 4,]
+  png(filename=paste0("Results/", sampSet, "_", category,  "_nebula_GO_bubbleplot_", ID, ".png"), height=2800, width=1080)
+  p <- ggplot(GO_Results, aes(x=dataset, y=-log(as.numeric(classicFisher)), size=Significant, label=Term, color=dataset)) +
+  geom_text_repel(size=8, max.overlaps = 100) +
+  geom_jitter(width = 0.2, height = 0) +
+  labs(color=NULL, size="count DE genes") +
+  ylab("-log(p-value)") + xlab(NULL) +
+  scale_color_manual(values=five_colours[main_population]) +
+  guides(color="none") +
+  scale_size_area(max_size = 10)
+  print(p)
+  dev.off()
+   # geom_hline(yintercept=-log10(0.05), col="red") + 
+}
+
+write.table(All_GO_Results, paste0("Results/", sampSet, "_", category,"_nebula_GO_combined.tsv"), sep="\t", quote=FALSE, col.names=NA)
+
+# plot bubble plot show results of 4 population
+
+
+GO <- All_GO_Results
+GO$dataset <- factor(GO$dataset, levels=c("Macrophages_Data", "CD4TCells_Data",
+                                          "CD8TCells_Data", "BCells_Data"))
+GO <- GO[GO$Significant > 4,]
+
+png(filename=paste0("Results/", sampSet, "_", category, "_nebula_GO_bubbleplot_combined.png"), height=2500, width=1080)
+ggplot(GO, aes(x=dataset, y=-log(as.numeric(classicFisher)), size=Significant, label=Term, color=dataset)) +
+  geom_text_repel(size=8, max.overlaps = 10) +
+  geom_hline(yintercept=-log10(0.0003), col="red") +
+  geom_jitter(width = 0.2, height = 0) +
+  labs(color=NULL, size="count DE genes") +
+  ylab("-log(p-value)") + xlab(NULL) +
+  scale_color_manual(values=five_colours) +
+  guides(color="none") +
+  scale_size_area(max_size = 10) +
+  theme(axis.text.x = element_text(size=30))
+dev.off()
+
+
+  # scale_x_discrete(labels= c("Macrophages", "CD4 T Cells", "CD8 T Cells", "B Cells")) +
+
+```
+
+# Wrapping up
+
+Save everything
+```{r save-everything}
+sessionInfo()
+# save.image(file = paste0(sampSet, "_differential_NEBULA_GO_functions.RData"))
+
+```
