@@ -167,7 +167,7 @@ plot_volcano2 <- function(df_re, title) {
 identify DE genes between 2 conditions across all cells
 
 ```{r find out DE genes between 2 conditions across all cells all clusters}
-
+selected_DPI = 1
 # for simplicity, 
 sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$cull_date == selected_DPI) 
                                           | (sce_all_filt$cull_date != selected_DPI & sce_all_filt$condition == "control")]
@@ -184,32 +184,34 @@ if(file.exists(file_path))
 }
 
 y_limit <- 1.0e-20
+
+save.image(file = "DE_nebula_lily_develop.RData")
 # Condition
-broad_Data <- data.frame(broad_re$summary$gene,
-                               broad_re$summary$logFC_conditionG135,
-                               broad_re$summary$se_conditionG135,
-                               p.adjust(broad_re$summary$p_conditionG135, "BH"))
-broad_Data <- mod_data(broad_Data)
-broad_genes <- broad_Data$delabel[!is.na(broad_Data$delabel)]
-# many DE genes don't have gene symbols
-# broad_genes only stores the gene symbols who are DE, but many DE genes don't have gene symbols now, maybe due to insufficient reference genome annotation
-# test <- broad_Data[!is.na(broad_Data$delabel),]
+# broad_Data <- data.frame(broad_re$summary$gene,
+#                                broad_re$summary$logFC_conditionG135,
+#                                broad_re$summary$se_conditionG135,
+#                                p.adjust(broad_re$summary$p_conditionG135, "BH"))
+# broad_Data <- mod_data(broad_Data)
+# broad_genes <- broad_Data$delabel[!is.na(broad_Data$delabel)]
+# # many DE genes don't have gene symbols
+# # broad_genes only stores the gene symbols who are DE, but many DE genes don't have gene symbols now, maybe due to insufficient reference genome annotation
+# # test <- broad_Data[!is.na(broad_Data$delabel),]
+# # 
+# p1 <- plot_volcano(df_re=broad_Data, title= paste(sampSet,"DE genes between 2 conditions across all cells"))
 # 
-p1 <- plot_volcano(df_re=broad_Data, title= paste(sampSet,"DE genes between 2 conditions across all cells"))
-
-
-file_path <- paste0('Results/', sampSet,'_DE_NEBULA_total.png', height=1080, width=2160)
-#plot and save
-png(filename=file_path)
-print(p1)
-dev.off()
-
-
-# ouput DE genes into csv
-output_df <- broad_Data[order(broad_Data$`adj.P.Val`),]
-write.table(output_df, 
-            file=paste0('Results/', sampSet,'_DE_NEBULA_total', '.csv'), 
-            sep=',', quote=FALSE, row.names = FALSE)
+# 
+# file_path <- paste0('Results/', sampSet,'_DE_NEBULA_total.png', height=1080, width=2160)
+# #plot and save
+# png(filename=file_path)
+# print(p1)
+# dev.off()
+# 
+# 
+# # ouput DE genes into csv
+# output_df <- broad_Data[order(broad_Data$`adj.P.Val`),]
+# write.table(output_df, 
+#             file=paste0('Results/', sampSet,'_DE_NEBULA_total', '.csv'), 
+#             sep=',', quote=FALSE, row.names = FALSE)
 
     
 ```
