@@ -1280,7 +1280,7 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
 
   limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$cluster ,
                   col = c(1:length(unique(cluster)))[cluster],
-                  main = paste(selected_DPI, "MDS"))
+                  main = paste("DPI", selected_DPI, "MDS"))
   # print(p)
   
   #######################################################################
