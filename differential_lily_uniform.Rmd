@@ -861,14 +861,14 @@ mod_data <- function(df_re, i, cell_type, flag)
   y_limit <- 1.0e-20
   # add a column of NAs
   df_re$diffexpressed <- "NO"
-  # # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP"
-  # df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust < 0.05] <- "UP"
-  # # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
-  # df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust < 0.05] <- "DOWN"
+  # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP"
+  df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust < 0.05] <- "UP"
+  # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
+  df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust < 0.05] <- "DOWN"
   
   
-  df_re$diffexpressed[df_re$logFC > 0.6 & df_re$PValue < 0.05] <- "UP"
-  df_re$diffexpressed[df_re$logFC < -0.6 & df_re$PValue < 0.05] <- "DOWN"
+  # df_re$diffexpressed[df_re$logFC > 0.6 & df_re$PValue < 0.05] <- "UP"
+  # df_re$diffexpressed[df_re$logFC < -0.6 & df_re$PValue < 0.05] <- "DOWN"
   table(df_re$diffexpressed)
   
   # dir.create('Results')
