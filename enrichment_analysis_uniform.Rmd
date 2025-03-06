@@ -46,14 +46,14 @@ library(dplyr)
 # combined_GO_dotplots_per_cell_type <- function(selected_cluster = c("1", "9c"), 
 #                                                GO_multiple_cell_type,
 #                                                cell_type = "CD8T", method = "edgeR", 
-#                                                universal_file_path = 'run_2_edgeR_annotated_DE_cluster_',
+#                                                universal_file_path = 'run_2_edgeR_DE_cluster_',
 #                                                combine_flag = TRUE)
 # {
 #   print(paste('start run function combined_GO_dotplots_per_cell_type for', cell_type))
 #   combined_GO_sig_df <- NULL  
 #   file_list <- paste0(paste0(universal_file_path, selected_cluster),'.csv')
 #   names(file_list) <- selected_cluster
-#   # file_path = '/mnt/rstudio/lily/bsp185/Results/run_2_edgeR_annotated_DE_cluster_1.csv'
+#   # file_path = '/mnt/rstudio/lily/bsp185/Results/run_2_edgeR_DE_cluster_1.csv'
 #   
 #   for (i in 1:length(file_list)) 
 #   {
@@ -213,7 +213,7 @@ library(dplyr)
 
 # GO_multiple_cell_type <- NULL
 # 
-# universal_file_path <- paste0('Results/', sampSet, '_edgeR_annotated_DE_cluster_')
+# universal_file_path <- paste0('Results/', sampSet, '_edgeR_DE_cluster_')
 # 
 # if(sampSet == 'run_1' )
 # {
@@ -568,7 +568,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
                                              GO_multiple_cell_type,
                                              cell_type = "CD8T", DE_method = "edgeR", 
                                              EA_method= "over_represent",
-                                             universal_file_path = 'run_2_edgeR_annotated_DE_cluster_',
+                                             universal_file_path = 'run_2_edgeR_DE_cluster_',
                                              combine_flag = TRUE, database = "GO",
                                              id_type = "symbol")
 {
@@ -866,7 +866,7 @@ df_grouped <- df_cell_type_cluster %>%
 
 conduct_EA_main <- function(selected_DE_method, selected_prefix)
 {
-  selected_file_path <- paste0('Results/DE_', selected_DE_method, '_', sampSet, selected_prefix, '_annotated_cluster_')
+  selected_file_path <- paste0('Results/DE_', selected_DE_method, '_', sampSet, selected_prefix, '_cluster_')
   
   
   for (selected_cell_types in df_grouped$annotated_type) 
@@ -1003,7 +1003,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
 ```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset , fig.width= 12}
 
 
-conduct_EA_main                                                        (selected_DE_method = "edgeR", selected_prefix = "_t1_t2_DPI12")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_t1_t2_DPI12")
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_t1_t2_DPI1")
  
 
@@ -1061,7 +1061,7 @@ conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_t1_DPI1")
 <!-- # method = "edgeR" -->
 <!-- # if(method == "edgeR") -->
 <!-- # { -->
-<!-- #    file_list <- list.files(path = "v1.10/Results/", pattern = "run_2_edgeR_annotated_DE_cluster_.*\\.csv", full.names = TRUE) -->
+<!-- #    file_list <- list.files(path = "v1.10/Results/", pattern = "run_2_edgeR_DE_cluster_.*\\.csv", full.names = TRUE) -->
 <!-- # } -->
 <!-- # -->
 <!-- # -->
