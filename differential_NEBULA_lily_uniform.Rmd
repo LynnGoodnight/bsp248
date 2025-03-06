@@ -101,64 +101,85 @@ run_NEBULA <- function(SCE, predictors, pred_string)
 }
 
 y_limit <- 1.0e-20
-# modify dataframe of results, identify up/down regulated genes
-mod_data <- function(df_re) 
+mod_data <- function(df_re, cluster_i, cell_type, comparison_DPI_flag) 
 {
-  names(df_re) <- c("ID", "logFC", "AveExpr", "adj.P.Val")
+  # comparison_DPI_flag = "_ctl_t1"
+  # cluster_i = "broad"
+  colnames(df_re) <- c("gene_symbol", "logFC", "AveExpr", "p_adjust")
+  y_limit <- 1.0e-20
   # add a column of NAs
   df_re$diffexpressed <- "NO"
   # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP"
-  df_re$diffexpressed[df_re$logFC > 0.6 & df_re$adj.P.Val < 0.05] <- "UP"
+  df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust < 0.05] <- "UP"
   # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
-  df_re$diffexpressed[df_re$logFC < -0.6 & df_re$adj.P.Val < 0.05] <- "DOWN"
-  df_re$delabel <- NA
-  df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$ID[df_re$diffexpressed != "NO"]
-  # for row/gene who up/down, its delabel column will store the gene symbol again
-  # for row/gene who is not DE, its delabel column is NA
-  # Set p-value floor
-  df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit
+  df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust < 0.05] <- "DOWN"
+  
+  table(df_re$diffexpressed)
+  df_re$delabel <- NA  
+  # dir.create('Results')
+  write.table(df_re, 
+              file=paste0('Results/DE_nebula_', sampSet, comparison_DPI_flag, '_cluster_', cluster_i, '.csv'),
+              sep=',', quote=FALSE, row.names = FALSE)  
+  
+
+  if(sum(df_re$diffexpressed != "NO") == 0)
+  {
+    
+    print(paste('no qualified DE genes observed in this cluster', cluster_i, ', no volcano plot'))
+    return(df_re)
+  }else
+  {
+    
+    # print(paste('qualified DE genes observed in this cluster', cluster_i, ', show volcano plot'))
+    sig_flag <- (df_re$diffexpressed != "NO")
+    df_re$delabel[sig_flag] <- df_re$gene_symbol[sig_flag]
+    # for row/gene who up/down, its delabel column will store the gene symbol again
+    # for row/gene who is not DE, its delabel column is NA
+    # Set p-value floor
+    df_re$p_adjust[df_re$p_adjust <= y_limit] <- y_limit
+
+    df_re$logFC[df_re$logFC >= 10] <- 10
+    df_re$logFC[df_re$logFC <= -10] <- -10
+    
+    p1 <- plot_volcano(df_re, title=paste("nebula DE genes across cells within cluster", cluster_i, cell_type, comparison_DPI_flag))
+    # print(p1)
+    
+    png(filename = paste0('Results/DE_nebula_', sampSet, comparison_DPI_flag, '_volcano_cluster', cluster_i, '.png') , height=1080, width=1080, res = 220)
+    # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space 
+    print(p1)
+    dev.off()    
+  }
+  
   return(df_re)
 }
-# mod_data2 is used for co-expression analysis
-mod_data2 <- function(df_re) {
-  names(df_re) <- c("ID", "logFC", "AveExpr", "adj.P.Val")
-  # add a column of NAs
-  df_re$diffexpressed <- "NO"
-  # if log2Foldchange > 0.3 and pvalue < 0.05, set as "UP"
-  df_re$diffexpressed[df_re$logFC > 0.3 & df_re$adj.P.Val < 0.05] <- "UP"
-  # if log2Foldchange < -0.3 and pvalue < 0.05, set as "DOWN"
-  df_re$diffexpressed[df_re$logFC < -0.3 & df_re$adj.P.Val < 0.05] <- "DOWN"
-  df_re$delabel <- NA
-  df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$ID[df_re$diffexpressed != "NO"]
-  # Set p-value floor
-  df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit
-  return(df_re)
-}
+
 
 
 #  Create volcano plot
 plot_volcano <- function(df_re, title) 
 {
-  ggplot(data=df_re, aes(x = logFC, y = -log10(adj.P.Val), col=diffexpressed, label=delabel)) +
-  geom_point() +
-  geom_text_repel(size=7) +    
-  labs(title=title) +
-  geom_vline(xintercept=c(-0.6, 0.6), col="red") +
-  geom_hline(yintercept=-log10(0.05), col="red") +
-  scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")
-    # xlim(-3, 3) + ylim(0, -log10(y_limit)) +
-}
-plot_volcano2 <- function(df_re, title) {
-  ggplot(data=df_re, aes(x = logFC, y = -log10(adj.P.Val), col=diffexpressed, label=delabel)) +
-  geom_point() +
-    xlim(-3, 3) + ylim(0, -log10(y_limit)) +
-    geom_text_repel(size=7) +    
-  labs(title=title) +
-  geom_vline(xintercept=c(-0.3, 0.3), col="red") +
-  geom_hline(yintercept=-log10(0.05), col="red") +
-  scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")
+  # here we use p values rather than p adjusted value to try
+  # df_re$p_adjust <- df_re$PValue
 
-}
+  
+  ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
+    geom_point() +
+    geom_text_repel() +    geom_vline(xintercept=c(-0.6, 0.6), col="red") +
+    geom_hline(yintercept=-log10(0.05), col="red") +
+    labs(title=title, x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
+    scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
+    theme(axis.title.x = element_text(size = 15),                     # X-axis label font size
+          axis.title.y = element_text(size = 15)   )
+  # xlim(-3, 3) + ylim(0, -log10(y_limit)) +     
+  # plot.title = element_text(size = 20),        # Title font size and style
+
+  ## Warning: Removed 7866 rows containing missing values or values outside the scale range
+  ## (`geom_text_repel()`).
+  ## Warning: ggrepel: 191 unlabeled data points (too many overlaps). Consider
+  ## increasing max.overlaps
+  # as there is insufficient space in the plot to display gene symbol of each dot, warning above appear. 
+}  
+
 
 ```
 
@@ -167,52 +188,58 @@ plot_volcano2 <- function(df_re, title) {
 identify DE genes between 2 conditions across all cells
 
 ```{r find out DE genes between conditions across all cells all clusters}
-selected_DPI = 1
-# for simplicity, 
+
+main_DE_nebula_per_DPI <- function(selected_DPI = 1)
+{
+
 sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$cull_date == selected_DPI) 
                                           | (sce_all_filt$cull_date != selected_DPI & sce_all_filt$condition == "control")]
 
-file_path <- paste0('DE_NEBULA_', sampSet, '_all_clusters_results.rds')
+file_path <- paste0('DE_NEBULA_', sampSet, '_DPI_', selected_DPI, '_broad_clusters_results.rds')
+
 if(file.exists(file_path))
 {
   broad_re <- readRDS(file_path)
 }else
 {
+  head(sce_all_filt$named_cluster)
+  head(sce_all_filt$Sample)
+  
+  sce_all_filt$named_cluster
   broad_re <- run_NEBULA(SCE=sce_all_filt, predictors=c("named_cluster", "condition"), pred_string=~named_cluster + condition)
   saveRDS(broad_re,file_path)
   
 }
 
-y_limit <- 1.0e-20
 
-save.image(file = "DE_nebula_lily_develop.RData")
-# Condition
-# broad_Data <- data.frame(broad_re$summary$gene,
-#                          broad_re$summary$logFC_conditionG135,
-#                          broad_re$summary$se_conditionG135,
-#                          p.adjust(broad_re$summary$p_conditionG135, "BH"))
-# broad_Data <- mod_data(broad_Data)
-# broad_genes <- broad_Data$delabel[!is.na(broad_Data$delabel)]
-# # many DE genes don't have gene symbols
-# # broad_genes only stores the gene symbols who are DE, but many DE genes don't have gene symbols now, maybe due to insufficient reference genome annotation
-# # test <- broad_Data[!is.na(broad_Data$delabel),]
-# #
-# p1 <- plot_volcano(df_re=broad_Data, title= paste(sampSet,"DE genes between 2 conditions across all cells"))
-# 
-# 
-# file_path <- paste0('Results/', sampSet,'_DE_NEBULA_total.png', height=1080, width=2160)
-# #plot and save
-# png(filename=file_path)
-# print(p1)
-# dev.off()
-# 
-# 
-# # ouput DE genes into csv
-# output_df <- broad_Data[order(broad_Data$`adj.P.Val`),]
-# write.table(output_df,
-#             file=paste0('Results/', sampSet,'_DE_NEBULA_total', '.csv'),
-#             sep=',', quote=FALSE, row.names = FALSE)
-# 
+# save.image(file = "DE_nebula_lily_develop.RData")
+# check the DE across Condition
+head(broad_re$summary$gene)
+colnames(broad_re[["summary"]])
+broad_Data_H1N1 <- data.frame(broad_re$summary$gene,
+                              broad_re$summary$logFC_conditionH1N1,
+                              broad_re$summary$se_conditionH1N1,
+                              p.adjust(broad_re$summary$p_conditionH1N1, "fdr"))
+
+head(broad_Data_H1N1)
+broad_clean_DE_H1N1 <- mod_data(broad_Data_H1N1,  cluster_i="broad", 
+                                cell_type="", comparison_DPI_flag = paste0("_ctl_t1_DPI_", selected_DPI))
+
+
+broad_Data_PRCV <- data.frame(broad_re$summary$gene,
+                              broad_re$summary$logFC_conditionPRCV,
+                              broad_re$summary$se_conditionPRCV,
+                              p.adjust(broad_re$summary$p_conditionPRCV, "fdr"))
+
+head(broad_Data_PRCV)
+broad_clean_DE_PRCV <- mod_data(broad_Data_PRCV,  cluster_i="broad", 
+                                cell_type="", comparison_DPI_flag = paste0("_ctl_t1_DPI_", selected_DPI))
+  
+}
+
+main_DE_nebula_per_DPI(selected_DPI = 1)
+main_DE_nebula_per_DPI(selected_DPI = 2)
+
 
 ```
 
