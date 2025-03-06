@@ -695,7 +695,7 @@ visulize_abundance <- function(sce_all_filt, annot)
       geom_bar(stat='identity') +
       facet_wrap(~ type_cluster) + 
       scale_x_discrete(limits=DPI_ordered_S_id) +
-      ggtitle("proportion of each cluster", selected_DPI) +
+      ggtitle("n_cells of each cluster", selected_DPI) +
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  
     print(p)
     
