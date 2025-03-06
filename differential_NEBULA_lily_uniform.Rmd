@@ -172,7 +172,7 @@ selected_DPI = 1
 sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$cull_date == selected_DPI) 
                                           | (sce_all_filt$cull_date != selected_DPI & sce_all_filt$condition == "control")]
 
-file_path <- paste0('Results/DE_NEBULA_', sampSet, '_all_clusters_results.rds')
+file_path <- paste0('DE_NEBULA_', sampSet, '_clusters_results.rds')
 if(file.exists(file_path))
 {
   broad_re <- readRDS(file_path)

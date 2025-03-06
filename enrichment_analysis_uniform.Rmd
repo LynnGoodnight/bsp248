@@ -725,12 +725,12 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
         }
         if(EA_method == "over_represent")
         {
-        GO_result_df <- GO_result_df[(GO_result_df$Count >= 5) , ]    
-        if(nrow(GO_result_df) == 0)
-        {
-          print(paste('no GO terms in Gene Ontology (GO) database with over 3 DEGs annotated for', file_path))
-          next
-        }            
+          GO_result_df <- GO_result_df[(GO_result_df$Count >= 5) , ]    
+          if(nrow(GO_result_df) == 0)
+          {
+            print(paste('no GO terms in Gene Ontology (GO) database with over 3 DEGs annotated for', file_path))
+            next
+          }            
         }
       
         # print(head(GO_result_df, 2))
@@ -784,8 +784,8 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
     
     # GO_result_df$p.adjust <- GO_result_df$pvalue
     # when we use pvalue instead of p.adjust value
-    # GO_result_df_sig <- GO_result_df[(GO_result_df$p.adjust < 0.05), ]
-    GO_result_df_sig <- GO_result_df[(GO_result_df$p.adjust < 0.4), ]
+    GO_result_df_sig <- GO_result_df[(GO_result_df$p.adjust < 0.05), ]
+    # GO_result_df_sig <- GO_result_df[(GO_result_df$p.adjust < 0.1), ]
     
     if(nrow(GO_result_df_sig) == 0) 
     {
@@ -1003,7 +1003,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
 ```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset , fig.width= 12}
 
 
-conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_t1_t2_DPI12")
+conduct_EA_main                                                        (selected_DE_method = "edgeR", selected_prefix = "_t1_t2_DPI12")
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_t1_t2_DPI1")
  
 

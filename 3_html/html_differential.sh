@@ -34,7 +34,7 @@ export sampSet="all"
 export sampDPI="both"
 echo "sampSet" $sampSet
 ## sleep 10
-cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/differential_${sampSet}.html"
+cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_differential_${sampSet}.html"
 /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('differential_lily_uniform.Rmd',  output_file=\"${cF}\")"
 
 echo `date`
