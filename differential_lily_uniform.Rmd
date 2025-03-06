@@ -543,7 +543,7 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
     my_comparisons <- list( c("PRCV", "H1N1"), c("PRCV", "control"), c("control", "H1N1") )
     cell_type <- df_cluster_number_name[ selected_cluster, "named_cluster" ]
     
-    View(df_pro_one)
+    # View(df_pro_one)
     colnames(df_pro_one)
     p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
                     fill = "sample_id", color = "sample_id", 
