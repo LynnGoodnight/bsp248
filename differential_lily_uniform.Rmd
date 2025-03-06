@@ -1034,13 +1034,15 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
   # retrieve 8 samples in cluster 1
   y <- DGEList(counts=counts(sc), samples=colData(sc))
   
-  print(paste('check condition replicates in DE edgeR in cluster', clust, 'DPI', DPI))
-  print(table(y$samples$condition))
-  # if(length(which(table(y$samples$condition) < 3)) > 0)
-  # {
-  #   # if repelicates under any condition less than 3, we don't obtain enough repelicates for valid statistic test
-  #   return("one or more condition contain less than 3 samples after fitering sample whose cell number < 10")
-  # }
+
+  if(length(which(table(y$samples$condition) < 3)) > 0)
+  {
+    # if repelicates under any condition less than 3, we don't obtain enough repelicates for valid statistic test
+    print(paste('check condition replicates in DE edgeR in cluster', clust, 'DPI', DPI))
+    print(table(y$samples$condition))    
+    
+    return("one or more condition contain less than 3 samples after fitering sample whose cell number < 10")
+  }
   
   keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
                        min.total.count=filtexprstotal)
@@ -1066,10 +1068,10 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
     
   }
 
-  # limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
-  #                 col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
-  #                 main = paste('cluster:', clust, 'in DPI', DPI))
-  # print(p)
+  limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
+                  col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
+                  main = paste('cluster:', clust, 'in DPI', DPI))
+
   design <- model.matrix(~ 0 + condition, y$samples)
   # print(design)
   # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
