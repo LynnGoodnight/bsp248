@@ -873,7 +873,7 @@ mod_data <- function(df_re, i, cell_type, flag)
   
   # dir.create('Results')
   write.table(df_re, 
-              file=paste0('Results/DE_edgeR_', sampSet, flag, '_annotated_cluster_', i, '.csv'),
+              file=paste0('Results/DE_edgeR_', sampSet, flag, '_cluster_', i, '.csv'),
               sep=',', quote=FALSE, row.names = FALSE)  
   
   df_re$delabel <- NA
@@ -1033,6 +1033,7 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
   
   # retrieve 8 samples in cluster 1
   y <- DGEList(counts=counts(sc), samples=colData(sc))
+  
   print(paste('check condition replicates in DE edgeR in cluster', clust, 'DPI', DPI))
   print(table(y$samples$condition))
   # if(length(which(table(y$samples$condition) < 3)) > 0)
@@ -1065,9 +1066,9 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
     
   }
 
-  limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
-                  col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
-                  main = paste('cluster:', clust, 'in DPI', DPI))
+  # limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
+  #                 col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
+  #                 main = paste('cluster:', clust, 'in DPI', DPI))
   # print(p)
   design <- model.matrix(~ 0 + condition, y$samples)
   # print(design)
