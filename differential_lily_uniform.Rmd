@@ -542,7 +542,7 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
     library(ggrepel)
     my_comparisons <- list( c("PRCV", "H1N1"), c("PRCV", "control"), c("control", "H1N1") )
     cell_type <- df_cluster_number_name[ selected_cluster, "named_cluster" ]
-    
+    library(ggpubr)    
     # View(df_pro_one)
     colnames(df_pro_one)
     p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
@@ -558,22 +558,22 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
   
     
     print(p)
-    library(ggpubr)
+
     
-    p <- ggdotplot(
-      df_pro_one, 
-      x = "condition", 
-      y = "proportion",
-      color = "sample_id",  # Keeps the color by sample_id
-      fill = "sample_id",   # Fills the dots with sample_id color
-      size = 5              # Increases dot size
-    ) +
-      ggtitle(paste("proportion of cluster", selected_cluster, cell_type, "across condition", selected_DPI)) +
-      
-      # Add statistical comparisons
-      stat_compare_means(comparisons = my_comparisons, method = "t.test") 
-    
-    print(p)
+    # p <- ggdotplot(
+    #   df_pro_one, 
+    #   x = "condition", 
+    #   y = "proportion",
+    #   color = "sample_id",  # Keeps the color by sample_id
+    #   fill = "sample_id",   # Fills the dots with sample_id color
+    #   size = 5              # Increases dot size
+    # ) +
+    #   ggtitle(paste("proportion of cluster", selected_cluster, cell_type, "across condition", selected_DPI)) +
+    #   
+    #   # Add statistical comparisons
+    #   stat_compare_means(comparisons = my_comparisons, method = "t.test") 
+    # 
+    # print(p)
     
     # p <-  ggboxplot(df_pro_one, x = "condition", y = "proportion",
     #           color = "condition")  + ggtitle( paste("proportion of cluster", selected_cluster, "across condition")) +
