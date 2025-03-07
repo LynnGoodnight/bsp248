@@ -160,13 +160,35 @@ print(ReducedDim_plot)
 
 # plot the sample composition of each cluster in a bar plot
 dat <- as.data.frame(table(sce_corrected$cluster, sce_corrected$Sample))
-colnames(dat) <- c('cluster', 'sample', 'n_cells')
+colnames(dat) <- c('cluster', 'Sample_id', 'n_cells')
+dat_2 <- data.frame(Sample_id = sce_corrected$Sample,
+                   cull_date = sce_corrected$cull_date,
+                   condition = sce_corrected$condition)
+dat_2 <- unique(dat_2)  
+dat  <- base:::merge(dat, dat_2, all.x = TRUE)
 
-scTkn <- paste0(sampSet,"_k",clustK)
 
-ggplot(dat, aes(fill=sample, y=n_cells, x=cluster)) +
+
+
+library(ggpubr)
+library(ggrepel)
+p <- ggplot(dat, aes(fill=Sample_id, y=n_cells, x=cluster)) +
   geom_bar(position='stack', stat='identity') +
-  labs(title=scTkn)
+  facet_wrap(cull_date ~ condition,  scales="free_x") +
+  labs(title=paste0("cluster compostion ",sampSet,"_k",clustK))
+
+print(p)
+png(filename = paste0('Results/clustering_', sampSet, 'cluster_composition_barplot.png') , height=1800, width=2600, res = 300)
+print(p)
+dev.off()  
+  
+
+# draw a bar plot to visulize the composition of each virus within each cluster
+# colour cluster plot by condition
+ggplot(dat, aes(fill=condition, y=n_cells, x=cluster)) +
+  geom_bar(position='stack', stat='identity') +
+  facet_wrap( ~ cull_date,  scales="free_x") +
+  labs(title=paste0("cluster compostion ",sampSet,"_k",clustK))
 
 
 ## check columns match before adding count data to sce_corrected
@@ -246,17 +268,6 @@ draw_UMAP_after_sampling(sce_corrected, "batch effect corrected" )
 # draw_UMAP_after_sampling(sce, "original, no batch effect correction")
 ```
 
-### colour cluster plot by condition
-```{r draw a bar plot to visulize the composition of each virus within each cluster}
-# sce_corrected <- sce_run_x_corrected
-
-dat <- as.data.frame(table(sce_corrected$cluster, sce_corrected$condition))
-colnames(dat) <- c('cluster', 'condition', 'n_cells')
-
-ggplot(dat, aes(fill=condition, y=n_cells, x=cluster)) +
-  geom_bar(position='stack', stat='identity')
-
-```
 
 
 ## Evaluating the clustering quality
@@ -952,7 +963,7 @@ visulize_QC_doublets_RMDS(sce_corrected)
 ```
 
 # remove tiny subclusters and low-quality clusters
-```{r remove tiny subclusters and low-quality clusters and combine some subclusters and plot UMAP}
+```{r remove tiny subclusters and low-quality clusters and combine some subclusters and plot UMAP, fig.width=12}
 if(bsp_num == "bsp_185")
 {
 if(sampSet == 'run_1' )
