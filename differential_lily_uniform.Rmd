@@ -1041,7 +1041,7 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
     print(paste('check condition replicates in DE edgeR in cluster', clust, 'DPI', DPI))
     print(table(y$samples$condition))    
     print("one or more condition contain less than 3 samples after fitering sample whose cell number < 10")
-    # return()
+    return()
   }
   
   keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
