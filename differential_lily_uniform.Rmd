@@ -1067,10 +1067,15 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
     # plotMD(y, column=i, main=clust)
     
   }
-
+  if(length(which(table(y$samples$condition) < 3)) > 0)
+  {
+  }else
+  {
   limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
                   col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
-                  main = paste('cluster:', clust, 'in DPI', DPI))
+                  main = paste('cluster:', clust, 'in DPI', DPI))    
+  }
+
 
   design <- model.matrix(~ 0 + condition, y$samples)
   # print(design)
