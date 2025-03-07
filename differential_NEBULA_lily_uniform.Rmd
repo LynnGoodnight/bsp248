@@ -190,6 +190,7 @@ identify DE genes between 2 conditions across all cells
 
 ```{r find out DE genes between conditions across all cells all clusters}
 
+
 main_DE_nebula_per_DPI <- function(selected_DPI = 1)
 {
 
@@ -213,7 +214,7 @@ if(file.exists(file_path))
 }
 
 
-# save.image(file = "DE_nebula_lily_develop.RData")
+
 # check the DE across Condition
 head(broad_re$summary$gene)
 colnames(broad_re[["summary"]])
@@ -268,7 +269,7 @@ df_grouped <- df_cell_type_cluster %>%
  summarise(cluster_numbers = paste(cluster, collapse = ", ")) %>%
  ungroup()
 
-
+save.image(file = "DE_nebula_lily_develop.RData")
 NEBULA_DE_subset <- function(sce_all_filt, selected_cluster = c("2", "8c", "14a"), 
                             cell_type_tag = 'CD8T', selected_DPI = 1, 
                             single_cluster_tag = FALSE)
