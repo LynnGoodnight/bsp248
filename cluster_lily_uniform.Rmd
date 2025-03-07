@@ -65,6 +65,7 @@ sce_run_x_corrected <- readRDS(paste0("sce_", sampSet, "_corrected.rds"))
 
 my_bar_plot <- function(sce,my_flag)
 {
+  library(ggplot2)
   df <- as.data.frame(table(sce$Sample)) 
   colnames(df) <- c("Sample_id","n_cells")
   
