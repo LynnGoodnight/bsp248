@@ -285,7 +285,7 @@ sil.approx
 sil.data <- as.data.frame(sil.approx)
 sil.data$closest <- factor(ifelse(sil.data$width > 0, sce_corrected$cluster, sil.data$other))
 sil.data$cluster <- sce_corrected$cluster
-
+scTkn <- paste0(sampSet,"_k",clustK)
 ggplot(sil.data, aes(x=cluster, y=width, colour=closest)) +
     ggbeeswarm::geom_quasirandom(method="smiley") +
     labs(title=scTkn)
