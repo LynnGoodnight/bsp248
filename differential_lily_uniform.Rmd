@@ -880,7 +880,7 @@ mod_data <- function(df_re, i, cell_type, flag)
   if(sum(df_re$diffexpressed != "NO") == 0)
   {
     
-    print(paste('no qualified DE genes observed in this cluster', i, ', no volcano plot'))
+    # print(paste('no qualified DE genes observed in this cluster', i, ', no volcano plot'))
     return(df_re)
   }else
   {
@@ -990,15 +990,15 @@ output_DE_to_files <- function(de.results.any, flag= 't1_t2_DPI1_')
     if(length(table(output_df$diffexpressed)) == 1)
     {
       
-      print(paste('no significant DE in cluster', i))
-      print(table(output_df$diffexpressed))      
+      # print(paste('no significant DE in cluster', i))
+      # print(table(output_df$diffexpressed))      
     }else
     {
       vector1 <- table(output_df$diffexpressed)
       summary_df[i,'DOWN'] <- vector1['DOWN']
       summary_df[i,'UP'] <- vector1['UP']
-      print(paste('remain gene number is', nrow(output_df), 'exist significant DE in cluster', i))
-      print(table(output_df$diffexpressed))
+      # print(paste('remain gene number is', nrow(output_df), 'exist significant DE in cluster', i))
+      # print(table(output_df$diffexpressed))
       
     }
     

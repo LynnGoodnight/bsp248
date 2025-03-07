@@ -233,7 +233,7 @@ broad_Data_PRCV <- data.frame(broad_re$summary$gene,
 
 head(broad_Data_PRCV)
 broad_clean_DE_PRCV <- mod_data(broad_Data_PRCV,  cluster_i="broad", 
-                                cell_type="", comparison_DPI_flag = paste0("_ctl_t1_DPI_", selected_DPI))
+                                cell_type="", comparison_DPI_flag = paste0("_ctl_t2_DPI_", selected_DPI))
   
 }
 
@@ -244,205 +244,123 @@ main_DE_nebula_per_DPI(selected_DPI = 2)
 ```
 
 
-<!-- find out IFI6 co-expressed genes by use NEBULA to calculate corresponding correlation values between other gene with IFI6 -->
-
-<!-- ```{r find out IFI6 co-expressed genes across all cells-broad} -->
-<!-- co_expression_NEBULA <- function(sce_all_filt, target_gene = 'IFI6', target_value = "IFI6_logcounts" , pred_string_1, file_name_tag = 'broad') -->
-<!-- { -->
-<!--   IFI6_broad_SCE <- sce_all_filt[!rownames(sce_all_filt) %in% c(target_gene) ,] -->
-<!--   file_name <- paste0(file_name_tag,'_NEBULA_results_', target_gene, '.rds') -->
-<!--   if(file.exists(file_name)) -->
-<!--   { -->
-<!--     IFI6_broad_re <- readRDS(file_name) -->
-<!--   }else -->
-<!--   { -->
-<!--     IFI6_broad_re <- run_NEBULA(SCE=IFI6_broad_SCE, predictors=c("named_cluster", target_value), pred_string = pred_string_1) -->
-<!--     saveRDS(IFI6_broad_re,file = file_name) -->
-<!--   }   -->
-
-<!--   y_limit <- 1.0e-100 -->
-<!--   # plot IFI6 -->
-<!--   IFI6_broad_Data <- data.frame(IFI6_broad_re$summary$gene, -->
-<!--                                 IFI6_broad_re$summary$logFC_IFI6_logcounts, -->
-<!--                                 IFI6_broad_re$summary$se_IFI6_logcounts, -->
-<!--                                 p.adjust(IFI6_broad_re$summary$p_IFI6_logcounts, -->
-<!--                                          "BH")) -->
-<!--   # this should output the IFI6 co-expressed genes in each cell type, but i don't fully understand what does 'IFI6_broad_re$summary$p_IFI6_logcounts' mean, what other column 'p_named_clusterPlasma Cells' mean -->
-<!--   IFI6_broad_Data <- mod_data2(IFI6_broad_Data) -->
-<!--   IFI6_broad_genes <- IFI6_broad_Data$delabel[!is.na(IFI6_broad_Data$delabel)] -->
-
-<!--   png(filename=paste0('Results/NEBULA_', file_name_tag, '_', target_gene, '.png'), height=1080, width=1080) -->
-<!--   plot_volcano2(df_re=IFI6_broad_Data, title=paste("all cells,",target_gene)) -->
-<!--   dev.off() -->
-
-<!--   # ouput DE genes into csv -->
-<!--   output_df <- IFI6_broad_Data[order(IFI6_broad_Data$`adj.P.Val`),] -->
-<!--   write.table(output_df, -->
-<!--               file=paste0('Results/', sampSet,'_DE_nebula_', file_name_tag, -->
-<!--                           target_gene,'.csv'), sep=',', quote=FALSE, -->
-<!--               row.names =FALSE) -->
-
-<!--   return(IFI6_broad_re) -->
-<!-- } -->
-
-<!-- IFI6_broad_re <- co_expression_NEBULA(sce_all_filt, target_gene = 'IFI6', target_value = "IFI6_logcounts" , pred_string_1 = ~named_cluster+IFI6_logcounts, -->
-<!--                                       file_name_tag = 'broad') -->
 
 
-<!-- ``` -->
+```{r save image after DE analysis across broad finish, eval=FALSE}
 
-<!-- ```{r find out IFI6 co-expressed genes across all cells-broad} -->
-<!-- IFI6_broad_SCE <- sce_all_filt[!rownames(sce_all_filt) %in% c('IFI6') ,] -->
+# save.image(file = paste0(sampSet, '_differential_NEBULA_total.RData'))
+```
 
-<!-- IFI6_broad_re <- run_NEBULA(SCE=IFI6_broad_SCE, predictors=c("named_cluster", "IFI6_logcounts"), pred_string=~named_cluster+IFI6_logcounts) -->
+## identify DE genes within each main cell type and each cluster
 
-<!-- y_limit <- 1.0e-100 -->
-<!-- # plot IFI6 -->
-<!-- IFI6_broad_Data <- data.frame(IFI6_broad_re$summary$gene, IFI6_broad_re$summary$logFC_IFI6_logcounts, IFI6_broad_re$summary$se_IFI6_logcounts, p.adjust(IFI6_broad_re$summary$p_IFI6_logcounts, "BH")) -->
-<!-- IFI6_broad_Data <- mod_data2(IFI6_broad_Data) -->
-<!-- IFI6_broad_genes <- IFI6_broad_Data$delabel[!is.na(IFI6_broad_Data$delabel)] -->
-
-<!-- png(filename='Results/NEBULA_broad_IFI6.png', height=1080, width=1080) -->
-<!-- plot_volcano2(df_re=IFI6_broad_Data, title="all cells, IFI6") -->
-<!-- dev.off() -->
-<!-- ``` -->
+Now try identify DE genes between control and infected animals within each main cell type 
 
 
-<!-- ```{r save image after DE analysis across broad finish, eval=FALSE} -->
-
-<!-- # save.image(file = paste0(sampSet, '_differential_NEBULA_total.RData')) -->
-<!-- ``` -->
-
-<!-- ## identify DE genes within each main cell population and each cluster -->
-
-<!-- Now try identify DE genes between 2 conditions within each main cell population (Macrophages, CD8 T cells, CD4 T cells, B cells) -->
-
-<!-- #### run 1: -->
-<!-- within cluster, Macrophages population (Macrophages) -->
-<!-- within cluster, CD8 T cells population (CD8 T + mitotic CD8 T) -->
-<!-- within cluster, CD4 T cells population (CD4 T + mitotic CD4 T) -->
-<!-- within cluster, B cells population (B cells) -->
-<!-- see meeting slides of 25th june  -->
-
-<!-- #### run 2: -->
-<!-- within cluster, Macrophages population (Macrophages) -->
-<!-- within cluster, CD8 T cells population (CD8 T + mitotic CD8 T) -->
-<!-- within cluster, CD4 T cells population (CD4 T + mitotic CD4 T) -->
-<!-- within cluster, B cells population (B cells) -->
-<!-- see meeting slides of 25th june  -->
-
-<!-- <!-- # ```{r NEBULA-Tregs} --> -->
-<!-- <!-- # Tregs_dataSCE <- sce_all_filt[, sce_all_filt$cluster %in% c("10")] --> -->
-<!-- <!-- # # Remove zero genes --> -->
-<!-- <!-- # Tregs_dataSCE <- Tregs_dataSCE[rowSums(counts(Tregs_dataSCE)) != 0, ] --> -->
-<!-- <!-- #  --> -->
-<!-- <!-- # Tregs_re <- run_NEBULA(SCE=Tregs_dataSCE, predictors=c("condition"), pred_string=~condition) --> -->
-<!-- <!-- #  --> -->
-<!-- <!-- # y_limit <- 1.0e-10 --> -->
-<!-- <!-- # # Tregs Infected --> -->
-<!-- <!-- # PH1N1_Tregs_Data <- data.frame(Tregs_re$summary$gene, Tregs_re$summary$logFC_conditionpH1N1, Tregs_re$summary$se_conditionpH1N1, p.adjust(Tregs_re$summary$p_conditionpH1N1, "BH")) --> -->
-<!-- <!-- # PH1N1_Tregs_Data <- mod_data(PH1N1_Tregs_Data) --> -->
-<!-- <!-- #  --> -->
-<!-- <!-- # p3 <- plot_volcano(df_re=PH1N1_Tregs_Data, title="Tregs, pH1N1") --> -->
-<!-- <!-- #  --> -->
-<!-- <!-- # # Tregs vaccinated --> -->
-<!-- <!-- # HANP_Tregs_Data <- data.frame(Tregs_re$summary$gene, Tregs_re$summary$`logFC_conditionAd-HA/NP`, Tregs_re$summary$`se_conditionAd-HA/NP`, p.adjust(Tregs_re$summary$`p_conditionAd-HA/NP`, "BH")) --> -->
-<!-- <!-- # HANP_Tregs_Data <- mod_data(HANP_Tregs_Data) --> -->
-<!-- <!-- #  --> -->
-<!-- <!-- # p1 <- plot_volcano(df_re=HANP_Tregs_Data, title="Tregs, Ad-HA/NP") --> -->
-<!-- <!-- #  --> -->
-<!-- <!-- # # Tregs Vaccinated+IL1b --> -->
-<!-- <!-- # IL1b_Tregs_Data <- data.frame(Tregs_re$summary$gene, Tregs_re$summary$`logFC_conditionAd-HA/NP+Ad-IL1b`, Tregs_re$summary$`se_conditionAd-HA/NP+Ad-IL1b`, p.adjust(Tregs_re$summary$`p_conditionAd-HA/NP+Ad-IL1b`, "BH")) --> -->
-<!-- <!-- # IL1b_Tregs_Data <- mod_data(IL1b_Tregs_Data) --> -->
-<!-- <!-- #  --> -->
-<!-- <!-- # p2 <- plot_volcano(df_re=IL1b_Tregs_Data, title="Tregs, Ad-HA/NP+Ad-IL1b") --> -->
-<!-- <!-- #  --> -->
-<!-- <!-- # # Plot and save --> -->
-<!-- <!-- # png(filename='Results/NEBULA_Treg_condition.png', height=1080, width=2160) --> -->
-<!-- <!-- # grid.arrange(p1, p2, p3, nrow=1) --> -->
-<!-- <!-- # dev.off() --> -->
-<!-- <!-- # ``` --> -->
-
-<!-- CD8 T cells, mitotic CD8 T cells -->
-<!-- ```{r NEBULA-CD8Tcells} -->
-<!-- NEBULA_DE_subset <- function(sce_all_filt, selected_cluster = c("2", "8c", "14a"), file_name_tag = 'CD8T', single_cluster_tag = FALSE) -->
-<!-- { -->
-<!--   CD8TCells_dataSCE <- sce_all_filt[, sce_all_filt$cluster %in% selected_cluster] -->
-<!--   if(dim(CD8TCells_dataSCE)[2] < 240) -->
-<!--   { -->
-<!--     print(paste('in cluster', selected_cluster, '8 samples have less than 240 cells in total, too few to do DE analysis')) -->
-<!--     return('8 samples have less than 240 cells in total, too few to do DE analysis') -->
-<!--   }   -->
-<!--   # Remove genes whose counts are zero -->
-<!--   CD8TCells_dataSCE <- CD8TCells_dataSCE[rowSums(counts(CD8TCells_dataSCE)) != 0, ] -->
-
-<!--   file_name <- paste0('Results/',sampSet,'_DE_', file_name_tag,'_NEBULA_results.rds') -->
-<!--   if(file.exists(file_name)) -->
-<!--   { -->
-<!--     CD8TCells_re <- readRDS(file_name) -->
-<!--   }else -->
-<!--   { -->
-<!--     if(single_cluster_tag) -->
-<!--     { -->
-<!--       CD8TCells_re <- run_NEBULA(SCE=CD8TCells_dataSCE, predictors="condition", pred_string=~condition)       -->
-<!--     }else -->
-<!--     { -->
-<!--       CD8TCells_re <- run_NEBULA(SCE=CD8TCells_dataSCE, predictors=c("cluster", "condition"), pred_string=~cluster+condition)       -->
-<!--     } -->
-
-<!--     saveRDS(CD8TCells_re,file = file_name) -->
-<!--   }   -->
-
-<!--   y_limit <- 1.0e-10 -->
-<!--   # CD8TCells  -->
-<!--   CD8TCells_Data <- data.frame(CD8TCells_re$summary$gene, -->
-<!--                                      CD8TCells_re$summary$logFC_conditionG135, -->
-<!--                                      CD8TCells_re$summary$se_conditionG135, -->
-<!--                                 p.adjust(CD8TCells_re$summary$p_conditionG135, -->
-<!--                                               "BH")) -->
-<!--   CD8TCells_Data <- mod_data(CD8TCells_Data) -->
-<!--   CD8_genes <- CD8TCells_Data$delabel[!is.na(CD8TCells_Data$delabel)] -->
-
-<!--   p1 <- plot_volcano(df_re=CD8TCells_Data, title=paste('DE between 2 conditions in subset of', file_name_tag, sampSet)) -->
-<!--   # print(p1) -->
-
-<!--   png(filename=paste0('Results/', sampSet, '_DE_NEBULA_', file_name_tag, '.png'), height=1080, width=2160) -->
-<!--   print(p1) -->
-<!--   dev.off() -->
-<!--   # ouput DE genes into csv -->
-<!--   output_df <- CD8TCells_Data[order(CD8TCells_Data$`adj.P.Val`),] -->
-<!--   write.table(output_df, -->
-<!--               file=paste0('Results/', sampSet,'_DE_nebula_', file_name_tag,  -->
-<!--                           '.csv'), sep=',', quote=FALSE, -->
-<!--               row.names =FALSE) -->
-<!--   return(CD8TCells_re) -->
-
-<!-- } -->
 
 
-<!-- if(sampSet == 'run_1' ) -->
-<!-- { -->
-<!--   CD8TCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c("2", "8c", "14a"), file_name_tag = 'CD8T')   -->
-<!-- } -->
+```{r NEBULA DE per cell type}
 
-<!-- if(sampSet == 'run_2' ) -->
-<!-- { -->
-<!--   CD8TCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c('1', '9c'), file_name_tag = 'CD8T') -->
-<!-- } -->
-<!-- ``` -->
+df_cell_type_cluster <- read.csv("munual_annotation.csv", header = FALSE)
+colnames(df_cell_type_cluster) <- c('cluster', 'annotated_type')
+df_grouped <- df_cell_type_cluster %>%
+ group_by(annotated_type) %>%
+ summarise(cluster_numbers = paste(cluster, collapse = ", ")) %>%
+ ungroup()
 
-<!-- CD4 T cells, mitotic CD4 T cells -->
-<!-- ```{r NEBULA-CD4Tcells} -->
-<!-- if(sampSet == 'run_1' ) -->
-<!-- { -->
-<!--   CD4TCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c("3a", "8b", "14c", "11b", "17"), file_name_tag = 'CD4T') -->
-<!-- } -->
-<!-- if(sampSet == 'run_2' ) -->
-<!-- { -->
-<!--   CD4TCells_re <- NEBULA_DE_subset(sce_all_filt, selected_cluster = c('4a', '8', '9a'), file_name_tag = 'CD4T') -->
-<!-- } -->
 
-<!-- ``` -->
+NEBULA_DE_subset <- function(sce_all_filt, selected_cluster = c("2", "8c", "14a"), 
+                            cell_type_tag = 'CD8T', selected_DPI = 1, 
+                            single_cluster_tag = FALSE)
+{
+ # remove cells not belong to our selected clusters
+ CD8TCells_dataSCE <- sce_all_filt[, sce_all_filt$cluster %in% selected_cluster]
+ if(dim(CD8TCells_dataSCE)[2] < 300)
+ {
+   #dim(CD8TCells_dataSCE)[2] is total cell number
+   print(paste('in all clusters of', cell_type_tag, ' total cell number less than 240, too few to do DE analysis'))
+   return('all samples have less than 240 cells in total, too few to do DE analysis')
+ }
+ # Remove genes whose counts are zero
+
+ CD8TCells_dataSCE <- CD8TCells_dataSCE[rowSums(counts(CD8TCells_dataSCE)) != 0, ]
+ # table(rowSums(counts(CD8TCells_dataSCE)) != 0)
+ 
+ file_name <- paste0('Results/DE_nebula_',sampSet,'_DPI',selected_DPI, '_', cell_type_tag,'.rds')
+ 
+ 
+if(file.exists(file_name))
+{
+CD8TCells_re <- readRDS(file_name)
+}else
+{
+if(single_cluster_tag)
+{
+ CD8TCells_re <- run_NEBULA(SCE=CD8TCells_dataSCE, predictors=c("cluster", "condition"), pred_string=~cluster+condition)
+
+}else
+{
+ # head(CD8TCells_dataSCE$cluster)
+ # CD8TCells_dataSCE$cluster <- as.integer(CD8TCells_dataSCE$cluster)
+ CD8TCells_re <- run_NEBULA(SCE=CD8TCells_dataSCE, predictors=c("long_named_cluster", "condition"), pred_string=~long_named_cluster+condition)
+}
+
+saveRDS(CD8TCells_re,file = file_name)
+}
+ 
+per_cell_type_H1N1 <- data.frame(CD8TCells_re$summary$gene,
+                            CD8TCells_re$summary$logFC_conditionH1N1,
+                            CD8TCells_re$summary$se_conditionH1N1,
+                            p.adjust(CD8TCells_re$summary$p_conditionH1N1, "fdr"))
+
+head(per_cell_type_H1N1)
+per_cell_type_clean_DE_H1N1 <- mod_data(per_cell_type_H1N1,  cluster_i="", 
+                              cell_type=cell_type_tag, 
+                              comparison_DPI_flag = paste0("_ctl_t1_DPI_", selected_DPI))
+
+
+per_cell_type_PRCV <- data.frame(CD8TCells_re$summary$gene,
+                            CD8TCells_re$summary$logFC_conditionPRCV,
+                            CD8TCells_re$summary$se_conditionPRCV,
+                            p.adjust(CD8TCells_re$summary$p_conditionPRCV, "fdr"))
+
+head(per_cell_type_PRCV)
+per_cell_type_clean_DE_PRCV <- mod_data(per_cell_type_PRCV,  cluster_i="", 
+                              cell_type = cell_type_tag, 
+                              comparison_DPI_flag = paste0("_ctl_t2_DPI_", selected_DPI))
+
+return(CD8TCells_re)
+ 
+}
+
+ 
+for (Selected_DPI in c(1, 12)) 
+{
+  # Selected_DPI = 1
+ sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$cull_date == Selected_DPI) 
+                                           | (sce_all_filt$cull_date != Selected_DPI & sce_all_filt$condition == "control")]
+ 
+ # selected_cell_types = 'Macrophages'
+ for (selected_cell_types in df_grouped$annotated_type) 
+ {
+   print(selected_cell_types)
+   selected_Cluster <- as.character(df_grouped[df_grouped$annotated_type == 
+                                                 selected_cell_types, "cluster_numbers"])
+   selected_Cluster <-  strsplit(selected_Cluster, split = ", ")[[1]] 
+   print(selected_Cluster)
+   
+   CD8TCells_re <- NEBULA_DE_subset(sce_all_filt = sce_all_filt_DPI_selected,
+                                    selected_cluster = selected_Cluster, 
+                                    cell_type_tag = selected_cell_types,
+                                    selected_DPI = Selected_DPI)
+ }   
+  
+}
+
+ 
+ 
+ 
+```
+
 
 <!-- B cells -->
 <!-- ```{r NEBULA-BCells} -->
@@ -965,9 +883,9 @@ main_DE_nebula_per_DPI(selected_DPI = 2)
 
 <!-- # Wrapping up -->
 
-<!-- Save everything -->
-<!-- ```{r save-everything} -->
-<!-- sessionInfo() -->
-<!-- # save.image(file = paste0(sampSet, "_differential_NEBULA_GO_functions.RData")) -->
+Save everything
+```{r save-everything}
+sessionInfo()
+# save.image(file = paste0(sampSet, "_differential_NEBULA_GO_functions.RData"))
 
-<!-- ``` -->
+```
