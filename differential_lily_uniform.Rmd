@@ -459,11 +459,11 @@ conduct_DA <- function(subsets, selected_comparison = 3)
     restab$comparison <- colnames(contrasts)[selected_comparison]  
     # print(head(restab, 10))
     
-    print(paste('cluster proportion has significantly changed across condition: ', DPI))
+    print(paste("cluster proportion has significantly changed (p.adjust) across condition: ", DPI))
     print(restab[ (restab$FDR < 0.05), ])
     
-    print(paste('significant P values ', DPI))
-    print(restab[ (restab$PValue < 0.05), ])    
+    # print(paste('significant P values ', DPI))
+    # print(restab[ (restab$PValue < 0.05), ])    
     
     DA[[DPI]] <- restab
     
@@ -1040,8 +1040,8 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
     # if repelicates under any condition less than 3, we don't obtain enough repelicates for valid statistic test
     print(paste('check condition replicates in DE edgeR in cluster', clust, 'DPI', DPI))
     print(table(y$samples$condition))    
-    
-    return("one or more condition contain less than 3 samples after fitering sample whose cell number < 10")
+    print("one or more condition contain less than 3 samples after fitering sample whose cell number < 10")
+    # return()
   }
   
   keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
