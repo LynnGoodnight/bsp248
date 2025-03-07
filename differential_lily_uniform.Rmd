@@ -414,16 +414,35 @@ conduct_DA <- function(subsets, selected_comparison = 3)
     # write.csv(abundances, file = 'abundances_check.csv')
     # head(abundances)
     # head(colnames(abundances))
-    selected_anno <- annot[colnames(abundances), ]
+
     # extract rows of samples used there, s1-8 
+    meta_data <- subset(colData(x), select=c("condition", "run", "cull_date", "animal_id"))[match(colnames(abundances), x$Sample),] 
+
+    y.ab <- DGEList(abundances, samples= meta_data)
     
-    y.ab <- DGEList(abundances, samples= selected_anno)
+   # filter some clusters which only exist in a few samples 
+  keep <- filterByExpr(y.ab, group=y.ab$samples$condition, 
+                       min.count = 10, min.total.count = 60)
+  # default min.count = 10, min.total.count = 15, large.n = 10, min.prop = 0.7
+  # min.count: numeric. Minimum count required for at least some samples.
+  # min.total.count: numeric. Minimum total count required across all samples.
+  # large.n: integer. Number of samples per group that is considered to be “large”.
+  # min.prop: numeric. In large sample situations, the minimum proportion of samples in a group that a gene needs to be expressed in. See Details below for the exact formula.
+  # here counts represent cell number 
+  
+  summary(keep) 
+  keep # filters out some clusters 
+  y.ab <- y.ab[keep,]
+      
     
     y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('control', 'H1N1', 'PRCV'))
+    y.ab$samples$run <- factor(y.ab$samples$run, levels=c('1', '2', '3'))
     
-    design <- model.matrix(~ 0 + condition, data = y.ab$samples)
+    
+    design <- model.matrix(~ 0 + condition + run, data = y.ab$samples)
     print(design)
-    contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1, control_PRCV =  conditioncontrol-conditionPRCV, 
+    contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1, 
+                               control_PRCV =  conditioncontrol-conditionPRCV, 
                                H1N1_PRCV = conditionH1N1-conditionPRCV, levels = design)
     
     print(contrasts)

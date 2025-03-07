@@ -66,16 +66,22 @@ sce_run_x_corrected <- readRDS(paste0("sce_", sampSet, "_corrected.rds"))
 my_bar_plot <- function(sce,my_flag)
 {
   df <- as.data.frame(table(sce$Sample)) 
-  colnames(df) <- c("sample","cell_number")
-  library(ggplot2)
-  # Basic barplot
-  ggplot(data=df, aes(x=sample, y=cell_number,fill = sample)) +
-    geom_bar(stat="identity")+
-    geom_text(aes(label=cell_number), vjust=-0.3, size=3.5) +
-    ggtitle(paste0("cell number summary ",my_flag))+
+  colnames(df) <- c("Sample_id","n_cells")
+  
+  
+  dat_2 <- data.frame(Sample_id = sce$Sample,
+                      cull_date = sce$cull_date,
+                      condition = sce$condition)
+  dat_2 <- unique(dat_2)  
+  dat  <- base:::merge(df, dat_2, all.x = TRUE)
+  
+  ggplot(data=dat, aes(x=Sample_id, y=n_cells,fill = Sample_id)) +
+    geom_bar(stat="identity") +
+    geom_text(aes(label=n_cells), vjust=1, size=3.5) +
+    ggtitle(paste0("cell number summary ")) +
+    facet_wrap(cull_date ~ condition,  scales="free_x") +
     theme(axis.text.x = element_text(angle = 90)) 
   
-
 }
 
 # my_bar_plot(sce_run_x,"before batch effect correction")
