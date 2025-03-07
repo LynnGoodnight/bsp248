@@ -422,7 +422,8 @@ conduct_DA <- function(subsets, selected_comparison = 3)
     
    # filter some clusters which only exist in a few samples 
   keep <- filterByExpr(y.ab, group=y.ab$samples$condition, 
-                       min.count = 10, min.total.count = 60)
+                       min.count = 10, min.total.count = 60,
+                       large.n = 3, min.prop = 0.7)
   # default min.count = 10, min.total.count = 15, large.n = 10, min.prop = 0.7
   # min.count: numeric. Minimum count required for at least some samples.
   # min.total.count: numeric. Minimum total count required across all samples.
