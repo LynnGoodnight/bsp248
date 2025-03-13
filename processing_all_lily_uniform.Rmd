@@ -1591,8 +1591,9 @@ Now we will properly normalize the data and merge all of the samples together.
 ```{r exclude catastrophic samples if any and merge samples }
 if(bsp_num == "bsp_248")
 {
-  for(sample_id in c(c("sample_03", "sample_05", "sample_10", "sample_20" )))
+  for(sample_id in c(c("sample_03", "sample_05", "sample_10")))
   {
+    # , "sample_20" 
    sce_list[[sample_id]] <- NULL
   
   }
@@ -1688,7 +1689,6 @@ normalize_visualize_save <- function(current_run,sce_all, Correct_batch_effects 
   varmod <- modelGeneVar(sce_all, block=sce_all$run)
   # Model the variance of the log-expression profiles for each gene, decomposing it into technical and biological components based on a fitted mean-variance trend.
   vargenes <- getTopHVGs(varmod, n=5000)
-  length(vargenes)
 
   sce_all <- fixedPCA(sce_all, subset.row=vargenes)
   #   attr(reducedDim(sce), "percentVar")
