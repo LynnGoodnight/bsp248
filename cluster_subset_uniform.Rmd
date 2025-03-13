@@ -54,7 +54,7 @@ library(ggbeeswarm)
 library(bluster)
 library(scran)
 library(scater)
-library("readxl")
+library(readxl)
 ```
 
 Load the data.
