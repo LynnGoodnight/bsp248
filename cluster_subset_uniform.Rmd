@@ -54,7 +54,7 @@ library(ggbeeswarm)
 library(bluster)
 library(scran)
 library(scater)
-library(readxl)
+
 ```
 
 Load the data.
@@ -66,7 +66,7 @@ clustK <- 20
 current_run  <- 'all'
 
 # ensure sample20 has been deleted 
-
+library(readxl)
 population_divide <- read_excel("Population devision.xlsx")
 selected_main_group <-  as.character(population_divide[1, 1])
 selected_cluster <- as.character(population_divide[1, 3])
