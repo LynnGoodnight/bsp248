@@ -64,7 +64,7 @@ sce_all <- readRDS("sce_all_with_named_subcluster.rds")
 sce_all_corrected <- readRDS("sce_all_corrected_with_named_subcluster.rds")
 clustK <- 20
 current_run  <- 'all'
-table(sce_main_group$Sample)
+
 # ensure sample20 has been deleted 
 
 population_divide <- read_excel("Population devision.xlsx")
@@ -76,7 +76,7 @@ library(stringr)
 selected_cluster <- str_replace_all(selected_cluster, fixed(" "), "")
 
 sce_main_group <- sce_all[, sce_all$cluster %in% selected_cluster]
-
+table(sce_main_group$Sample)
 overview_cell_number_per_sample <- function(sce, flag)
 {
   library(ggplot2)
