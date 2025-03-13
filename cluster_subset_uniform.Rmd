@@ -74,7 +74,7 @@ selected_cluster <- strsplit(selected_cluster, split = ",")[[1]]
 
 library(stringr)
 selected_cluster <- str_replace_all(selected_cluster, fixed(" "), "")
-
+save.image('cluster_subset_uniform_debug.RData')
 sce_main_group <- sce_all[, (sce_all$cluster %in% selected_cluster)]
 table(sce_main_group$Sample)
 overview_cell_number_per_sample <- function(sce, flag)
