@@ -41,6 +41,12 @@ This script is usually run on the hpc, see "code/3_html/muci_html_cluster_subset
 ## Reading in the data
 
 ```{r load library, eval=FALSE}
+
+```
+
+Load the data.
+
+```{r load processed data and subset overview cell number, fig.width=10}
 library(SingleCellExperiment)
 library(DropletUtils)
 library(scran)
@@ -55,11 +61,6 @@ library(bluster)
 library(scran)
 library(scater)
 
-```
-
-Load the data.
-
-```{r load processed data and subset overview cell number, fig.width=10}
 sce_all <- readRDS("sce_all_with_named_subcluster.rds")
 sce_all_corrected <- readRDS("sce_all_corrected_with_named_subcluster.rds")
 clustK <- 20
@@ -74,8 +75,9 @@ selected_cluster <- strsplit(selected_cluster, split = ",")[[1]]
 
 library(stringr)
 selected_cluster <- str_replace_all(selected_cluster, fixed(" "), "")
-save.image('cluster_subset_uniform_debug.RData')
-sce_main_group <- sce_all[, (sce_all$cluster %in% selected_cluster)]
+# save.image('cluster_subset_uniform_debug.RData')
+# load('cluster_subset_uniform_debug.RData')
+sce_main_group <- sce_all[ , (sce_all$cluster %in% selected_cluster) ]
 table(sce_main_group$Sample)
 overview_cell_number_per_sample <- function(sce, flag)
 {
