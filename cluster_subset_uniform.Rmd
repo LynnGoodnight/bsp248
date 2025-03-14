@@ -24,8 +24,6 @@ if (clustK == "") {
 print(clustK)
 
 print(paste('work_dir', work_dir, 'sampSet', sampSet, bsp_num))              
-sce_all <- readRDS("sce_all_with_named_subcluster.rds")
-sce_all_corrected <- readRDS("sce_all_corrected_with_named_subcluster.rds")
 
 ```
 
@@ -42,9 +40,6 @@ This script is usually run on the hpc, see "code/3_html/muci_html_cluster_subset
 
 ## Reading in the data
 
-```{r load library}
-
-```
 
 Load the data.
 
@@ -64,6 +59,8 @@ library(scran)
 library(scater)
 
 
+sce_all <- readRDS("sce_all_with_named_subcluster.rds")
+sce_all_corrected <- readRDS("sce_all_corrected_with_named_subcluster.rds")
 
 # ensure sample20 has been deleted 
 library(readxl)
