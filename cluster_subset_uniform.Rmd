@@ -479,18 +479,6 @@ ggplot(doublet.tab, aes(x=cluster, y=sum_counts, colour=query_doublet)) +
 
 
 # save workspace image
-```{r save workspace image after first time clustering}
-
-# save the R variables
-
-selected_main_group <- gsub(' ', '_', selected_main_group)
-# save.image(file = paste0(sampSet, "_k", clustK, selected_main_group, "_initial_cluster.RData"))
-
-saveRDS(sce_main_group_corrected, file = paste0('sce_',sampSet, '_', selected_main_group,'_corrected_initial_cluster.rds'))
-saveRDS(sce_main_group, file = paste0('sce_',sampSet, '_', selected_main_group,'_initial_cluster.rds'))
-
-
-```
 
 # output DE genes for all clusters
 Finally, we need to re-run our marker scoring because we have added some clusters. For this, we will only write to file the scores for the clusters we have added.
@@ -498,7 +486,7 @@ Finally, we need to re-run our marker scoring because we have added some cluster
 
 ```{r save top DE genes in excel file for new produced sub cluster}
 
-
+selected_main_group <- gsub(' ', '_', selected_main_group)
 assays(sce_main_group_corrected)$counts <- assays(sce_main_group)$counts[rownames(sce_main_group_corrected),]
 assays(sce_main_group_corrected)$logcounts <- assays(sce_main_group)$logcounts[rownames(sce_main_group_corrected),]
 
@@ -664,6 +652,21 @@ saveWorkbook(wb, file = paste0('Results/clustering_', sampSet, '_',
 
 
 # save workspace image
+
+```{r save workspace image after first time clustering}
+
+# save the R variables
+
+
+# save.image(file = paste0(sampSet, "_k", clustK, selected_main_group, "_initial_cluster.RData"))
+
+saveRDS(sce_main_group_corrected, file = paste0('sce_',sampSet, '_', selected_main_group,'_corrected_initial_cluster.rds'))
+saveRDS(sce_main_group, file = paste0('sce_',sampSet, '_', selected_main_group,'_initial_cluster.rds'))
+
+
+```
+
+
 ```{r save workspace image and create file for r shiny visulization}
 # save the R variables
 setwd(work_dir)
