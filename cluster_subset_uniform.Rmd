@@ -16,14 +16,16 @@ reference_genome_version <- Sys.getenv("reference_genome_version")
 
 knitr::opts_knit$set(root.dir = work_dir)
 
+current_run  <- sampSet
 
 if (clustK == "") {
    clustK <- 20          # defaulty
 }
 print(clustK)
 
-current_run <- sampSet
 print(paste('work_dir', work_dir, 'sampSet', sampSet, bsp_num))              
+sce_all <- readRDS("sce_all_with_named_subcluster.rds")
+sce_all_corrected <- readRDS("sce_all_corrected_with_named_subcluster.rds")
 
 ```
 
@@ -40,7 +42,7 @@ This script is usually run on the hpc, see "code/3_html/muci_html_cluster_subset
 
 ## Reading in the data
 
-```{r load library, eval=FALSE}
+```{r load library}
 
 ```
 
@@ -61,10 +63,7 @@ library(bluster)
 library(scran)
 library(scater)
 
-sce_all <- readRDS("sce_all_with_named_subcluster.rds")
-sce_all_corrected <- readRDS("sce_all_corrected_with_named_subcluster.rds")
-clustK <- 20
-current_run  <- 'all'
+
 
 # ensure sample20 has been deleted 
 library(readxl)

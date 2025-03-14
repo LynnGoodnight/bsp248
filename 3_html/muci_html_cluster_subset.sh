@@ -27,7 +27,7 @@ export bsp_num="bsp_248"
 export sampSet="all"
 export reference_genome_version="113"
 
-export clustK=20
+export clustK=25
 echo "clustK" $clustK
 
 
