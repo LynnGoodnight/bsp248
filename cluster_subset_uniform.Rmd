@@ -120,7 +120,6 @@ sce_main_group <- fixedPCA(sce_main_group, subset.row=vargenes)
 
 set.seed(100)
 sce_main_group <- runUMAP(sce_main_group, dimred='PCA')
-set.seed(100)
 sce_main_group <- runTSNE(sce_main_group, dimred='PCA')
 library(batchelor)
 set.seed(100)
@@ -140,6 +139,7 @@ sce_main_group_corrected$sum_counts_level <- sce_main_group$sum_counts_level
 rowdat <- rowData(sce_main_group_corrected)
 rowdat <- cbind(rowData(sce_main_group)[rownames(sce_main_group_corrected),], rowdat )
 rowData(sce_main_group_corrected) <- rowdat
+set.seed(100)
 sce_main_group_corrected <- runUMAP(sce_main_group_corrected, dimred="corrected")
 sce_main_group_corrected <- runTSNE(sce_main_group_corrected, dimred="corrected")
 
