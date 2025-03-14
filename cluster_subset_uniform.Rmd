@@ -102,7 +102,7 @@ overview_cell_number_per_sample(sce_main_group, flag = paste('main group:', sele
 
 ```
 
-```{r re-normarlize sce subset and batch effect correction, then visulize doublet situation in UMAP}
+```{r re-normarlize sce subset and batch effect correction, then visulize doublet situation in UMAP, fig.width=10}
 
 
 clust <- quickCluster(sce_main_group)
@@ -208,7 +208,7 @@ print(ReducedDim_plot)
 
 ```
 
-```{r draw bar plot to check sample/condition contribution within each cluster}
+```{r draw bar plot to check sample/condition contribution within each cluster, fig.width=10}
 assays(sce_main_group_corrected)$counts <- assays(sce_main_group)$counts[rownames(sce_main_group_corrected),]
 assays(sce_main_group_corrected)$logcounts <- assays(sce_main_group)$logcounts[rownames(sce_main_group_corrected),]
 
@@ -251,7 +251,7 @@ ggplot(dat, aes(fill=condition, y=n_cells, x=cluster)) +
 
 ```
 
-```{r randomly pick one point among dots whose UMAP location is identical and draw UMAP}
+```{r randomly pick one point among dots whose UMAP location is identical and draw UMAP, fig.width=10}
 library(dplyr)
 
 library(scater)
