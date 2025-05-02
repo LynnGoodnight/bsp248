@@ -177,7 +177,7 @@ sce_main_group$cluster <- sce_corrected_clust
 
 
 ### Basic dim reduction plots
-```{r create basic UMAP plots, fig.width=10}
+```{r create basic UMAP plots, fig.width=10, fig.height=10 }
 UMAP_color_by_cluster <- function(selected_sce, title_flag = "batch effect corrected" )
 {
   set.seed(55698)
@@ -208,7 +208,7 @@ print(ReducedDim_plot)
 
 ```
 
-```{r draw bar plot to check sample/condition contribution within each cluster, fig.width=10}
+```{r draw bar plot to check sample/condition contribution within each cluster, fig.width=10, fig.height=10}
 assays(sce_main_group_corrected)$counts <- assays(sce_main_group)$counts[rownames(sce_main_group_corrected),]
 assays(sce_main_group_corrected)$logcounts <- assays(sce_main_group)$logcounts[rownames(sce_main_group_corrected),]
 
@@ -251,7 +251,7 @@ ggplot(dat, aes(fill=condition, y=n_cells, x=cluster)) +
 
 ```
 
-```{r randomly pick one point among dots whose UMAP location is identical and draw UMAP, fig.width=10}
+```{r randomly pick one point among dots whose UMAP location is identical and draw UMAP, fig.width=10, fig.height=10}
 library(dplyr)
 
 library(scater)
@@ -475,6 +475,10 @@ ggplot(doublet.tab, aes(x=cluster, y=cxds_score, colour=query_doublet)) +
 
 ggplot(doublet.tab, aes(x=cluster, y=sum_counts, colour=query_doublet)) +
     ggbeeswarm::geom_quasirandom(method="smiley")
+
+
+sce_corrected <- sce_corrected[ , !sce_corrected$query_doublet]
+
 ```
 
 

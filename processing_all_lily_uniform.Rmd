@@ -1550,6 +1550,8 @@ library(scds)
 for(i in 1:length(sce_list)){
   sce_list[[i]] <- cxds(sce_list[[i]])
   sce_list[[i]]$query_doublet <- isOutlier(sce_list[[i]]$cxds_score, nmads=5, type='higher')
+  # sce_corrected$query_doublet has true value for estimated doublet cells
+  
   p <- plotReducedDim(sce_list[[i]], 'UMAP', colour_by='cxds_score') + ggtitle(paste('sample',i))
 
   print(p)
