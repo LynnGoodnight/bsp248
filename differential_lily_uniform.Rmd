@@ -31,9 +31,7 @@ if (sampSet == "") {
 print(sampSet)
 pfx <- paste0(work_dir,"Results/")
 dir.create(pfx, showWarnings = FALSE)
-# results_dir <- "Results"
-# 
-# dir.create(results_dir)
+
 ```
 
 

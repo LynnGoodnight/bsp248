@@ -24,7 +24,8 @@ if (clustK == "") {
 print(clustK)
 
 print(paste('work_dir', work_dir, 'sampSet', sampSet, bsp_num))              
-
+pfx <- paste0(work_dir,"Results/")
+dir.create(pfx, showWarnings = FALSE)
 ```
 
 
@@ -664,8 +665,8 @@ saveWorkbook(wb, file = paste0('Results/clustering_', sampSet, '_',
 
 # save.image(file = paste0(sampSet, "_k", clustK, selected_main_group, "_initial_cluster.RData"))
 
-saveRDS(sce_main_group_corrected, file = paste0('sce_',sampSet, '_', selected_main_group,'_corrected_initial_cluster.rds'))
-saveRDS(sce_main_group, file = paste0('sce_',sampSet, '_', selected_main_group,'_initial_cluster.rds'))
+saveRDS(sce_main_group_corrected, file = paste0('sce_',sampSet, '_subset_', selected_main_group,'_corrected_initial_cluster.rds'))
+saveRDS(sce_main_group, file = paste0('sce_',sampSet, '_subset_', selected_main_group,'_initial_cluster.rds'))
 
 
 ```
