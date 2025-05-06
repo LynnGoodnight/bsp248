@@ -6,9 +6,9 @@
 ## this script runs the R markdown scripts for the analysis of bsp248
 
 ## Resource Request
-#SBATCH --job-name=muci_differential
+#SBATCH --job-name=muci_differential_subset
 ## %j is job number, %x is the job name above
-#SBATCH --output=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/logs/%x-%j-outs_differential.txt
+#SBATCH --output=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/logs/%x-%j-outs.txt
 ## 10 hours
 #SBATCH --time=1-10:00:00
 #SBATCH --ntasks=1

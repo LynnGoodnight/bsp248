@@ -127,7 +127,7 @@ sce_all_filt is important for count-based differential analyses and seeing expre
 
 Next we name the good quality clusters. 
 
-```{r name cell types and assign color to the good quality clusters}
+```{r name cell types for each cluster }
 sce_filt <- sce_all_corrected
 sce_all_filt <- sce_all
 print(sce_all)
@@ -135,14 +135,18 @@ print(sce_all)
 #Long-form annotated version including cell subtypes
 if(grepl("subset", sampSet))
 {
-munual_annotation <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)  
+  munual_annotation <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)  
 }else
 {
-munual_annotation <- read.csv("munual_annotation.csv", header = FALSE) 
+  munual_annotation <- read.csv("munual_annotation.csv", header = FALSE) 
 }
 
 head(munual_annotation)
 colnames(munual_annotation) <- c("cluster", "name")
+
+# remove the content in parentheses as well as the parentheses
+munual_annotation$name <- sub(" \\(.*\\)", "", munual_annotation$name)
+
 
 if(bsp_num == "bsp_248")
 {
@@ -160,6 +164,13 @@ if(bsp_num == "bsp_248")
 
 unique(sce_all_filt$long_named_cluster)
 
+
+
+
+
+```
+
+```{r assign color to the good quality clusters}
 # Create label and assign colour for each cluster for convenient annotation later
 
 # label every cell with its tissue type and the cluster it belong to
@@ -189,29 +200,33 @@ sce_all_filt
 
 colData(sce_filt)[,c('named_cluster', 'long_named_cluster', 'verbose_cluster', 'EXP_celltype')] <- colData(sce_all_filt)[, c('named_cluster', 'long_named_cluster', 'verbose_cluster', 'EXP_celltype')]
 
-
-
 ```
 
 And make some UMAPs for visulization.
 
 ```{r plot UMAPs to show annotated cell types of clusters, fig.width= 12, fig.height=8}
 
+
+selected_point_size = 0.2
 # plot automatic assigned color for each cell type and cluster in UMAP
 sce_filt
-plotUMAP(sce_filt, colour_by="cluster", text_by = "cluster",  point_size=0.3) + guides(colour = guide_legend(override.aes = list(size=8, alpha = 1)))+ theme(text = element_text(size = 20)) + ggtitle(paste('UMAP', sampSet))
+plotUMAP(sce_filt, colour_by="cluster", text_by = "cluster",  point_size = selected_point_size) + 
+  guides(colour = guide_legend(override.aes = list(size=8, alpha = 1))) + 
+  theme(text = element_text(size = 20)) + ggtitle(paste('UMAP', sampSet))
 
- 
 
-p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point_size = 0.3) + guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1), title = 'Cell type')) + ggtitle(paste('UMAP', sampSet))
-  
+
+p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
+  guides(colour = guide_legend(override.aes = list(size = 5, alpha = 1))) +
+  ggtitle(paste('UMAP', sampSet))
+
 print(p1)
 
 
-p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", point_size = 0.3) + guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1), title = 'Cell type')) + ggtitle(paste('UMAP', sampSet))
+p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", point_size = selected_point_size) + 
+  guides(colour = guide_legend(override.aes = list(size = 5, alpha = 1), title = 'Cell type')) + 
+  ggtitle(paste('UMAP', sampSet)) 
 print(p1)  
-  
-
 
 
 ```
@@ -334,15 +349,13 @@ add a bubbleplot of defining genes
 
 
 ```{r exclude suspicious clusters and bad quality samples}
-# if(sampSet == 'run_1' )
-# {
-#   sce_all_filt <- sce_all_filt[,!sce_all_filt$cluster %in% c('9b', '14b', '19')]
-#   sce_filt <- sce_filt[,!sce_filt$cluster %in% c('9b', '14b', '19')]
-#     
-# }
 
+if(bsp_num == "bsp_248" & !grepl("subset", sampSet))
+{
 sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
-sce_filt  <- sce_filt[, sce_filt$Sample != "sample_20"]
+sce_filt  <- sce_filt[, sce_filt$Sample != "sample_20"]  
+}
+
 
 # # Update shiny app with filtered data for easier visualization and identification. For easier visualization in app, pre-convert counts metrics to log scale. 
 saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected', '_with_named_subcluster.rds'))
@@ -360,31 +373,32 @@ For running DA analysis, we looking for differential abundance/ cell type propor
 ```{r divide cells based on sorted population}
 
 
+
 # load annotation table as meta information need to use later
 if(bsp_num == "bsp_248")
 {
-    annot <- read.csv('/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/references/sample_information.csv')
-    head(annot)
-    samps <- paste("sample", formatC(1:24, width=2, flag="0"), sep="_")
-    annot$sample_id <- samps
-    rownames(annot) <- annot$sample_id
-    head(sce_all_filt$cull_date)
-
-    # DPI_1 <- sce_all_filt[,sce_all_filt$cull_date == 1]
-    # DPI_12 <- sce_all_filt[,sce_all_filt$cull_date == 12]
-    
-    
-    DPI_1 <- sce_all_filt[, (sce_all_filt$cull_date == 1) | (sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control")]
-    DPI_12 <- sce_all_filt[, (sce_all_filt$cull_date == 12) | (sce_all_filt$cull_date == 1 & sce_all_filt$condition == "control")]    
-    # table(sce_all_filt$cull_date == 1)
-    # table(sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control")
-    # table((sce_all_filt$cull_date == 1) | (sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control"))
-    # colData(sce_all_filt)
-
-    
-    subsets <- list(DPI_1=DPI_1, DPI_12=DPI_12)
-
-
+  annot <- read.csv('references/sample_information.csv')
+  head(annot)
+  samps <- paste("sample", formatC(1:24, width=2, flag="0"), sep="_")
+  annot$sample_id <- samps
+  rownames(annot) <- annot$sample_id
+  head(sce_all_filt$cull_date)
+  
+  # DPI_1 <- sce_all_filt[,sce_all_filt$cull_date == 1]
+  # DPI_12 <- sce_all_filt[,sce_all_filt$cull_date == 12]
+  
+  
+  DPI_1 <- sce_all_filt[, (sce_all_filt$cull_date == 1) | (sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control")]
+  DPI_12 <- sce_all_filt[, (sce_all_filt$cull_date == 12) | (sce_all_filt$cull_date == 1 & sce_all_filt$condition == "control")]    
+  # table(sce_all_filt$cull_date == 1)
+  # table(sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control")
+  # table((sce_all_filt$cull_date == 1) | (sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control"))
+  # colData(sce_all_filt)
+  
+  
+  subsets <- list(DPI_1=DPI_1, DPI_12=DPI_12)
+  
+  
   
 }
 
@@ -394,18 +408,17 @@ print(table(sce_all_filt$condition))
 head(colData(sce_all_filt))
 head(annot)
 # table(annot$condition)
+
 ```
 
 Our DA analysis will be run using a negative binomial test.
-<!-- Because clusters were computed on the dataset after merging and correcting for differences between runs, we will not include run as a covariate here. Instead, we will account for sex while testing differential abundance between conditions.  -->
 
-We'll consider a change in abundance (proportion of one cluster) with condition 135 vs ISU.
+
+We'll consider a change in abundance (proportion of one cluster) with condition virus1 vs virus2 vs control.
 
 ```{r conduct Differential abundance analysis for each sorted population}
-# if(sampSet == 'run_2' )
-# {
-# save.image(file = "differential_lily_develop.RData")
-# }
+
+
 df_cluster_number_name  <- as.data.frame(unique(colData(sce_all_filt)[,c('named_cluster', 'cluster')]))
 rownames(df_cluster_number_name) <- 1:nrow(df_cluster_number_name)
 # head(df_cluster_number_name)
@@ -414,9 +427,10 @@ rownames(df_cluster_number_name) <- 1:nrow(df_cluster_number_name)
 conduct_DA <- function(subsets, selected_comparison = 3)
 {
   DA <- NULL
-
+  
   for (i in 1:length(subsets) ) 
   {
+    # subsets is list with 2 elements contain the data of DPI1, DPI12 each 
     DPI <- names(subsets[i])
     x <- subsets[[i]]
     
@@ -426,26 +440,27 @@ conduct_DA <- function(subsets, selected_comparison = 3)
     # write.csv(abundances, file = 'abundances_check.csv')
     # head(abundances)
     # head(colnames(abundances))
-
+    
     # extract rows of samples used there, s1-8 
     meta_data <- subset(colData(x), select=c("condition", "run", "cull_date", "animal_id"))[match(colnames(abundances), x$Sample),] 
-
+    
     y.ab <- DGEList(abundances, samples= meta_data)
     
-   # filter some clusters which only exist in a few samples 
-  keep <- filterByExpr(y.ab, group=y.ab$samples$condition, 
-                       min.count = 10, min.total.count = 60)
-  # default min.count = 10, min.total.count = 15, large.n = 10, min.prop = 0.7
-  # min.count: numeric. Minimum count required for at least some samples.
-  # min.total.count: numeric. Minimum total count required across all samples.
-  # large.n: integer. Number of samples per group that is considered to be “large”.
-  # min.prop: numeric. In large sample situations, the minimum proportion of samples in a group that a gene needs to be expressed in. See Details below for the exact formula.
-  # here counts represent cell number 
-  
-  summary(keep) 
-  keep # filters out some clusters 
-  y.ab <- y.ab[keep,]
-      
+    # filter some clusters which only exist in a few samples 
+    keep <- filterByExpr(y.ab, group=y.ab$samples$condition, 
+                         min.count = 10, min.total.count = 60)
+    # default min.count = 10, min.total.count = 15, large.n = 10, min.prop = 0.7
+    # min.count: numeric. Minimum count required for at least some samples.
+    # min.total.count: numeric. Minimum total count required across all samples.
+    # large.n: integer. Number of samples per group that is considered to be “large”.
+    # min.prop: numeric. In large sample situations, the minimum proportion of samples in a group that a gene needs to be expressed in. See Details below for the exact formula.
+    # here counts represent cell number 
+
+    print(paste('FALSE show clusters need to be filtered as they only exist in a few samples', DPI))
+    print(keep)    
+    keep # filters out some clusters 
+    y.ab <- y.ab[keep,]
+    
     
     y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('control', 'H1N1', 'PRCV'))
     y.ab$samples$run <- factor(y.ab$samples$run, levels=c('1', '2', '3'))
@@ -505,7 +520,7 @@ conduct_DA <- function(subsets, selected_comparison = 3)
 # output DA results to excel files
 output_DA_excel <- function(DA, file_name_tag = '')
 {
-   
+  
   library(openxlsx)
   
   for(i in names(DA))
@@ -523,7 +538,7 @@ output_DA_excel <- function(DA, file_name_tag = '')
     # Save the workbook to a file
     saveWorkbook(wb, file = paste0('Results/DA_edgeR_', sampSet, file_name_tag, i, ".xlsx"), overwrite = TRUE)     
   }
-
+  
   # run_2 table contain the results of run 1+2
 }
 
@@ -538,6 +553,7 @@ output_DA_excel(DA_ctl_t1, file_name_tag='_ctl_t1_')
 
 DA_ctl_t2 <- conduct_DA(subsets, selected_comparison = 2)
 output_DA_excel(DA_ctl_t2, file_name_tag='_ctl_t2_')
+
 ```
 
 ```{r draw dot plots to direct visulize and compare cluster proportion between condition, fig.width= 10, fig.height= 8}
