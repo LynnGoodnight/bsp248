@@ -26,7 +26,7 @@ current_run <- sampSet
 print(paste('work_dir', work_dir, 'sampSet', sampSet, bsp_num))              
 if (sampSet == "") {
    sampSet <- "error, sampSet not provided"
-   # sampSet  <- run_1
+
    }
 print(sampSet)
 pfx <- paste0(work_dir,"Results/")
@@ -38,9 +38,16 @@ dir.create(pfx, showWarnings = FALSE)
 This script is usually run on the hpc, see "lily code/html/html_differential.sh".
 
 ```{r load input data }
+if(grepl("subset", sampSet))
+{
+  sce_all <- readRDS(paste0('sce_',sampSet,'_initial_cluster.rds')) #  '_with_subcluster.rds'
+  sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_initial_cluster.rds')) #   
+}else
+{
+  sce_all <- readRDS(paste0('sce_',sampSet,'_initial_cluster.rds')) #  '_with_subcluster.rds'
+  sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_initial_cluster.rds')) # '_corrected_with_subcluster.rds'  
+}
 
-sce_all <- readRDS(paste0('sce_',sampSet,'_initial_cluster.rds')) #  '_with_subcluster.rds'
-sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_initial_cluster.rds')) # '_corrected_with_subcluster.rds'
 
 
 ```
