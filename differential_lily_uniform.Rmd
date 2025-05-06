@@ -48,7 +48,7 @@ if(grepl("subset", sampSet))
   sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_initial_cluster.rds')) # '_corrected_with_subcluster.rds'  
 }
 
-
+save.image('differential_lily_develop.RData')
 
 ```
 
@@ -133,7 +133,14 @@ sce_all_filt <- sce_all
 print(sce_all)
 ## add in cluster names as sce_all_filt$named_cluster
 #Long-form annotated version including cell subtypes
-munual_annotation <- read.csv("munual_annotation.csv", header = FALSE)
+if(grepl("subset", sampSet))
+{
+munual_annotation <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)  
+}else
+{
+munual_annotation <- read.csv("munual_annotation.csv", header = FALSE) 
+}
+
 head(munual_annotation)
 colnames(munual_annotation) <- c("cluster", "name")
 
