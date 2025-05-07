@@ -463,7 +463,8 @@ conduct_DA <- function(subsets, selected_comparison = 3)
 
     print(paste('FALSE show clusters need to be filtered as they only exist in a few samples', DPI))
     print(keep)    
-    keep # filters out some clusters 
+    keep 
+    # filters out some clusters 
     y.ab <- y.ab[keep,]
     
     
@@ -1115,7 +1116,7 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
   y <- calcNormFactors(y)
   # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter 
   y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
-  y.ab$samples$run <- factor(y.ab$samples$run, levels=c('1', '2', '3'))
+  y$samples$run <- factor(y$samples$run, levels=c('1', '2', '3'))
   
   
   # par(mfrow=c(2,3))
