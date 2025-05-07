@@ -38,17 +38,17 @@ dir.create(pfx, showWarnings = FALSE)
 This script is usually run on the hpc, see "lily code/html/html_differential.sh".
 
 ```{r load input data }
-if(grepl("subset", sampSet))
-{
-  sce_all <- readRDS(paste0('sce_',sampSet,'_initial_cluster.rds')) #  '_with_subcluster.rds'
-  sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_initial_cluster.rds')) #   
-}else
-{
-  sce_all <- readRDS(paste0('sce_',sampSet,'_initial_cluster.rds')) #  '_with_subcluster.rds'
-  sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_initial_cluster.rds')) # '_corrected_with_subcluster.rds'  
-}
 
-save.image('differential_lily_develop.RData')
+
+sce_all <- readRDS(paste0('sce_',sampSet,'_initial_cluster.rds')) 
+sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_initial_cluster.rds'))   
+
+
+# if we conducted sub-clustering
+# sce_all <- readRDS(paste0('sce_',sampSet,'_with_subcluster.rds')) 
+# sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_with_subcluster.rds')) 
+  
+# save.image('differential_lily_develop.RData')
 
 ```
 
@@ -130,6 +130,9 @@ Next we name the good quality clusters.
 ```{r name cell types for each cluster }
 sce_filt <- sce_all_corrected
 sce_all_filt <- sce_all
+
+rm(sce_all, sce_all_corrected)
+
 print(sce_all)
 ## add in cluster names as sce_all_filt$named_cluster
 #Long-form annotated version including cell subtypes
@@ -147,7 +150,8 @@ colnames(munual_annotation) <- c("cluster", "name")
 # remove the content in parentheses as well as the parentheses
 munual_annotation$name <- sub(" \\(.*\\)", "", munual_annotation$name)
 
-
+# if we done sub-clustering, some clusters name may become 12a, 12b
+sce_all_filt$cluster <- as.character(sce_all_filt$cluster)
 if(bsp_num == "bsp_248")
 {
   for (i in unique(sce_all_filt$cluster))
@@ -352,8 +356,8 @@ add a bubbleplot of defining genes
 
 if(bsp_num == "bsp_248" & !grepl("subset", sampSet))
 {
-sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
-sce_filt  <- sce_filt[, sce_filt$Sample != "sample_20"]  
+  sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
+  sce_filt  <- sce_filt[, sce_filt$Sample != "sample_20"]  
 }
 
 
@@ -396,7 +400,7 @@ if(bsp_num == "bsp_248")
   # colData(sce_all_filt)
   
   
-  subsets <- list(DPI_1=DPI_1, DPI_12=DPI_12)
+  subsets <- list(DPI_1 = DPI_1, DPI_12 = DPI_12)
   
   
   
@@ -556,7 +560,7 @@ output_DA_excel(DA_ctl_t2, file_name_tag='_ctl_t2_')
 
 ```
 
-```{r draw dot plots to direct visulize and compare cluster proportion between condition, fig.width= 10, fig.height= 8}
+```{r draw dot plots to direct visulize and compare cluster proportion between condition, fig.width= 8, fig.height= 6}
 # draw dot plots to direct visualize and compare cluster proportion between condition
 direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
 {
@@ -780,10 +784,11 @@ boxplot_cluster_proportion <- function(selected_dataset, selected_cluster = '2',
     props <- data.frame(t(props))
     colnames(props) <- c('sample', 'cluster', 'prop')
     props <- merge(props, annot[, c("Condition", "sample")], by= "sample")
-    
-    props$sample <- factor(props$sample, levels=c("sample_09", "sample_14", "sample_15", 
-                                                  "sample_16", "sample_10", "sample_11", 
-                                                  "sample_12", "sample_13"))
+
+    props$sample <- as.factor(props$sample)        
+    # props$sample <- factor(props$sample, levels=c("sample_09", "sample_14", "sample_15", 
+    #                                               "sample_16", "sample_10", "sample_11", 
+    #                                               "sample_12", "sample_13"))
     as.character(props$cluster)
     props <- merge(props, df_cluster_number_name, by= "cluster")
     
@@ -1108,6 +1113,8 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
   y <- calcNormFactors(y)
   # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter 
   y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
+  y.ab$samples$run <- factor(y.ab$samples$run, levels=c('1', '2', '3'))
+  
   
   # par(mfrow=c(2,3))
   for (i in 1:ncol(y)) {
@@ -1124,10 +1131,12 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
   }
 
 
-  design <- model.matrix(~ 0 + condition, y$samples)
+  design <- model.matrix(~ 0 + condition + run, y$samples)
   # print(design)
   # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
-  contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1, control_PRCV =  conditioncontrol-conditionPRCV, H1N1_PRCV = conditionH1N1-conditionPRCV, levels = design)
+  contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1, 
+                             control_PRCV =  conditioncontrol-conditionPRCV, 
+                             H1N1_PRCV = conditionH1N1-conditionPRCV, levels = design)
   
   
   # print(contrasts)
@@ -1376,11 +1385,11 @@ DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 3, comparison_p
 
 
 DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 2, comparison_prefix = "_ctl_t2")
-DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 2, comparison_prefix = "_ctl_t2")
+# DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 2, comparison_prefix = "_ctl_t2")
 
 
 DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 1, comparison_prefix = "_ctl_t1")
-DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 1, comparison_prefix = "_ctl_t1")
+# DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 1, comparison_prefix = "_ctl_t1")
 
 ```
 
