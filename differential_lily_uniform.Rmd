@@ -648,7 +648,10 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
 
 direct_t_test(DPI_1, selected_DPI = "DPI_1")
 direct_t_test(DPI_12, selected_DPI = "DPI_12")
+```
 
+
+```{r draw composition bar plot to visulize and compare cluster proportion between condition, fig.width= 10, fig.height= 8}
 visulize_abundance <- function(sce_all_filt, annot)
 {
   
@@ -1304,8 +1307,12 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
   # View(summed@assays@data@listData[["counts"]])
   head(colData(summed)) 
   
-  summed.filt <- summed[,summed$ncells >= 10]
+  # summed.filt <- summed[,summed$ncells >= 10]
   # remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
+  summed.filt <- summed  
+# I am thinking maybe we shouldn’t filtering sample whose cell number < 10, maybe it’s true signal that some clusters only appear in certain condition, and does not appear at all in certain condition. so i I commented that filtering, and try without this filtering 
+  
+  
   
   # write.csv(table(summed.filt$cluster, summed.filt$Sample), file = "summed.filt_check.csv")
   # dim(summed.filt)
