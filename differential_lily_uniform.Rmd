@@ -210,26 +210,82 @@ colData(sce_filt)[,c('named_cluster', 'long_named_cluster', 'verbose_cluster', '
 And make some UMAPs for visulization.
 
 ```{r plot UMAPs to show annotated cell types of clusters, fig.width= 12, fig.height=8}
-
+output_color_code_in_UMAP <- function(x = p1,
+                                      clusterID_or_celltype = "named_cluster") 
+{
+  # Build the ggplot object
+  p1_build <- ggplot_build(p1)
+  
+  # Extract color and label (named_cluster) from the data
+  df_colors <- p1_build$data[[1]][, c("colour", "group")]
+  
+  # Pull named_cluster info from the input data used in plotUMAP
+  # Assuming `sce_filt` is a SingleCellExperiment object
+  if(clusterID_or_celltype == "named_cluster")
+  {
+    named_cluster_vec <- sce_filt$named_cluster 
+  }else if(clusterID_or_celltype == "cluster")
+  {
+    named_cluster_vec <- sce_filt$cluster
+  }
+  
+  # Create a data frame with unique mapping between factor value and actual value
+  df_mapping <- data.frame(
+    named_cluster = named_cluster_vec,
+    group = as.numeric(factor(named_cluster_vec))
+  )
+  
+  # Remove duplicates to get one row per cluster
+  df_mapping_unique <- unique(df_mapping)
+  
+  # Merge with extracted color info
+  library(dplyr)
+  color_cluster_map <- df_colors %>%
+    distinct(group, colour) %>%
+    inner_join(df_mapping_unique, by = "group") %>%
+    select(named_cluster, colour)
+  # distinct(group, colour) Keeps only unique combinations of group and colour
+  # View result
+  # print(color_cluster_map)
+  # Define your custom color palette (names must match your 'cell_type' exactly)
+  
+  # color_cluster_map <- base:::merge(color_cluster_map, unique(dat_annot[ , c("cluster_id", "cell_type")]) ,
+  #                    by.x = "named_cluster", by.y = "cluster_id")
+  # 
+  # color_cluster_map$named_cluster <- paste(color_cluster_map$named_cluster,
+  #                                          color_cluster_map$cell_type,
+  #                                          sep = "_")
+  # dat_annot$named_cluster <- paste(dat_annot$cluster_id, dat_annot$cell_type,
+  #                                  sep = "_")
+  
+  cell_type_colors <- setNames(
+    as.character(color_cluster_map[["colour"]]),  # values
+    as.character(color_cluster_map[["named_cluster"]])   # names
+  )
+  return(cell_type_colors)
+  
+}
 
 selected_point_size = 0.2
 # plot automatic assigned color for each cell type and cluster in UMAP
 sce_filt
-plotUMAP(sce_filt, colour_by="cluster", text_by = "cluster",  point_size = selected_point_size) + 
+p1 <- plotUMAP(sce_filt, colour_by="cluster", text_by = "cluster",  point_size = selected_point_size) + 
   guides(colour = guide_legend(override.aes = list(size=8, alpha = 1))) + 
   theme(text = element_text(size = 20)) + ggtitle(paste('UMAP', sampSet))
-
-
+print(p1)
+clusterid_colors <- output_color_code_in_UMAP (p1, "cluster")
+  
 
 p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
-  guides(colour = guide_legend(override.aes = list(size = 5, alpha = 1))) +
+  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
   ggtitle(paste('UMAP', sampSet))
 
 print(p1)
+cell_type_colors <- output_color_code_in_UMAP (p1, "named_cluster")
 
 
 p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", point_size = selected_point_size) + 
-  guides(colour = guide_legend(override.aes = list(size = 5, alpha = 1), title = 'Cell type')) + 
+  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1), title = 'Cell type')) + 
   ggtitle(paste('UMAP', sampSet)) 
 print(p1)  
 
@@ -680,9 +736,9 @@ visulize_abundance <- function(sce_all_filt, annot)
   
   p <- ggplot(data=dat_annot, aes(x=S_id, y=proportion, fill=cell_type)) +
     geom_bar(stat="identity") + 
-    facet_wrap(DPI ~ condition,  scales="free_x") +
+    facet_wrap(DPI ~ condition,  scales="free_x")+
+    scale_fill_manual(values = cell_type_colors) +
     ggtitle("cell_type_composition_barplot")
-  
   print(p)
   
   png(filename = paste0('Results/DA_edgeR_', sampSet, '_composition_barplot_cell_type.png') , height=2600, width=1800, res = 300)
@@ -690,10 +746,12 @@ visulize_abundance <- function(sce_all_filt, annot)
   dev.off()  
   
   
-  p <- ggplot(data=dat_annot, aes(x=S_id, y=proportion, fill=type_cluster)) +
-    geom_bar(stat="identity") + 
-    facet_wrap(DPI ~ condition,  scales="free_x")+
-    ggtitle("cluster_composition_barplot")
+  p <- ggplot(data = dat_annot, aes(x = S_id, y = proportion, fill = cluster_id)) +
+    geom_bar(stat = "identity") + 
+    facet_wrap(DPI ~ condition, scales = "free_x") +
+    scale_fill_manual(values = clusterid_colors) +
+    ggtitle("clusterid_composition_barplot")
+  
   print(p)
   
   png(filename = paste0('Results/DA_edgeR_', sampSet, '_composition_barplot_cluster.png') , height=3000, width=2600, res = 300)
