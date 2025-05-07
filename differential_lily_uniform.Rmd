@@ -131,9 +131,10 @@ Next we name the good quality clusters.
 sce_filt <- sce_all_corrected
 sce_all_filt <- sce_all
 
-rm(sce_all, sce_all_corrected)
 
 print(sce_all)
+rm(sce_all, sce_all_corrected)
+
 ## add in cluster names as sce_all_filt$named_cluster
 #Long-form annotated version including cell subtypes
 if(grepl("subset", sampSet))
@@ -765,10 +766,10 @@ visulize_abundance(sce_all_filt, annot)
 
 Let's plot box plots of proportions between 2 conditions to have a look.
 
-```{r plot box plots to visulize cell proportion between 2 conditions}
+```{r plot composition bar plots to visulize cell proportion between 2 conditions}
 
 
-
+# in bsp185, we only run code below to plot those clusters whose composition changed significantly in certain main populations
 
 boxplot_cluster_proportion <- function(selected_dataset, selected_cluster = '2',
                                        flag = 'total', composition = FALSE, annot = annot)
@@ -1072,6 +1073,7 @@ output_DE_to_files <- function(de.results.any, flag= 't1_t2_DPI1_')
   return(summary_df)
 }  
 
+# function to conduct core edgeR DE analysis
 pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
                                 selected_comparison = 3, DPI = 1)
 {
