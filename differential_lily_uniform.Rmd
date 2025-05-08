@@ -747,7 +747,10 @@ visulize_abundance <- function(sce_all_filt, annot)
   print(p)
   dev.off()  
   
-  clusterid_colors$named_cluster <- as.integer(clusterid_colors$named_cluster)
+  
+  # head(dat_annot$cluster_id)
+  dat_annot$cluster_id <- as.factor(dat_annot$cluster_id)
+  # names(clusterid_colors) <- as.integer(names(clusterid_colors))
   p <- ggplot(data = dat_annot, aes(x = S_id, y = proportion, fill = cluster_id)) +
     geom_bar(stat = "identity") + 
     facet_wrap(DPI ~ condition, scales = "free_x") +
