@@ -709,6 +709,7 @@ direct_t_test(DPI_12, selected_DPI = "DPI_12")
 
 
 ```{r draw composition bar plot to visulize and compare cluster proportion between condition, fig.width= 10, fig.height= 8}
+
 visulize_abundance <- function(sce_all_filt, annot)
 {
   
@@ -746,7 +747,7 @@ visulize_abundance <- function(sce_all_filt, annot)
   print(p)
   dev.off()  
   
-  
+  clusterid_colors$named_cluster <- as.integer(clusterid_colors$named_cluster)
   p <- ggplot(data = dat_annot, aes(x = S_id, y = proportion, fill = cluster_id)) +
     geom_bar(stat = "identity") + 
     facet_wrap(DPI ~ condition, scales = "free_x") +
