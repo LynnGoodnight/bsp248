@@ -467,19 +467,28 @@ It may be the case that our suspected doublets, which fell in a particular regio
 # print the proportion of estimated Doublet in each cluster
 prop.table(table(sce_corrected$cluster, sce_corrected$query_doublet), margin=1)
 
-# visualize cxds_score and estimated Doublet in each cluster
+violin_plot_doublet_inspection <- function(sce_corrected,
+                                      title_flag = "before filtering estimated Doublet")
+{
+  # visualize cxds_score and estimated Doublet in each cluster
+  doublet.tab <- data.frame(colData(sce_corrected)[,c('cxds_score', 'cluster', 'query_doublet', 'sum_counts')])
+  
+  p1 <- ggplot(doublet.tab, aes(x=cluster, y=cxds_score, colour=query_doublet)) +
+      ggbeeswarm::geom_quasirandom(method="smiley") + 
+    ggtitle(paste("doublet inspection",selected_main_group,  title_flag))
+  print(p1)
+  
+  p1 <- ggplot(doublet.tab, aes(x=cluster, y=sum_counts, colour=query_doublet)) +
+      ggbeeswarm::geom_quasirandom(method="smiley")  + 
+    ggtitle(paste("doublet inspection", selected_main_group, title_flag)) 
+  print(p1)  
+}
 
-doublet.tab <- data.frame(colData(sce_corrected)[,c('cxds_score', 'cluster', 'query_doublet', 'sum_counts')])
-
-ggplot(doublet.tab, aes(x=cluster, y=cxds_score, colour=query_doublet)) +
-    ggbeeswarm::geom_quasirandom(method="smiley")
-
-ggplot(doublet.tab, aes(x=cluster, y=sum_counts, colour=query_doublet)) +
-    ggbeeswarm::geom_quasirandom(method="smiley")
-
+violin_plot_doublet_inspection(sce_corrected)
 
 sce_corrected <- sce_corrected[ , !sce_corrected$query_doublet]
 
+violin_plot_doublet_inspection(sce_corrected)
 ```
 
 
