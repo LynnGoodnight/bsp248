@@ -151,7 +151,7 @@ colnames(munual_annotation) <- c("cluster", "name")
 # remove the content in parentheses as well as the parentheses
 munual_annotation$name <- sub(" \\(.*\\)", "", munual_annotation$name)
 
-# if we done sub-clustering, some clusters name may become 12a, 12b
+# if we done sub-clustering, some clusters name may become 12a, 12b. but for bsp248 subset, no sub-clustering yet
 sce_all_filt$cluster <- as.character(sce_all_filt$cluster)
 if(bsp_num == "bsp_248")
 {
@@ -166,6 +166,7 @@ if(bsp_num == "bsp_248")
     }
 }
 # head(sce_all_filt$long_named_cluster)
+sce_all_filt$cluster <- as.integer(sce_all_filt$cluster)
 
 unique(sce_all_filt$long_named_cluster)
 
