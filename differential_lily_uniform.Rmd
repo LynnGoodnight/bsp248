@@ -1132,8 +1132,8 @@ output_DE_to_files <- function(de.results.any, flag= 't1_t2_DPI1_')
   
   for(i in names(de.results.any))
   {
-    print(paste('TRUE means DE genes whose FDR below 0.05 in cluster', i))
-    print(table(de.results.any[[i]]$p_adjust < 0.05))
+    # print(paste('TRUE means DE genes whose FDR below 0.05 in cluster', i))
+    # print(table(de.results.any[[i]]$p_adjust < 0.05))
     
   }
   rownames(summary_df) = paste0('cluster_', names(de.results.any))
@@ -1161,7 +1161,7 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
     # if repelicates under any condition less than 3, we don't obtain enough repelicates for valid statistic test
     print(paste('check condition replicates in DE edgeR in cluster', clust, 'DPI', DPI))
     print(table(y$samples$condition))    
-    print("one or more condition contain less than 3 samples after fitering sample whose cell number < 10")
+    print("one or more condition contain less than 3 replicates after fitering sample whose cell number < 10")
     # return()
   }
   
@@ -1186,18 +1186,16 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
   
   
   # par(mfrow=c(2,3))
-  for (i in 1:ncol(y)) {
-    # plotMD(y, column=i, main=clust)
-    
-  }
-  if(length(which(table(y$samples$condition) < 3)) > 0)
-  {
-  }else
-  {
-  limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
-                  col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
-                  main = paste('cluster:', clust, 'in DPI', DPI))    
-  }
+
+  # if(length(which(table(y$samples$condition) < 3)) > 0)
+  # {
+  #   print(' fail to plot MDS, one or more condition has less than 3 replicates')
+  # }else
+  # {
+  # limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
+  #                 col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
+  #                 main = paste('cluster:', clust, 'in DPI', DPI))    
+  # }
 
 
   design <- model.matrix(~ 0 + condition + run, y$samples)
@@ -1370,11 +1368,9 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
   # View(summed@assays@data@listData[["counts"]])
   head(colData(summed)) 
   
-  # summed.filt <- summed[,summed$ncells >= 10]
+  summed.filt <- summed[,summed$ncells >= 10]
   # remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
-  summed.filt <- summed  
-# I am thinking maybe we shouldn’t filtering sample whose cell number < 10, maybe it’s true signal that some clusters only appear in certain condition, and does not appear at all in certain condition. so i I commented that filtering, and try without this filtering 
-  
+
   
   
   # write.csv(table(summed.filt$cluster, summed.filt$Sample), file = "summed.filt_check.csv")
