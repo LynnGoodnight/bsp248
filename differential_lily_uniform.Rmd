@@ -1211,6 +1211,7 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
   tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
   if(is(tc, 'error') | is(tc, 'warning'))
   {
+    print("estimateDisp error or warning")
     return(paste(tc))
   }else
   {
