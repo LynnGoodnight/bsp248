@@ -48,7 +48,7 @@ sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_initial_cluster.r
 # sce_all <- readRDS(paste0('sce_',sampSet,'_with_subcluster.rds')) 
 # sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_with_subcluster.rds')) 
   
-# save.image('differential_lily_develop.RData')
+
 
 ```
 
@@ -290,7 +290,7 @@ p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster",
   ggtitle(paste('UMAP', sampSet)) 
 print(p1)  
 
-
+save.image('differential_lily_develop.RData')
 ```
 
 
