@@ -662,9 +662,11 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
                size = 2)+
       ggtitle(paste("proportion of cluster", selected_cluster, 
                     cell_type, "across condition", selected_DPI))  +
-      guides(color = guide_legend(override.aes = list(size = 10))) +
-      stat_compare_means(comparisons = my_comparisons,
-                         method = "t.test") 
+      guides(color = guide_legend(override.aes = list(size = 10))) 
+    
+    # +
+    #   stat_compare_means(comparisons = my_comparisons,
+    #                      method = "t.test") 
   
     
     print(p)
@@ -1211,7 +1213,8 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
   tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
   if(is(tc, 'error') | is(tc, 'warning'))
   {
-    print("estimateDisp error or warning")
+
+    print(paste("estimateDisp error or warning in cluster", clust) )
     return(paste(tc))
   }else
   {
