@@ -1208,9 +1208,9 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
   design <- model.matrix(~ 0 + condition + run, y$samples)
   # print(design)
   # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
-  contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1, 
-                             control_PRCV =  conditioncontrol-conditionPRCV, 
-                             H1N1_PRCV = conditionH1N1-conditionPRCV, levels = design)
+  contrasts <- makeContrasts(control_H1N1 = conditionH1N1-conditioncontrol, 
+                             control_PRCV =  conditionPRCV-conditioncontrol, 
+                             H1N1_PRCV = conditionPRCV-conditionH1N1, levels = design)
   
   
   # print(contrasts)
