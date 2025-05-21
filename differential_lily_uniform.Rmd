@@ -165,8 +165,8 @@ if(bsp_num == "bsp_248")
     
     cell_type <- munual_annotation[ i, "name"]
     long_celltype <- as.character(df_grouped[ df_grouped$name == cell_type, "celltype_cluster"])         
-    print(paste(i, cell_type, long_celltype))
-    print(typeof(long_celltype))
+    # print(paste(i, cell_type, long_celltype))
+    # print(typeof(long_celltype))
     sce_all_filt$named_cluster[sce_all_filt$cluster==i] <- cell_type
     sce_all_filt$long_named_cluster[sce_all_filt$cluster==i] <- long_celltype
   }
@@ -288,6 +288,12 @@ p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point
 
 print(p1)
 cell_type_colors <- output_color_code_in_UMAP (p1, "named_cluster")
+
+p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster", point_size = selected_point_size) +
+  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
+  ggtitle(paste('UMAP', sampSet))
+
+print(p1)
 
 
 p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", point_size = selected_point_size) + 
