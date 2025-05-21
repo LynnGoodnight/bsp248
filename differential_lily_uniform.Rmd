@@ -1004,9 +1004,9 @@ mod_data <- function(df_re, i, cell_type, flag)
   # df_re$diffexpressed[df_re$logFC > 0.6 & df_re$PValue < 0.05] <- "UP"
   # df_re$diffexpressed[df_re$logFC < -0.6 & df_re$PValue < 0.05] <- "DOWN"
   table(df_re$diffexpressed)
-  
+  df_re_clean <- df_re[ df_re$diffexpressed != "NO", ]
   # dir.create('Results')
-  write.table(df_re, 
+  write.table(df_re_clean, 
               file=paste0('Results/DE_edgeR_', sampSet, flag, '_cluster_', i, '.csv'),
               sep=',', quote=FALSE, row.names = FALSE)  
   
@@ -1473,7 +1473,7 @@ DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 2, comparison_pr
 # DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 2, comparison_prefix = "_ctl_t2")
 
 
-DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 1, comparison_prefix = "_ctl _PRCV")
+DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 1, comparison_prefix = "_tl_H1N1")
 # DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 1, comparison_prefix = "_ctl_t1")
 
 ```
