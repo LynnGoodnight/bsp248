@@ -665,8 +665,6 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
     p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
                     fill = "sample_id", color = "sample_id", 
                      size = 3) +
-      geom_text(aes(label = S_id) , hjust = 1, nudge_x = 0.05,
-               size = 2)+
       ggtitle(paste("proportion of cluster", selected_cluster, 
                     cell_type, "across condition", selected_DPI))  +
       guides(color = guide_legend(override.aes = list(size = 10))) 
@@ -674,7 +672,8 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
     # +
     #   stat_compare_means(comparisons = my_comparisons,
     #                      method = "t.test") 
-  
+        # geom_text(aes(label = S_id) , hjust = 1, nudge_x = 0.05,
+        #        size = 2) +
     
     print(p)
 
