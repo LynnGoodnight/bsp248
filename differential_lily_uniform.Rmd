@@ -145,36 +145,41 @@ if(grepl("subset", sampSet))
   munual_annotation <- read.csv("munual_annotation.csv", header = FALSE) 
 }
 
-head(munual_annotation)
+
 colnames(munual_annotation) <- c("cluster", "name")
 
 # remove the content in parentheses as well as the parentheses
 munual_annotation$name <- sub(" \\(.*\\)", "", munual_annotation$name)
+library(dplyr)
+df_grouped <- munual_annotation %>%
+  group_by(name) %>%
+  summarise(cluster_contained = paste(cluster, collapse = ", ")) %>%
+  ungroup()
+df_grouped$celltype_cluster <- paste(df_grouped$name, df_grouped$cluster_contained)
 
-# if we done sub-clustering, some clusters name may become 12a, 12b. but for bsp248 subset, no sub-clustering yet
 sce_all_filt$cluster <- as.character(sce_all_filt$cluster)
 if(bsp_num == "bsp_248")
 {
   for (i in unique(sce_all_filt$cluster))
-    {
+  {
     
-    name <- munual_annotation[ i, "name"]
-    long_name <- paste(name, i, sep = ", ")       
-    # print(paste(i, name, long_name))
-    sce_all_filt$named_cluster[sce_all_filt$cluster==i] <- name
-    sce_all_filt$long_named_cluster[sce_all_filt$cluster==i] <- long_name
-    }
+    cell_type <- munual_annotation[ i, "name"]
+    long_celltype <- as.character(df_grouped[ df_grouped$name == cell_type, "celltype_cluster"])         
+    print(paste(i, cell_type, long_celltype))
+    print(typeof(long_celltype))
+    sce_all_filt$named_cluster[sce_all_filt$cluster==i] <- cell_type
+    sce_all_filt$long_named_cluster[sce_all_filt$cluster==i] <- long_celltype
+  }
 }
+table(sce_all_filt$long_named_cluster)
 # head(sce_all_filt$long_named_cluster)
 sce_all_filt$cluster <- as.integer(sce_all_filt$cluster)
 
 unique(sce_all_filt$long_named_cluster)
 
 
-
-
-
 ```
+
 
 ```{r assign color to the good quality clusters}
 # Create label and assign colour for each cluster for convenient annotation later
