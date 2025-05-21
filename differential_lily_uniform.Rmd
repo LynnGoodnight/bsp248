@@ -296,6 +296,8 @@ p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster",
 print(p1)  
 
 # save.image('differential_lily_develop.RData')
+
+
 ```
 
 
