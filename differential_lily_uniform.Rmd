@@ -294,7 +294,7 @@ p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster", 
   ggtitle(paste('UMAP', sampSet))
 
 print(p1)
-cell_type_colors <- output_color_code_in_UMAP (p1, "long_named_cluster")
+# cell_type_colors <- output_color_code_in_UMAP (p1, "long_named_cluster")
 
 
 p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", point_size = selected_point_size) + 
@@ -1470,11 +1470,11 @@ DE_analysis(sce_all_filt, selected_DPI = 1,  Select_comparison= 3, comparison_pr
 DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 3, comparison_prefix = "_H1N1_PRCV")
 
 
-DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 2, comparison_prefix = "_ctl _PRCV")
+DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 2, comparison_prefix = "_ctl_PRCV")
 # DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 2, comparison_prefix = "_ctl_t2")
 
 
-DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 1, comparison_prefix = "_tl_H1N1")
+DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 1, comparison_prefix = "_ctl_H1N1")
 # DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 1, comparison_prefix = "_ctl_t1")
 
 ```
