@@ -294,6 +294,7 @@ p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster", 
   ggtitle(paste('UMAP', sampSet))
 
 print(p1)
+cell_type_colors <- output_color_code_in_UMAP (p1, "long_named_cluster")
 
 
 p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", point_size = selected_point_size) + 
