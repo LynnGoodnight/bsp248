@@ -14,6 +14,7 @@ sampSet <- Sys.getenv("sampSet")
 knitr::opts_knit$set(root.dir = work_dir)
 
 method = "edgeR"
+species = "pig"
 entrez_map_file <- '/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/references/ensembl_entrez_map.csv' 
 
 ```
@@ -854,8 +855,18 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
 ```{r draw dot plots contain each cluster as one column, and group columns based on main cell population, using GO dataset, _t1_t2_DPI12}
 
 # obtain clusters id belong to same cell type
-df_cell_type_cluster <- read.csv("munual_annotation.csv", header = FALSE)
+if(grepl("subset", sampSet))
+{
+  df_cell_type_cluster <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)  
+}else
+{
+  df_cell_type_cluster <- read.csv("munual_annotation.csv", header = FALSE)  
+}
+
 colnames(df_cell_type_cluster) <- c('cluster', 'annotated_type')
+# remove the content in parentheses as well as the parentheses
+df_cell_type_cluster$annotated_type <- sub(" \\(.*\\)", "", df_cell_type_cluster$annotated_type)
+
 df_grouped <- df_cell_type_cluster %>%
   group_by(annotated_type) %>%
   summarise(cluster_numbers = paste(cluster, collapse = ", ")) %>%
@@ -1003,15 +1014,15 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
 ```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset , fig.width= 12}
 
 
-conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_t1_t2_DPI12")
-conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_t1_t2_DPI1")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI12")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI1")
  
 
-conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_t2_DPI12")
-conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_t2_DPI1")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_PRCV_DPI12")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_PRCV_DPI1")
 
-conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_t1_DPI12")
-conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_t1_DPI1")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_H1N1_DPI12")
+conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_H1N1_DPI1")
 
 ```
 
@@ -1223,19 +1234,19 @@ conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_t1_DPI1")
 
 
 
-<!-- # Wrapping up -->
+# Wrapping up
 
-<!-- Save everything -->
+Save everything
 
-<!-- ```{r save rds} -->
+```{r save rds}
 
-<!-- #  -->
-<!-- save.image(file = paste0('advanced_analysis_',sampSet,'.RData')) -->
-<!-- sessionInfo() -->
-<!-- # saveRDS(sce_all_filt, file=paste0('sce_',sampSet,'_cluster_filt.rds')) -->
-
-
+#
+save.image(file = paste0('enrichment_analysis_',sampSet,'.RData'))
+sessionInfo()
+# saveRDS(sce_all_filt, file=paste0('sce_',sampSet,'_cluster_filt.rds'))
 
 
-<!-- ``` -->
+
+
+```
 
