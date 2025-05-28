@@ -16,8 +16,6 @@ reference_genome_version <- Sys.getenv("reference_genome_version")
 
 knitr::opts_knit$set(root.dir = work_dir)
 
-current_run  <- sampSet
-
 if (clustK == "") {
    clustK <- 20          # defaulty
 }
@@ -66,36 +64,40 @@ sce_all_corrected <- readRDS("sce_all_corrected_with_named_subcluster.rds")
 # ensure sample20 has been deleted 
 library(readxl)
 population_divide <- read_excel("Population devision.xlsx")
-selected_main_group <-  as.character(population_divide[1, 1])
-selected_cluster <- as.character(population_divide[1, 3])
+# selected_main_group <-  as.character(population_divide[1, 1])
+selected_main_group <-  sampSet
+population_divide <- as.data.frame(population_divide)
+rownames(population_divide) <-  population_divide[,1]
+selected_cluster <- as.character(population_divide[selected_main_group, 3])
 selected_cluster <- strsplit(selected_cluster, split = ",")[[1]]
 
 library(stringr)
 selected_cluster <- str_replace_all(selected_cluster, fixed(" "), "")
 # save.image('cluster_subset_uniform_debug.RData')
 # load('cluster_subset_uniform_debug.RData')
+print(selected_cluster)
 sce_main_group <- sce_all[ , (sce_all$cluster %in% selected_cluster) ]
 table(sce_main_group$Sample)
 overview_cell_number_per_sample <- function(sce, flag)
 {
   library(ggplot2)
-  df <- as.data.frame(table(sce$Sample)) 
+  df <- as.data.frame(table(sce$Sample))
   colnames(df) <- c("Sample_id","n_cells")
-  
-  
+
+
   dat_2 <- data.frame(Sample_id = sce$Sample,
                       cull_date = sce$cull_date,
                       condition = sce$condition)
-  dat_2 <- unique(dat_2)  
+  dat_2 <- unique(dat_2)
   dat  <- base:::merge(df, dat_2, all.x = TRUE)
-  
+
   ggplot(data=dat, aes(x=Sample_id, y=n_cells,fill = Sample_id)) +
     geom_bar(stat="identity") +
     geom_text(aes(label=n_cells), vjust=1, size=3.5) +
     ggtitle(paste0(flag, ", cell number summary")) +
     facet_wrap(cull_date ~ condition,  scales="free_x") +
-    theme(axis.text.x = element_text(angle = 90)) 
-  
+    theme(axis.text.x = element_text(angle = 90))
+
 }
 
 # my_bar_plot(sce_run_x,"before batch effect correction")
@@ -108,7 +110,7 @@ overview_cell_number_per_sample(sce_main_group, flag = paste('main group:', sele
 
 clust <- quickCluster(sce_main_group)
 size_factors <- calculateSumFactors(sce_main_group, cluster=clust)
-# log transfrom gene counts  
+# log transfrom gene counts
 sce_main_group <- logNormCounts(sce_main_group, size_factors=size_factors)
 varmod <- modelGeneVar(sce_main_group, block=sce_main_group$run)
 # Model the variance of the log-expression profiles for each gene, decomposing it into technical and biological components based on a fitted mean-variance trend.
@@ -126,7 +128,7 @@ sce_main_group_corrected$Sample <- sce_main_group$Sample
 sce_main_group_corrected$condition <- sce_main_group$condition
 sce_main_group_corrected$run <- sce_main_group$run
 sce_main_group_corrected$cull_date <- sce_main_group$cull_date
-sce_main_group_corrected$animal_id <- sce_main_group$animal_id  
+sce_main_group_corrected$animal_id <- sce_main_group$animal_id
 sce_main_group_corrected$cxds_score <- sce_main_group$cxds_score
 sce_main_group_corrected$query_doublet <- sce_main_group$query_doublet
 sce_main_group_corrected$sum_counts <- sce_main_group$sum_counts
@@ -160,12 +162,12 @@ library(bluster)
 library(scran)
 library(scater)
 # scran library need to load after some packages, otherwise could not find function "clusterCells"
- 
+
 sce_corrected_clust <- clusterCells(sce_main_group_corrected,
                                           use.dimred="corrected",
                                           BLUSPARAM=SNNGraphParam(k=clustK, type="jaccard",cluster.fun="louvain"))
 
-# k An integer scalar specifying the number of nearest neighbors to consider during graph construction.                                                          
+# k An integer scalar specifying the number of nearest neighbors to consider during graph construction.
 
 
 
@@ -183,25 +185,25 @@ UMAP_color_by_cluster <- function(selected_sce, title_flag = "batch effect corre
 {
   set.seed(55698)
   umap_plot <- plotUMAP(selected_sce, colour_by="cluster", point_size=0.3,
-                        text_by = "cluster") + 
+                        text_by = "cluster") +
     guides(colour = guide_legend(override.aes = list(size=6))) +
     ggtitle(paste(sampSet, title_flag))
   # Adjust the legend text and title size
-  
-  
+
+
   # Print the plot
   print(umap_plot)
-  
-  
+
+
   TSNE_plot <- plotTSNE(selected_sce, colour_by="cluster", point_size=0.3,
                         text_by = "cluster") + guides(colour = guide_legend(override.aes = list(size=6))) + ggtitle(paste(sampSet, title_flag))
-  print(TSNE_plot)  
+  print(TSNE_plot)
 }
 
 UMAP_color_by_cluster(sce_main_group_corrected, "batch effect corrected" )
 UMAP_color_by_cluster(sce_main_group, "original, no batch effect correction")
 
-ReducedDim_plot <-  plotReducedDim(sce_main_group_corrected, dimred='corrected', 
+ReducedDim_plot <-  plotReducedDim(sce_main_group_corrected, dimred='corrected',
                                    colour_by="cluster", point_size=0.1, ncomponents=5) +
   guides(colour = guide_legend(override.aes = list(size=6)))
 print(ReducedDim_plot)
@@ -222,7 +224,7 @@ colnames(dat) <- c('cluster', 'Sample_id', 'n_cells')
 dat_2 <- data.frame(Sample_id = sce_corrected$Sample,
                     cull_date = sce_corrected$cull_date,
                     condition = sce_corrected$condition)
-dat_2 <- unique(dat_2)  
+dat_2 <- unique(dat_2)
 dat  <- base:::merge(dat, dat_2, all.x = TRUE)
 
 
@@ -237,10 +239,10 @@ p <- ggplot(dat, aes(fill=Sample_id, y=n_cells, x=cluster)) +
 
 print(p)
 
-png(filename = paste0('Results/clustering_', sampSet, '_', selected_main_group, '_cluster_composition_barplot.png') , 
+png(filename = paste0('Results/clustering_', sampSet, '_', selected_main_group, '_cluster_composition_barplot.png') ,
     height=1800, width=2600, res = 300)
 print(p)
-dev.off()  
+dev.off()
 
 # draw a bar plot to visulize the composition of each virus within each cluster
 # colour cluster plot by condition
@@ -258,64 +260,64 @@ library(dplyr)
 library(scater)
 selected_sce <- sce_corrected
 
-draw_UMAP_after_sampling <- function(selected_sce, 
+draw_UMAP_after_sampling <- function(selected_sce,
                                      title_flag = "batch effect corrected")
 {
-  
+
   # Get UMAP coordinates and sample information
-  
+
   umap_coords <- as.data.frame(reducedDim(selected_sce, "UMAP"))
-  
+
   umap_coords$Sample <- selected_sce$Sample
   umap_coords$condition <- selected_sce$condition
   umap_coords$sum_counts_level <- selected_sce$sum_counts_level
   umap_coords$run <- selected_sce$run
   umap_coords$cull_date <- selected_sce$cull_date
   head(selected_sce$run)
-  
+
   set.seed(100)
   # Group by UMAP coordinates and sample one point from each group
   umap_sampled <- umap_coords %>%
     group_by(UMAP1, UMAP2) %>%
     sample_n(1)
-  
+
   # Plot the UMAP with sampled points
   umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = Sample)) +
     geom_point(size = 0.1) +
     ggtitle(paste(sampSet, title_flag)) +
     facet_wrap(cull_date ~ condition) +
     guides(colour = guide_legend(override.aes = list(size = 6)))
-  
+
   # Print the plot
   print(umap_plot)
-  
-  
+
+
   # Plot the UMAP with sampled points
   umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = condition)) +
     geom_point(size = 0.1) +
     facet_wrap( ~ cull_date) +
     ggtitle(paste(sampSet, title_flag)) +
     guides(colour = guide_legend(override.aes = list(size = 6)))
-  
+
   # Print the plot
   print(umap_plot)
-  
+
   umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = sum_counts_level)) +
     geom_point(size = 0.1) +
     ggtitle(paste(sampSet, title_flag)) +
     facet_wrap(cull_date ~ condition) +
     guides(colour = guide_legend(override.aes = list(size = 6)))
-  
+
   # Print the plot
   print(umap_plot)
-  
+
   umap_plot <- ggplot(umap_sampled, aes(x = UMAP1, y = UMAP2, color = run)) +
     geom_point(size = 0.1) +
     ggtitle(paste(sampSet, title_flag)) +
     guides(colour = guide_legend(override.aes = list(size = 6)))
-  
+
   # Print the plot
-  print(umap_plot)  
+  print(umap_plot)
 }
 draw_UMAP_after_sampling(sce_corrected, "batch effect corrected" )
 
@@ -354,7 +356,7 @@ clusters which have low purity, indicate some of cell within these clusters have
 ```{r calculate cells purity and visualization in UMAP}
 
 
-########################################################################### 
+###########################################################################
 
 pure <- neighborPurity(reducedDim(sce_corrected, "corrected"), sce_corrected$cluster)
 pure
@@ -365,7 +367,7 @@ pure.data$cluster <- sce_corrected$cluster
 ggplot(pure.data, aes(x=cluster, y=purity, colour=maximum)) +
   ggbeeswarm::geom_quasirandom(method="smiley") +
   labs(title=scTkn)
-########################################################################### 
+###########################################################################
 
 # check the UMAP location of cells have low purity values
 colData(selected_sce)$purity <- pure.data[colnames(selected_sce), 'purity']
@@ -417,7 +419,7 @@ in UMAP plot, we can find some clusters locate quiet close to other clusters, so
 And finally we'll look at the heterogeneity within each cluster by computing the within cluster sum of squares.
 
 ```{r check heterogeneity within each cluster and visualization}
-########################################################################### 
+###########################################################################
 rmsd <- clusterRMSD(reducedDim(sce_corrected, "corrected"), sce_corrected$cluster)
 
 df <- as.data.frame(rmsd)
@@ -472,16 +474,16 @@ violin_plot_doublet_inspection <- function(sce_corrected,
 {
   # visualize cxds_score and estimated Doublet in each cluster
   doublet.tab <- data.frame(colData(sce_corrected)[,c('cxds_score', 'cluster', 'query_doublet', 'sum_counts')])
-  
+
   p1 <- ggplot(doublet.tab, aes(x=cluster, y=cxds_score, colour=query_doublet)) +
-      ggbeeswarm::geom_quasirandom(method="smiley") + 
+      ggbeeswarm::geom_quasirandom(method="smiley") +
     ggtitle(paste("doublet inspection",selected_main_group,  title_flag))
   print(p1)
-  
+
   p1 <- ggplot(doublet.tab, aes(x=cluster, y=sum_counts, colour=query_doublet)) +
-      ggbeeswarm::geom_quasirandom(method="smiley")  + 
-    ggtitle(paste("doublet inspection", selected_main_group, title_flag)) 
-  print(p1)  
+      ggbeeswarm::geom_quasirandom(method="smiley")  +
+    ggtitle(paste("doublet inspection", selected_main_group, title_flag))
+  print(p1)
 }
 
 violin_plot_doublet_inspection(sce_corrected)
@@ -526,28 +528,28 @@ for(i in unique(names(marker.info.corrected)) )
 {
   # print(i)
   ord <- marker.info.corrected[[i]][order(marker.info.corrected[[i]]$mean.logFC.cohen, decreasing=TRUE),]
-  
+
   if(bsp_num == "bsp_248")
   {
-    if(reference_genome_version == "108")
+    if(reference_genome_version == "pig_108")
     {
-      ord$symbol <- rowData(sce_corrected)[rownames(ord), 'ENTREZ_symbol']      
-    }else if(reference_genome_version == "113")
+      ord$symbol <- rowData(sce_corrected)[rownames(ord), 'ENTREZ_symbol']
+    }else if(reference_genome_version == "pig_113")
     {
-      ord$symbol <- rowData(sce_corrected)[rownames(ord), 'Symbol']      
-    }      
+      ord$symbol <- rowData(sce_corrected)[rownames(ord), 'Symbol']
+    }
   }
   if(bsp_num == "bsp_247")
   {
-    ord$symbol <- rowData(sce_corrected)[rownames(ord), 'Symbol']       
+    ord$symbol <- rowData(sce_corrected)[rownames(ord), 'Symbol']
   }
-  
-  
+
+
   pfx <- paste0(work_dir,"markers_",sampSet,'_k',clustK)
   dir.create(pfx, showWarnings = FALSE)
-  
-  
-  
+
+
+
   DE_genes <- cbind(ord$symbol,ord)
   DE_genes <- as.data.frame(ord)
   DE_genes <- cbind(rownames(DE_genes), ord$symbol, DE_genes)
@@ -555,14 +557,14 @@ for(i in unique(names(marker.info.corrected)) )
   DE_genes_mid$'mean.AUC' <- DE_genes[ ,'mean.AUC']
   DE_genes <- DE_genes_mid
   colnames(DE_genes)[2:3] <- c('ensemble_id', 'symbols')
-  
+
   sheet_name <- paste("cluster", i, '#',cell_n_cluster[i])
-  
+
   # Add a worksheet to the workbook with the created name
   addWorksheet(wb, sheetName = sheet_name)
   # Write the data frame to the worksheet
   writeData(wb, sheet = sheet_name, DE_genes)
-  
+
 }
 # Save the workbook to a file
 saveWorkbook(wb, file = paste0('Results/clustering_', sampSet, '_',

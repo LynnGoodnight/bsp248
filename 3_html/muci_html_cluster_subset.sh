@@ -17,7 +17,7 @@
 #SBATCH --mem-per-cpu=50G
 
 ## Job Steps
-echo "Starting: in sbatch we asked for 10 thread and 128G mem"
+echo "Starting: in sbatch we asked for 10 thread and 50G mem"
 echo `date`
 
 module load tools
@@ -25,7 +25,7 @@ module load tools
 export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/"
 export bsp_num="bsp_248"
 export sampSet="all"
-export reference_genome_version="113"
+export reference_genome_version="pig_113"
 
 export clustK=25
 echo "clustK" $clustK
@@ -36,12 +36,17 @@ echo "clust date: " `date`
 
 cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code/bsp248
 
-export sampSet="all"
+# export sampSet="innate immune cells"
+# echo "sampSet" $sampSet
+# ## sleep 10
+# cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_clustering_subset_${sampSet}_k${clustK}.html"
+# /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('cluster_subset_uniform.Rmd',  output_file=\"${cF}\")"
+
+export sampSet="adaptive immune cells"
 echo "sampSet" $sampSet
 ## sleep 10
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_clustering_subset_${sampSet}_k${clustK}.html"
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('cluster_subset_uniform.Rmd',  output_file=\"${cF}\")"
-
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/R-4.5.0/bin/R -e "rmarkdown::render('cluster_subset_uniform.Rmd',  output_file=\"${cF}\")"
 
 echo `date`
 sleep 10
