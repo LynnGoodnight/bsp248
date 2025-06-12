@@ -4,7 +4,7 @@ author: "lily yang"
 date: "`r Sys.Date()`"
 output: html_document
 ---
-
+# set up
 ```{r, setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -24,25 +24,7 @@ print(clustK)
 print(paste('work_dir', work_dir, 'sampSet', sampSet, bsp_num))              
 pfx <- paste0(work_dir,"Results/")
 dir.create(pfx, showWarnings = FALSE)
-```
 
-
-
-This script picks up where "differential_lily_uniform.Rmd" left off.
-
-We will load the data, subset into different main cell type, re-cluster, remove doublet clusters, evaluate cluster quality, etc, in order to come up with the best dataset for annotation.
-
-This script is usually run on the hpc, see "code/3_html/muci_html_cluster_subset.sh".
-
-
-# first Clustering and evaluation
-
-## Reading in the data
-
-
-Load the data.
-
-```{r load processed data and subset overview cell number, fig.width=10}
 library(SingleCellExperiment)
 library(DropletUtils)
 library(scran)
@@ -57,6 +39,26 @@ library(bluster)
 library(scran)
 library(scater)
 
+
+```
+
+
+
+This script picks up where "differential_lily_uniform.Rmd" left off.
+
+We will load the data, subset into different main cell type, re-cluster, remove doublet clusters, evaluate cluster quality, etc, in order to come up with the best dataset for annotation.
+
+This script is usually run on the hpc, see "code/3_html/muci_html_cluster_subset.sh".
+
+
+# initial Clustering and evaluation
+
+## Reading in the data
+
+
+Load the data.
+
+```{r load processed data, subset selected cells, overview cell number per sample, fig.width=10}
 
 sce_all <- readRDS("sce_all_with_named_subcluster.rds")
 sce_all_corrected <- readRDS("sce_all_corrected_with_named_subcluster.rds")
@@ -105,7 +107,7 @@ overview_cell_number_per_sample(sce_main_group, flag = paste('main group:', sele
 
 ```
 
-```{r re-normarlize sce subset and batch effect correction, then visulize doublet situation in UMAP, fig.width=10}
+```{r re-normarlize sce subset, batch effect correction, calculate PCA and UMAP, fig.width=10}
 
 
 clust <- quickCluster(sce_main_group)
@@ -402,7 +404,10 @@ summary_purity_df <- data.frame(misclassifed_counts = adjusted_sums,
 print(df)
 print(summary_purity_df)
 
-print(paste(sum(summary_purity_df$misclassifed_counts),sum(summary_purity_df$misclassifed_proportion)))
+num_cells_misclassifed <- sum(summary_purity_df$misclassifed_counts)
+n_cells <-  dim(selected_sce)[2]
+print(paste(num_cells_misclassifed, num_cells_misclassifed/n_cells))
+
 
 
 
@@ -681,6 +686,44 @@ saveRDS(sce_main_group, file = paste0('sce_', 'subset_', selected_main_group, '_
 
 
 ```
+
+# re-clustering T cells and NK cells
+```{r create a function to visulize sub clusters in UMAP}
+
+
+# check the location of these 4 sub clusters in UMAP
+
+check_sample_contribution_location_for_selected_subcluster <- function(selected_sce,cluster_n = c('8a','8b','8c'))  
+  {
+  # check the sample contribution for cluster 
+  the_cluster <- prop.table(table(selected_sce$cluster, selected_sce$Sample), margin=1)[cluster_n,]
+  
+
+  the_cluster <- as.data.frame(the_cluster)
+  colnames(the_cluster) <- c('sub_cluster','sample','contribution' )
+
+
+  p <-   ggplot(data=the_cluster, aes(x = sub_cluster , y=contribution, fill=sample)) +
+    geom_bar(stat="identity")  + ggtitle('sample contribution in sub_cluster')
+  
+  print(p) 
+  
+  p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="Sample", point_size=1) + ggtitle('sub cluster')
+  print(p)
+
+  p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="condition", point_size=1) + ggtitle('sub cluster')
+  print(p)
+  
+  p <- plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="cluster", point_size=1) + ggtitle('sub cluster')
+  p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
+  print(p)  
+    
+  }
+
+  
+
+```
+
 
 
 ```{r save workspace image and create file for r shiny visulization}

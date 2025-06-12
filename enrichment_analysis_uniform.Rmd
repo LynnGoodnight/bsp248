@@ -33,6 +33,7 @@ library(clusterProfiler)
 library(org.Ss.eg.db)
 library(ggplot2)
 library(dplyr)
+
 ```
 
 
@@ -572,7 +573,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
                                              combine_flag = TRUE, database = "GO",
                                              id_type = "symbol")
 {
-  print(paste('start run function combined_GO_dotplots_mul_cluster for', cell_type))
+  # print(paste('start run function combined_GO_dotplots_mul_cluster for', cell_type))
   combined_GO_sig_df <- NULL  
   # combined_GO_sig_df include sig_  GO terms or kegg category within one main population
   file_list <- paste0(paste0(universal_file_path, clusters),'.csv')
@@ -592,11 +593,11 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
     
     if(file.exists(file_path))
     {
-      print(paste('import DE results for cluster ', file_list[i]))
+      print(paste('import DE results for ', file_list[i]))
       res_ids = read.csv(file_path, header=TRUE)
     }else
     {
-      print(paste('DE results for cluster ', file_list[i], 'not exist, skip'))
+      print(paste('DE results for ', file_list[i], 'not exist, skip'))
       next
     }
     
@@ -617,7 +618,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
       if(id_type == "entrez")
       {
         all_ENTREZID <- as.character(res_ids_entrez$entrez_ids)
-        print(paste("length(all_ENTREZID)", length(all_ENTREZID), "unique all_ENTREZID", length(unique(all_ENTREZID)), file_path)  )
+        print(paste("length (all_ENTREZID):", length(all_ENTREZID), "unique all_ENTREZID:", length(unique(all_ENTREZID)), ".", file_path)  )
         
         print(table(is.na(all_ENTREZID)))
         
@@ -646,7 +647,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
           next
         }
         sig_symbol <- as.character(sig_symbol$symbol)         
-        print(paste("length of all_symbol", length(all_symbol), "length of sig_symbol", length(sig_symbol), file_path)  )
+        print(paste("length of all_symbol:", length(all_symbol), "length of sig_symbol:", length(sig_symbol), file_path)  )
         columns(org.Ss.eg.db)
         sig_ENTREZID <- mapIds(org.Ss.eg.db,
                                keys=sig_symbol,
@@ -664,6 +665,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
       
       if(EA_method == "GSEA")
       {
+        # sort gene order
         geneList_df <- res_ids[, c("logFC", "symbol") ]
         ENTREZID <- mapIds(org.Ss.eg.db,
                            keys=geneList_df$symbol,
@@ -684,7 +686,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
         names(geneList) = geneList_df[, "ENTREZID"]
         ## feature 2: named vector
         
-        ## feature 3: decreasing orde
+        ## feature 3: decreasing order
         geneList = sort(geneList, decreasing = TRUE)
       }
       
@@ -720,7 +722,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
         GO_result_df <- ego@result
         if(sum(GO_result_df$pvalue < 0.05) == 0)
         {
-          print(paste('no enriched GO (pvalue < 0.05) in Gene Ontology (GO) database', file_path))
+          print(paste("no enriched GO (pvalue < 0.05) in Gene Ontology (GO) database", file_path))
           next
         }
         if(EA_method == "over_represent")
@@ -846,34 +848,6 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
 }
 
 
-
-
-```
-
-
-```{r draw dot plots contain each cluster as one column, and group columns based on main cell population, using GO dataset, _t1_t2_DPI12}
-
-# obtain clusters id belong to same cell type
-if(grepl("subset", sampSet))
-{
-  df_cell_type_cluster <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)  
-}else
-{
-  df_cell_type_cluster <- read.csv("munual_annotation.csv", header = FALSE)  
-}
-
-colnames(df_cell_type_cluster) <- c('cluster', 'annotated_type')
-# remove the content in parentheses as well as the parentheses
-df_cell_type_cluster$annotated_type <- sub(" \\(.*\\)", "", df_cell_type_cluster$annotated_type)
-
-df_grouped <- df_cell_type_cluster %>%
-  group_by(annotated_type) %>%
-  summarise(cluster_numbers = paste(cluster, collapse = ", ")) %>%
-  ungroup()
-
-
-
-
 conduct_EA_main <- function(selected_DE_method, selected_prefix)
 {
   selected_file_path <- paste0('Results/DE_', selected_DE_method, '_', sampSet, selected_prefix, '_cluster_')
@@ -892,6 +866,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     # Over Representation Analysis
 
     selected_database <- "GO"
+    print(paste("selected_EA_method:", selected_EA_method, "selected_database:", selected_database))
     GO_multiple_cell_type <- NULL
     GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
                                                               GO_multiple_cell_type,
@@ -918,6 +893,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     }
 
     selected_database <- "KEGG"
+    print(paste("selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
     GO_multiple_cell_type <- NULL
     GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
                                                               GO_multiple_cell_type,
@@ -947,6 +923,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     selected_EA_method <- "GSEA"
     # Gene Set Enrichment Analysis
     selected_database <- "GO"
+    print(paste("selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
     GO_multiple_cell_type <- NULL
     GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
                                                               GO_multiple_cell_type,
@@ -976,6 +953,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     # symbol/esemble id to ncbi id must induce repeats, so not possible to
     # conduct this analysis, need to use ncbi reference database in mapping step
     selected_database <- "KEGG"
+    print(paste("selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
     GO_multiple_cell_type <- NULL
     GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
                                                               GO_multiple_cell_type,
@@ -1004,6 +982,34 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
 
   }
 }  
+
+
+
+```
+
+
+```{r draw dot plots contain each cluster as one column, and group columns based on main cell population, using GO dataset, _t1_t2_DPI12}
+
+# obtain clusters id belong to same cell type
+if(grepl("subset", sampSet))
+{
+  df_cell_type_cluster <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)  
+}else
+{
+  df_cell_type_cluster <- read.csv("munual_annotation.csv", header = FALSE)  
+}
+
+colnames(df_cell_type_cluster) <- c('cluster', 'annotated_type')
+# remove the content in parentheses as well as the parentheses
+df_cell_type_cluster$annotated_type <- sub(" \\(.*\\)", "", df_cell_type_cluster$annotated_type)
+
+df_grouped <- df_cell_type_cluster %>%
+  group_by(annotated_type) %>%
+  summarise(cluster_numbers = paste(cluster, collapse = ", ")) %>%
+  ungroup()
+
+
+
 
 
 
