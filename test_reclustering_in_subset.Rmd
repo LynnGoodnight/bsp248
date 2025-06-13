@@ -22,14 +22,14 @@ selected_main_group <-  sampSet
 # sce_main_group_corrected <- readRDS(file = paste0('sce_', 'subset_', selected_main_group, '_corrected_initial_cluster.rds'))
 # sce_main_group <- readRDS(file = paste0('sce_', 'subset_', selected_main_group, '_initial_cluster.rds'))
 
-load(file = "subset_adaptive immune cells_k25_initial_cluster.RData" )
-# load(file = paste0(sampSet, "_k", clustK, selected_main_group, ))
+
 
 ```
 
 
 ```{r prepare the environment}
-
+load(file = "subset_adaptive immune cells_k25_initial_cluster.RData" )
+# load(file = paste0(sampSet, "_k", clustK, selected_main_group, ))
 library(SingleCellExperiment)
 library(DropletUtils)
 library(scran)
