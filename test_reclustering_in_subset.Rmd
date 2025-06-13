@@ -19,9 +19,10 @@ knitr::opts_knit$set(root.dir = work_dir)
 print(paste('work_dir', work_dir, 'sampSet', sampSet, 'bsp_num', bsp_num, 'clustK', clustK))              
 selected_main_group <-  sampSet
 
-sce_main_group_corrected <- readRDS(file = paste0('sce_', 'subset_', selected_main_group, '_corrected_initial_cluster.rds'))
-sce_main_group <- readRDS(file = paste0('sce_', 'subset_', selected_main_group, '_initial_cluster.rds'))
+# sce_main_group_corrected <- readRDS(file = paste0('sce_', 'subset_', selected_main_group, '_corrected_initial_cluster.rds'))
+# sce_main_group <- readRDS(file = paste0('sce_', 'subset_', selected_main_group, '_initial_cluster.rds'))
 
+load(file = paste0(sampSet, "_k", clustK, selected_main_group, "_initial_cluster.RData"))
 
 ```
 
@@ -40,11 +41,9 @@ library(ggplot2)
 library(ggbeeswarm)
 library(scater)
 
-sce_corrected = readRDS(file = paste0('sce_',sampSet,'_corrected_initial_cluster.rds'))
+```
 
-sce = readRDS(file = paste0('sce_',sampSet,'_initial_cluster.rds'))
-
-selected_sce <- sce_corrected
+```{r visulize clusters in UMAP}
 
 UMAP_color_by_cluster <- function(selected_sce, title_flag = "batch effect corrected" )
 {
@@ -62,76 +61,174 @@ UMAP_color_by_cluster <- function(selected_sce, title_flag = "batch effect corre
 }
 
 
-UMAP_color_by_cluster(sce_corrected, "batch effect corrected" )
+UMAP_color_by_cluster(sce_main_group_corrected, title_flag = paste("subset", selected_main_group, "batch effect corrected") )
+
 ```
 
 
-```{r reclustering selected clusters}
-cluster_n <- c("5", "14", "16", "15") 
+```{r no guided gene unsupervised subcluster }
+unguided_unsupervised_subcluster <- function(sce, cluster_n = '12',n_HVG = 2000, k_values = 20)
+{
+  # extract all cells in selected clusters, and get the top 1000 (n_HVG) HVG in these cells
+  selected_cells <- (sce$cluster %in% cluster_n)
+  print(table(selected_cells))
+  
+  varmod8 <- modelGeneVar(sce[,selected_cells], block=sce[,selected_cells]$run)
+  vargenes8 <- getTopHVGs(varmod8, n=n_HVG)
+  vargenes8 <- union(vargenes8, c('ENSSSCG00000000687', 'ENSSSCG00000008213',
+           "ENSSSCG00000039708", 'ENSSSCG00000040465' , 'ENSSSCG00000040140'))
+  library(batchelor)
+  set.seed(100)
+  sce_8_fastMNN <- fastMNN(sce[,selected_cells], batch=sce[,selected_cells]$run,
+                           subset.row = vargenes8, get.variance = TRUE)
+  sce_8_fastMNN <- runUMAP(sce_8_fastMNN , dimred="corrected")  
+  for (selected_k_value in k_values) 
+  {
+  
 
+  library(bluster)
   library(scran)
+  library(scater)    
+  set.seed(200)
+  sce_8_fastMNN_clust <- clusterCells(sce_8_fastMNN, use.dimred="corrected",
+                                      BLUSPARAM=SNNGraphParam(k = selected_k_value, 
+                                                              type="jaccard",
+                                                              cluster.fun="fast_greedy"))
+  print(paste('n_HVG:', n_HVG, 'selected_k_value:', selected_k_value ))
+  
+  print(table(sce_8_fastMNN_clust))
+  sce_8_fastMNN$cluster <- sce_8_fastMNN_clust
+  p <- plotUMAP(sce_8_fastMNN, colour_by="cluster", point_size=1) + 
+    ggtitle(paste(n_HVG, 'HVG',  'k', selected_k_value ))
+  p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
+  print(p)  
+  
+  # add necessary log-counts and gene id, symbol metadata into sce_8_fastMNN
+  assays(sce_8_fastMNN)$logcounts <- assays(sce)$logcounts[rownames(sce_8_fastMNN), selected_cells]
+
+  rowdat <- rowData(sce_8_fastMNN)
+  head(rowData(sce))
+  rowdat <- cbind( rowData(sce)[rownames(sce_8_fastMNN), ], rowdat )
+  rowData(sce_8_fastMNN) <- rowdat      
+  
+  # draw the UMAP plots to check the selected genes expression in UMAP 
+  for(selected_gene in c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E"))
+  {
+    print(selected_gene)
+      selected_gene_id <- rownames(sce)[rowData(sce)$Symbol == selected_gene]
+      p <- plotUMAP(sce_8_fastMNN, colour_by=selected_gene_id, by_exprs_values='logcounts') + 
+        ggtitle(paste(selected_gene, n_HVG, 'HVG',  'k', selected_k_value )) 
+      print(p)
+  }
+
+  # draw the violin plots to check the selected genes expression across new clusters 
+  selected_genes <- rownames(sce)[rowData(sce)$Symbol %in% c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E")]
+  library(scater)
+  p <- plotExpression(sce_8_fastMNN, features=selected_genes, x='cluster',
+                      exprs_values='logcounts')   
+  print(p)
+
+    
+    
+  }
+
+  # # Ensure sce_12_clust is a character vector
+  # sce_12_clust <- as.character(sce_12_clust)
+  # 
+  # # Loop through the numbers and assign labels
+  # subcluster_vector <- NULL
+  # for (i in 1:length(unique(sce_12_clust))) {
+  #   sce_12_clust[sce_12_clust == as.character(i)] <- paste0(cluster_n, letters[i])
+  #   subcluster_vector <- c(subcluster_vector,paste0(cluster_n, letters[i]))
+  # }
+  # # This will assign '1' with '12a', '2' with '12b', ..., '5' with '12e', ...
+  #   
+  # 
+  # cs <- as.character(sce$cluster)
+  # cs[c12] <- sce_12_clust
+  # sce$cluster <- cs
+  # check_sample_contribution_location_for_selected_subcluster(sce,subcluster_vector) 
+
+    
+  return(sce)
+}
+
+
+if(bsp_num == 'bsp_248' & sampSet == "adaptive immune cells")
+{
+  cluster_n <- c("1", "3", "4", "5", "6", "7", "8")
+  selected_k_values <- c(20, 30, 40, 50)
+  unguided_unsupervised_subcluster(sce_main_group, cluster_n, n_HVG = 1000, k_value = selected_k_values)
+  unguided_unsupervised_subcluster(sce_main_group, cluster_n, n_HVG = 2000, k_value = selected_k_values)
+  unguided_unsupervised_subcluster(sce_main_group, cluster_n, n_HVG = 3000, k_value = selected_k_values)  
+  unguided_unsupervised_subcluster(sce_main_group, cluster_n, n_HVG = 4000, k_value = selected_k_values)
+}
+
+
+```
+
+
+```{r code below re-cluster selected clusters after initial clustering, using CD4, CD8 guided_unsupervised_recluster, and manually select the number of input HVGs used in clustering }
+# that's the code i used to try separate T sub cell type and NK cell after initial clustering of bsp 248 data, but by manually select the number of input HVGs used in clustering to a very small value, this turn into a supervised strategy. the corresponding results store in HPC v1.7 folder
+
+library(scran)
 guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_value = 20)
 {
   selected_cells <- (sce$cluster %in% cluster_n)
   print(table(selected_cells))
-  
-  # CD4 <- counts(sce)['ENSSSCG00000000687',selected_cells]
-  # # the CD4 gene counts of all cells in selected cluster 
-  # CD8 <- counts(sce)['ENSSSCG00000008213',selected_cells]
-  # # the CD8B gene counts of all cells in selected cluster 
 
   # extract all cells in selected clusters, and get the top 1000 (n_HVG) HVG in these cells
   varmod8 <- modelGeneVar(sce[,selected_cells], block=sce[,selected_cells]$run)
   vargenes8 <- getTopHVGs(varmod8, n=1000)
-  
+
   CD4corr <- vector('numeric', 1000)
   CD8corr <- vector('numeric', 1000)
   KLRK1_corr <- vector('numeric', 1000)
   KLRB1_corr <- vector('numeric', 1000)
-  
+
   library(scHOT)
-  if(file.exists("recluster_CD4corr.rds") & 
-     file.exists("recluster_CD8corr.rds") & 
+  if(file.exists("recluster_CD4corr.rds") &
+     file.exists("recluster_CD8corr.rds") &
      file.exists("recluster_KLRK1_corr.rds") &
      file.exists("recluster_KLRB1_corr.rds"))
   {
     CD4corr = readRDS(file = "recluster_CD4corr.rds")
     CD8corr = readRDS(file = "recluster_CD8corr.rds")
     KLRK1_corr = readRDS(file = "recluster_KLRK1_corr.rds")
-    KLRB1_corr = readRDS(file = "recluster_KLRB1_corr.rds") 
-    
+    KLRB1_corr = readRDS(file = "recluster_KLRB1_corr.rds")
+
   }else
-  {  
+  {
     for(i in 1:length(vargenes8)){
-      
+
       # the weightedZIKendall function calculates weighted Tau*, where Tau* is described in Pimentel et al (2015). This association measure is defined for zero-inflated, non-negative random variables.
       CD4corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000000687', selected_cells],
                                       logcounts(sce)[vargenes8[i], selected_cells])
       # # calculate numeric weighted Tau* association value between gene CD4 and each HVG
-      # 
+      #
       # #   ‘exprs(sce)['ENSSSCG00000000687', selected_cells]’ is the log counts of gene CD4 in selected cells.
       # # ‘exprs(sce)[vargenes8[i], selected_cells]’ is the log counts of one of the HVG gene in selected cells
       CD8corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000008213', selected_cells],
                                       logcounts(sce)[vargenes8[i], selected_cells])
       # calculate numeric weighted Tau* association value between gene CD8 and each HVG
-      
+
       KLRK1_corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000040465', selected_cells],
                                          logcounts(sce)[vargenes8[i], selected_cells])
       KLRB1_corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000039708', selected_cells],
-                                         logcounts(sce)[vargenes8[i], selected_cells])      
+                                         logcounts(sce)[vargenes8[i], selected_cells])
     }
-    
- 
-    
+
+
+
     saveRDS(CD8corr, file = "recluster_CD8corr.rds")
     saveRDS(CD4corr, file = "recluster_CD4corr.rds")
     saveRDS(KLRK1_corr, file = "recluster_KLRK1_corr.rds")
-    saveRDS(KLRB1_corr, file = "recluster_KLRB1_corr.rds")    
-    
+    saveRDS(KLRB1_corr, file = "recluster_KLRB1_corr.rds")
+
   }
 
   # select HVGs who positively co-expressed with CD4 and CD8  or have little to no monotonic association with CD4 and CD8 in cells in cluster 8
-  
+
   # select HVGs whose association value with CD4 and CD8 both higher than 0.1
   # A value close to 1 indicates a strong positive association, meaning that as the expression of CD4 increases, the expression of the HVG also tends to increase across the selected cells
   # - **Value Close to Zero**: Indicates little to no monotonic association between the expression levels of the two genes.
@@ -143,34 +240,36 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   print("which(CD4corr > 0.1)")
   print(which(CD4corr > 0.1) )
   print("which(CD8corr > 0.1)")
-  print(which(CD8corr > 0.1) )  
-  print("which(KLRK1_corr > 0.1)")  
+  print(which(CD8corr > 0.1) )
+  print("which(KLRK1_corr > 0.1)")
   print(which(KLRK1_corr > 0.1) )
   print("which(KLRB1_corr > 0.1)")
-  print(which(KLRB1_corr > 0.1) )  
-  
+  print(which(KLRB1_corr > 0.1) )
+
 
   top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213',
            "ENSSSCG00000039708", 'ENSSSCG00000040465' , 'ENSSSCG00000040140')
-  # 
-  top <- unique(top)  
-  print(paste("length(top)", length(top)))  
+  #
+  top <- unique(top)
+  print(paste("number of gene used for draw UMAP", length(top)))
+  # 136 genes
 
-  
-  # we don't batch correct there, but only use fastMNN to reduce the genes we use for draw UMAP for those selected cells
+
+  # we not only batch correct for sequencing run there, but also use fastMNN to reduce the genes we use to draw UMAP that only include those selected cells, we have cells from 3 runs here
+  # and here top contain the genes we selected, they are used in draw UMAP
   library(batchelor)
   set.seed(100)
   sce_8_fastMN_UMAP <- fastMNN(sce[,selected_cells], batch=sce[,selected_cells]$run,
                            subset.row = top, get.variance = TRUE)
   sce_8_fastMN_UMAP <- runUMAP(sce_8_fastMN_UMAP, dimred="corrected")
-  p <- plotUMAP(sce_8_fastMN_UMAP, colour_by="batch", point_size=1) 
-  print(p)  
-  
-  
+  p <- plotUMAP(sce_8_fastMN_UMAP, colour_by="batch", point_size=1)
+  print(p)
+
+  # here we assign value for top again as we selected different genes to draw UMAP and do clustering
   # we now only select marker genes we're interested as input for the re-clustering
   KLRK1_corr <- KLRK1_corr[1:790]
   related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1),
-                            which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1)))  
+                            which(KLRK1_corr > 0.1), which(KLRB1_corr > 0.1)))
   # related_genes <- unique(c(which(CD4corr > 0.1), which(CD8corr > 0.1)))
   top <- vargenes8[related_genes]
   top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213',
@@ -179,9 +278,10 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   #        "ENSSSCG00000039708", 'ENSSSCG00000040465' , 'ENSSSCG00000040140')
   print("gene used for re-clustering")
   print(top)
+  # 16 genes
   if (length(top) < 5)
   {
-    print('reminding: less than 5 related genes used for guided unsupervised clustering')
+    print('warnning: less than 5 related genes used for guided unsupervised clustering')
   }
   set.seed(100)
   sce_8_fastMNN <- fastMNN(sce[,selected_cells], batch=sce[,selected_cells]$run,
@@ -192,14 +292,14 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   set.seed(200)
   print(k_value)
   sce_8_fastMNN_clust <- clusterCells(sce_8_fastMNN,use.dimred="corrected",
-                                      BLUSPARAM=SNNGraphParam(k = k_value, 
+                                      BLUSPARAM=SNNGraphParam(k = k_value,
                                                               type="jaccard",
                                                               cluster.fun="fast_greedy"))
 # k=100 is the final decided value
   # check the number of cells in each new cluster, and add new cluster annotation to sce_8_fastMN_UMAP
   print(table(sce_8_fastMNN_clust))
-  
-  
+
+
   sce_8_fastMN_UMAP$cluster <- sce_8_fastMNN_clust
   p <- plotUMAP(sce_8_fastMN_UMAP, colour_by="cluster", point_size=1) + ggtitle(' cluster')
   p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
@@ -211,24 +311,24 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
   rowdat <- rowData(sce_8_fastMN_UMAP)
   head(rowData(sce))
   rowdat <- cbind( rowData(sce)[rownames(sce_8_fastMN_UMAP), ], rowdat )
-  rowData(sce_8_fastMN_UMAP) <- rowdat      
+  rowData(sce_8_fastMN_UMAP) <- rowdat
 
-  
-  # draw the UMAP plots to check the selected genes expression in UMAP 
+
+  # draw the UMAP plots to check the selected genes expression in UMAP
   for(selected_gene in c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E"))
   {
     print(selected_gene)
       selected_gene_id <- rownames(sce)[rowData(sce)$Symbol == selected_gene]
-      p <- plotUMAP(sce_8_fastMN_UMAP, colour_by=selected_gene_id, by_exprs_values='logcounts') + 
-        ggtitle(selected_gene) 
+      p <- plotUMAP(sce_8_fastMN_UMAP, colour_by=selected_gene_id, by_exprs_values='logcounts') +
+        ggtitle(selected_gene)
       print(p)
   }
 
-  # draw the violin plots to check the selected genes expression across new clusters 
+  # draw the violin plots to check the selected genes expression across new clusters
   selected_genes <- rownames(sce)[rowData(sce)$Symbol %in% c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E")]
   library(scater)
   p <- plotExpression(sce_8_fastMN_UMAP, features=selected_genes, x='cluster',
-                      exprs_values='logcounts')   
+                      exprs_values='logcounts')
   print(p)
   for(selected_gene in c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E"))
   {
@@ -236,106 +336,108 @@ guided_unsupervised_recluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_v
     print(paste(selected_gene, selected_gene_id))
   }
 
-  
+
   # save.image("clustering_develop_code2.RData")
   #################################################
   # # Ensure sce_8_fastMNN_clust  is a character vector
   # sce_8_fastMNN_clust  <- as.character(sce_8_fastMNN_clust )
-  # 
+  #
 
   # # # add new sub cluster annotation to sce
-  # 
+  #
   # # Loop through the numbers and assign labels
   # subcluster_vector <- NULL
   # for (i in 1:length(unique(sce_8_fastMNN_clust ))) {
   #   sce_8_fastMNN_clust [sce_8_fastMNN_clust  == as.character(i)] <- paste0(cluster_n, letters[i])
   #   subcluster_vector <- c(subcluster_vector,paste0(cluster_n, letters[i]))
   # }
-  # 
+  #
   # # This will assign new sub-cluster '1' as '12a', '2' with '12b', ..., '5' with '12e', ...
-  # 
-  # 
+  #
+  #
   # cs <- as.character(sce$cluster)
   # cs[selected_cells] <- sce_8_fastMNN_clust
   # sce$cluster <- cs
   # check_sample_contribution_location_for_selected_subcluster(sce,subcluster_vector)
-  # 
+  #
   print(getwd())
-  saveRDS(sce_8_fastMN_UMAP, file = "r_shiny_sce_8_fastMNN.rds") 
+  saveRDS(sce_8_fastMN_UMAP, file = "r_shiny_sce_8_fastMNN.rds")
   return(sce_8_fastMN_UMAP)
 }
-print(clustK)
-sce_8_fastMN_UMAP <- guided_unsupervised_recluster(sce, cluster_n, n_HVG = 5000, k_value = clustK)
+
+# cluster_n <- c("5", "14", "16", "15")
+# print(clustK)
+# sce_8_fastMN_UMAP <- guided_unsupervised_recluster(sce, cluster_n, n_HVG = 5000, k_value = clustK)
 
 
 ```
 
 
 ```{r save top DE genes in excel file for new produced clusters by reclustering}
-sce_corrected <- sce_8_fastMN_UMAP
-cell_n_cluster <- table(sce_corrected$cluster)
-
-
-marker.info.corrected <- scoreMarkers(sce_corrected,
-                                      groups=sce_corrected$cluster,
-                                      block=sce_corrected$run,
-                                      assay.type='logcounts',
-                                      full.stats=TRUE)
-
-
-
-library(openxlsx)
-# Create a new workbook
-wb <- createWorkbook()
-
-for(i in unique(names(marker.info.corrected)))
-{
-  # print(i)
-  ord <- marker.info.corrected[[i]][order(marker.info.corrected[[i]]$mean.logFC.cohen, decreasing=TRUE),]
-  
-  if(bsp_num == "bsp_248")
-  {
-    if(reference_genome_version == "108")
-    {
-      ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']      
-    }else if(reference_genome_version == "113")
-    {
-      ord$symbol <- rowData(sce)[rownames(ord), 'Symbol']      
-    }      
-  }
-  if(bsp_num == "bsp_247")
-  {
-      ord$symbol <- rowData(sce)[rownames(ord), 'Symbol']       
-  }
-
-
-  pfx <- paste0(work_dir,"markers_",sampSet,'_k',clustK)
-  dir.create(pfx, showWarnings = FALSE)
-
-
-
-  DE_genes <- cbind(ord$symbol,ord)
-  DE_genes <- as.data.frame(ord)
-  DE_genes <- cbind(rownames(DE_genes), ord$symbol, DE_genes)
-  DE_genes_mid <- DE_genes[ ,c(7,1:6)]
-  DE_genes_mid$'mean.AUC' <- DE_genes[ ,'mean.AUC']
-  DE_genes <- DE_genes_mid
-  colnames(DE_genes)[2:3] <- c('ensemble_id', 'symbols')
-
-  sheet_name <- paste("cluster", i, '#',cell_n_cluster[i])
-
-  # Add a worksheet to the workbook with the created name
-  addWorksheet(wb, sheetName = sheet_name)
-  # Write the data frame to the worksheet
-  writeData(wb, sheet = sheet_name, DE_genes)
-
-}
-
-file_name <- paste0(pfx,'/', sampSet, "_Markers_re_cluster.xlsx")
-print(file_name)
-# Save the workbook to a file
-saveWorkbook(wb, file = file_name, overwrite = TRUE)
-
+# sce_corrected <- sce_8_fastMN_UMAP
+# cell_n_cluster <- table(sce_corrected$cluster)
+# 
+# 
+# marker.info.corrected <- scoreMarkers(sce_corrected,
+#                                       groups=sce_corrected$cluster,
+#                                       block=sce_corrected$run,
+#                                       assay.type='logcounts',
+#                                       full.stats=TRUE)
+# 
+# 
+# 
+# library(openxlsx)
+# # Create a new workbook
+# wb <- createWorkbook()
+# 
+# for(i in unique(names(marker.info.corrected)))
+# {
+#   # print(i)
+#   ord <- marker.info.corrected[[i]][order(marker.info.corrected[[i]]$mean.logFC.cohen, decreasing=TRUE),]
+#   
+#   if(bsp_num == "bsp_248")
+#   {
+#     if(reference_genome_version == "108")
+#     {
+#       ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']      
+#     }else if(reference_genome_version == "113")
+#     {
+#       ord$symbol <- rowData(sce)[rownames(ord), 'Symbol']      
+#     }      
+#   }
+#   if(bsp_num == "bsp_247")
+#   {
+#       ord$symbol <- rowData(sce)[rownames(ord), 'Symbol']       
+#   }
+# 
+# 
+#   pfx <- paste0(work_dir,"markers_",sampSet,'_k',clustK)
+#   dir.create(pfx, showWarnings = FALSE)
+# 
+# 
+# 
+#   DE_genes <- cbind(ord$symbol,ord)
+#   DE_genes <- as.data.frame(ord)
+#   DE_genes <- cbind(rownames(DE_genes), ord$symbol, DE_genes)
+#   DE_genes_mid <- DE_genes[ ,c(7,1:6)]
+#   DE_genes_mid$'mean.AUC' <- DE_genes[ ,'mean.AUC']
+#   DE_genes <- DE_genes_mid
+#   colnames(DE_genes)[2:3] <- c('ensemble_id', 'symbols')
+# 
+#   sheet_name <- paste("cluster", i, '#',cell_n_cluster[i])
+# 
+#   # Add a worksheet to the workbook with the created name
+#   addWorksheet(wb, sheetName = sheet_name)
+#   # Write the data frame to the worksheet
+#   writeData(wb, sheet = sheet_name, DE_genes)
+# 
+# }
+# 
+# file_name <- paste0(pfx,'/', sampSet, "_Markers_re_cluster.xlsx")
+# print(file_name)
+# # Save the workbook to a file
+# saveWorkbook(wb, file = file_name, overwrite = TRUE)
+# 
 
 
 # save.image('clustering_develop_code.RData')

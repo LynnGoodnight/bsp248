@@ -1,5 +1,5 @@
 ---
-title: "clustering and sub-clustering with each main group"
+title: "clustering and sub-clustering within each subset"
 author: "lily yang"
 date: "`r Sys.Date()`"
 output: html_document
@@ -43,11 +43,9 @@ library(scater)
 
 ```
 
+This script picks up where initial clustering step left off.
 
-
-This script picks up where "differential_lily_uniform.Rmd" left off.
-
-We will load the data, subset into different main cell type, re-cluster, remove doublet clusters, evaluate cluster quality, etc, in order to come up with the best dataset for annotation.
+We will load the data, divide cells into different subset, re-cluster, remove doublet clusters, evaluate cluster quality, etc, in order to come up with the best dataset for annotation.
 
 This script is usually run on the hpc, see "code/3_html/muci_html_cluster_subset.sh".
 
@@ -59,12 +57,12 @@ This script is usually run on the hpc, see "code/3_html/muci_html_cluster_subset
 
 Load the data.
 
-```{r load processed data, subset selected cells, overview cell number per sample, fig.width=10}
+```{r load processed data produced at end of initial clustering script, subset selected cells, overview cell number per sample, fig.width=10}
 
 sce_all <- readRDS("sce_all_with_named_subcluster.rds")
-sce_all_corrected <- readRDS("sce_all_corrected_with_named_subcluster.rds")
 
-# ensure sample20 has been deleted 
+# ensure sample 20 has been deleted 
+# read in a table record which initial clusters belong to which subset, extract the clusters id for one subset
 library(readxl)
 population_divide <- read_excel("Population devision.xlsx")
 # selected_main_group <-  as.character(population_divide[1, 1])
@@ -79,6 +77,8 @@ selected_cluster <- str_replace_all(selected_cluster, fixed(" "), "")
 # save.image('cluster_subset_uniform_debug.RData')
 # load('cluster_subset_uniform_debug.RData')
 print(selected_cluster)
+
+# extract cells belong to selected initial clusters
 sce_main_group <- sce_all[ , (sce_all$cluster %in% selected_cluster) ]
 table(sce_main_group$Sample)
 overview_cell_number_per_sample <- function(sce, flag)
@@ -507,7 +507,7 @@ violin_plot_doublet_inspection(sce_corrected)
 # save the R variables
 
 
-save.image(file = paste0(sampSet, "_k", clustK, selected_main_group, "_initial_cluster.RData"))
+save.image(file = paste0('subset', selected_main_group, "_k", clustK, "_initial_cluster.RData"))
 
 saveRDS(sce_main_group_corrected, file = paste0('sce_', 'subset_', selected_main_group, '_corrected_initial_cluster.rds'))
 saveRDS(sce_main_group, file = paste0('sce_', 'subset_', selected_main_group, '_initial_cluster.rds'))
