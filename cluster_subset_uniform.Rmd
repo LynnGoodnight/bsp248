@@ -442,8 +442,7 @@ ggplot(data=df, aes(x=cluster, y=rmsd)) +
 
 
 
-## check suspicious clusters
-### check QC metrics all clusters
+### check QC metrics of all clusters
 check QC metrics for all clusters (sum_counts, genes_detected, mito_proportion).
 check sample contribution of suspicious cluster, sample distribution in UMAP of suspicious cluster
 
@@ -467,7 +466,7 @@ print(p)
 
 ```
 
-## Doublet inspection
+## Doublet inspection of all clusters
 
 It may be the case that our suspected doublets, which fell in a particular region of the UMAP, have formed their own cluster. This is a convenient means of removing them as we can get rid of the whole cluster and don't have to rationalist a threshold for suspected doublet value.
 
@@ -507,7 +506,7 @@ violin_plot_doublet_inspection(sce_corrected)
 # save the R variables
 
 
-save.image(file = paste0('subset', selected_main_group, "_k", clustK, "_initial_cluster.RData"))
+# save.image(file = paste0('subset', selected_main_group, "_k", clustK, "_initial_cluster.RData"))
 
 saveRDS(sce_main_group_corrected, file = paste0('sce_', 'subset_', selected_main_group, '_corrected_initial_cluster.rds'))
 saveRDS(sce_main_group, file = paste0('sce_', 'subset_', selected_main_group, '_initial_cluster.rds'))
@@ -515,46 +514,155 @@ saveRDS(sce_main_group, file = paste0('sce_', 'subset_', selected_main_group, '_
 
 ```
 
-# re-clustering T cells and NK cells
-```{r create a function to visulize sub clusters in UMAP}
+# re-clustering T cells and NK cells if necessary 
+```{r create a function to visulize new generated clusters in this step}
 
-
-# check the location of these 4 sub clusters in UMAP
+# check the location of selected new generated clusters in UMAP
 
 check_sample_contribution_location_for_selected_subcluster <- function(selected_sce,cluster_n = c('8a','8b','8c'))  
-  {
-  # check the sample contribution for cluster 
-  the_cluster <- prop.table(table(selected_sce$cluster, selected_sce$Sample), margin=1)[cluster_n,]
-  
-
-  the_cluster <- as.data.frame(the_cluster)
-  colnames(the_cluster) <- c('sub_cluster','sample','contribution' )
+{
+# check the sample contribution for cluster 
+the_cluster <- prop.table(table(selected_sce$cluster, selected_sce$Sample), margin=1)[cluster_n,]
 
 
-  p <-   ggplot(data=the_cluster, aes(x = sub_cluster , y=contribution, fill=sample)) +
-    geom_bar(stat="identity")  + ggtitle('sample contribution in sub_cluster')
-  
-  print(p) 
-  
-  p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="Sample", point_size=1) + ggtitle('sub cluster')
-  print(p)
+the_cluster <- as.data.frame(the_cluster)
+colnames(the_cluster) <- c('sub_cluster','sample','contribution' )
 
-  p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="condition", point_size=1) + ggtitle('sub cluster')
-  print(p)
-  
-  p <- plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="cluster", point_size=1) + ggtitle('sub cluster')
-  p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
-  print(p)  
-    
-  }
 
+p <-   ggplot(data=the_cluster, aes(x = sub_cluster , y=contribution, fill=sample)) +
+  geom_bar(stat="identity")  + ggtitle('sample contribution in sub_cluster')
+
+print(p) 
+
+p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="Sample", point_size=1) + ggtitle('sub cluster')
+print(p)
+
+p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="condition", point_size=1) + ggtitle('sub cluster')
+print(p)
+
+p <- plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="cluster", point_size=1) + ggtitle('sub cluster')
+p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
+print(p)  
   
+}
 
 ```
 
 
+```{r unguided unsupervised re-cluster, fig.width=14, fig.height=10 }
 
-# output DE genes for all clusters and save image
+
+unguided_unsupervised_subcluster <- function(sce, cluster_n = '12',n_HVG = 2000, k_values = 20)
+{
+  # extract all cells in selected clusters, and get the top 1000 (n_HVG) HVG in these cells
+  selected_cells <- (sce$cluster %in% cluster_n)
+  print(table(selected_cells))
+  
+  varmod8 <- modelGeneVar(sce[,selected_cells], block=sce[,selected_cells]$run)
+  vargenes8 <- getTopHVGs(varmod8, n=n_HVG)
+  vargenes8 <- union(vargenes8, c('ENSSSCG00000000687', 'ENSSSCG00000008213',
+                                  "ENSSSCG00000039708", 'ENSSSCG00000040465' , 'ENSSSCG00000040140'))
+  library(batchelor)
+  set.seed(100)
+  sce_8_fastMNN <- fastMNN(sce[,selected_cells], batch=sce[,selected_cells]$run,
+                           subset.row = vargenes8, get.variance = TRUE)
+  sce_8_fastMNN <- runUMAP(sce_8_fastMNN , dimred="corrected")  
+  
+  library(bluster)
+  library(scran)
+  library(scater)    
+  selected_k_value <-  k_values
+  ########################################################################### 
+  
+  
+  
+  set.seed(200)
+  sce_8_fastMNN_clust <- scran::clusterCells(sce_8_fastMNN, use.dimred="corrected",
+                                             BLUSPARAM=SNNGraphParam(k = selected_k_value, 
+                                                                     type="jaccard",
+                                                                     cluster.fun="fast_greedy"))
+  # change the clustering algorithm to KmeansParam
+  # sce_8_fastMNN_clust <- scran::clusterCells(sce_8_fastMNN, use.dimred="corrected",
+  #                                     BLUSPARAM=KmeansParam(centers = 6))
+  
+  print(paste('n_HVG:', n_HVG, 'selected_k_value:', selected_k_value ))
+  
+  print(table(sce_8_fastMNN_clust))
+  sce_8_fastMNN$cluster <- sce_8_fastMNN_clust
+  p <- plotUMAP(sce_8_fastMNN, colour_by="cluster", point_size=1) + 
+    ggtitle(paste(n_HVG, 'HVG',  'k', selected_k_value ))
+  p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
+  print(p)  
+  
+  # add necessary log-counts and gene id, symbol metadata into sce_8_fastMNN
+  assays(sce_8_fastMNN)$logcounts <- assays(sce)$logcounts[rownames(sce_8_fastMNN), selected_cells]
+  
+  rowdat <- rowData(sce_8_fastMNN)
+  head(rowData(sce))
+  rowdat <- cbind( rowData(sce)[rownames(sce_8_fastMNN), ], rowdat )
+  rowData(sce_8_fastMNN) <- rowdat      
+  
+  # draw the UMAP plots to check the selected genes expression in UMAP 
+  for(selected_gene in c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E"))
+  {
+    
+    selected_gene_id <- rownames(sce)[rowData(sce)$Symbol == selected_gene]
+    print(paste(selected_gene, selected_gene_id))
+    p <- plotUMAP(sce_8_fastMNN, colour_by=selected_gene_id, by_exprs_values='logcounts') + 
+      ggtitle(paste(selected_gene, n_HVG, 'HVG',  'k', selected_k_value )) 
+    print(p)
+  }
+  
+  # draw the violin plots to check the selected genes expression across new clusters 
+  # selected_genes <- rownames(sce)[rowData(sce)$Symbol %in% c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E")]
+  selected_genes <- c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E")
+  library(scater)
+  p <- plotExpression(sce_8_fastMNN, features=selected_genes, x='cluster',
+                      exprs_values='logcounts', swap_rownames = 'Symbol' )   
+  print(p)
+  
+  
+  ########################################################################### 
+  
+  # Ensure sce_8_fastMNN_clust is a character vector
+  sce_8_fastMNN_clust <- as.character(sce_8_fastMNN_clust)
+  
+  # Loop through the numbers and assign new labels
+  subcluster_vector <- NULL
+  for (i in unique(sce_8_fastMNN_clust) ) {
+    new_cluster_lable <- paste0("re_", i)
+    sce_8_fastMNN_clust[sce_8_fastMNN_clust == as.character(i)] <- new_cluster_lable
+    subcluster_vector <- c(subcluster_vector, new_cluster_lable)
+  }
+  # This will assign '1' with 're_1', '2' with 're_2', ..., '5' with 're_5', ...
+  
+
+  
+  c12 <- (sce$cluster %in% cluster_n)
+  cs <- as.character(sce$cluster)
+  cs[c12] <- sce_8_fastMNN_clust
+  sce$cluster <- cs
+  check_sample_contribution_location_for_selected_subcluster(sce, subcluster_vector)
+  
+  
+  return(sce)
+}
+
+
+if(bsp_num == 'bsp_248' & sampSet == "adaptive immune cells")
+{
+  cluster_n <- c("1", "3", "4", "5", "6", "7", "8")
+  selected_k_values <- 10
+
+  sce_main_group_1 <- unguided_unsupervised_subcluster(sce_main_group, cluster_n, n_HVG = 4000, k_value = selected_k_values)
+}
+sce_main_group_corrected$cluster <- sce_main_group_1$cluster
+
+UMAP_color_by_cluster(sce_main_group_corrected, "batch effect corrected after re-clustering T cells, NK cells" )
+
+```
+
+# output DE genes within each clusters and save image
 Finally, we need to re-run our marker scoring because we have added some clusters. 
 
 
