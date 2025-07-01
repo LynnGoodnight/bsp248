@@ -119,9 +119,10 @@ unguided_unsupervised_subcluster <- function(sce, cluster_n = '12',n_HVG = 2000,
   # draw the UMAP plots to check the selected genes expression in UMAP 
   for(selected_gene in c("CD4", "CD8B",  "KLRB1", "KLRK1", "CD3E"))
   {
-    print(paste(selected_gene, selected_gene_id))
+
     
       selected_gene_id <- rownames(sce)[rowData(sce)$Symbol == selected_gene]
+      print(paste(selected_gene, selected_gene_id))
       p <- plotUMAP(sce_8_fastMNN, colour_by=selected_gene_id, by_exprs_values='logcounts') + 
         ggtitle(paste(selected_gene, n_HVG, 'HVG',  'k', selected_k_value )) 
       print(p)
