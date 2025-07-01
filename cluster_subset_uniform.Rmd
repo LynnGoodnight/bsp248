@@ -549,7 +549,7 @@ print(p)
 ```
 
 
-```{r unguided unsupervised re-cluster, fig.width=14, fig.height=10 }
+```{r unguided unsupervised re-cluster, fig.width=10, fig.height=9 }
 
 
 unguided_unsupervised_subcluster <- function(sce, cluster_n = '12',n_HVG = 2000, k_values = 20)
