@@ -838,10 +838,10 @@ saveWorkbook(wb, file = paste0('Results/clustering_', sampSet, '_',
 # save the R variables
 setwd(work_dir)
 
-# save.image(file = paste0(sampSet, "_", "k", clustK, "_with_subcluster.RData"))
+# save.image(file = paste0(sampSet, "_", "k", clustK, "_with_refined_cluster.RData"))
 
-# saveRDS(sce_corrected, file = paste0('sce_',sampSet,'_corrected_with_subcluster.rds'))
-# saveRDS(sce, file = paste0('sce_',sampSet,'_with_subcluster.rds'))
+# saveRDS(sce_corrected, file = paste0('sce_',sampSet,'_corrected_with_refined_cluster.rds'))
+# saveRDS(sce, file = paste0('sce_',sampSet,'_with_refined_cluster.rds'))
 sessionInfo()
 
 ```
