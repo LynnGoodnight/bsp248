@@ -841,8 +841,8 @@ setwd(work_dir)
 # save.image(file = paste0(sampSet, "_", "k", clustK, "_with_refined_cluster.RData"))
 
 
-saveRDS(sce_main_group_corrected, file = paste0('sce_',sampSet,'_corrected_with_refined_cluster.rds'))
-saveRDS(sce_main_group, file = paste0('sce_',sampSet,'_with_refined_cluster.rds'))
+saveRDS(sce_main_group_corrected, file = paste0('sce_subset_',sampSet,'_corrected_with_refined_cluster.rds'))
+saveRDS(sce_main_group, file = paste0('sce_subset_',sampSet,'_with_refined_cluster.rds'))
 sessionInfo()
 
 ```

@@ -39,7 +39,7 @@ echo "sampSet" $sampSet
 # cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_differential_${sampSet}.html"
 # /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/R-4.5.0/bin/R -e "rmarkdown::render('differential_lily_uniform.Rmd',  output_file=\"${cF}\")"
 
-export sampSet="subset_adaptive_immune_cells"
+export sampSet="subset_adaptive immune cells"
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_differential_${sampSet}.html"
 /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/R-4.5.0/bin/R -e "rmarkdown::render('differential_lily_uniform.Rmd',  output_file=\"${cF}\")"
 
