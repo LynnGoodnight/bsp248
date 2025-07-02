@@ -549,7 +549,7 @@ print(p)
 ```
 
 
-```{r unguided unsupervised re-cluster, fig.width=10, fig.height=9 }
+```{r unguided unsupervised re-cluster, fig.width=10, fig.height=8 }
 
 
 unguided_unsupervised_subcluster <- function(sce, cluster_n = '12',n_HVG = 2000, k_values = 20)
@@ -840,8 +840,8 @@ setwd(work_dir)
 
 # save.image(file = paste0(sampSet, "_", "k", clustK, "_with_refined_cluster.RData"))
 
-# saveRDS(sce_corrected, file = paste0('sce_',sampSet,'_corrected_with_refined_cluster.rds'))
-# saveRDS(sce, file = paste0('sce_',sampSet,'_with_refined_cluster.rds'))
+saveRDS(sce_corrected, file = paste0('sce_',sampSet,'_corrected_with_refined_cluster.rds'))
+saveRDS(sce, file = paste0('sce_',sampSet,'_with_refined_cluster.rds'))
 sessionInfo()
 
 ```

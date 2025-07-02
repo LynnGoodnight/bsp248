@@ -40,15 +40,14 @@ This script is usually run on the hpc, see "lily code/html/html_differential.sh"
 ```{r load input data }
 
 
-sce_all <- readRDS(paste0('sce_',sampSet,'_initial_cluster.rds')) 
-sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_initial_cluster.rds'))   
+# sce_all <- readRDS(paste0('sce_',sampSet,'_initial_cluster.rds')) 
+# sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_initial_cluster.rds'))   
 
 
-# if we conducted sub-clustering
-# sce_all <- readRDS(paste0('sce_',sampSet,'_with_subcluster.rds')) 
-# sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_with_subcluster.rds')) 
+# if we refine initial cluster results by conduct sub-clustering or re-clustering
+sce_all <- readRDS(paste0('sce_',sampSet,'_with_refined_cluster.rds'))
+sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_with_refined_cluster.rds'))
   
-
 
 ```
 
