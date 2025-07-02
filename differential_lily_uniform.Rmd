@@ -650,7 +650,7 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
   
   df_proportion <- prop.table(as.matrix(abundances), margin = 2)
   df_proportion <-as.data.frame(t(df_proportion)) 
-  n_cluster <- ncol(df_proportion)
+  n_cluster <- unique(sce_all_filt$cluster)
   df_proportion$sample_id <- rownames(df_proportion)
   
   library(ggpubr)
@@ -662,7 +662,7 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
   df_condition <- selected_anno[ , c("condition", "sample_id")]  
   df_pro_condition <- merge(df_condition, df_proportion)
   
-  for (selected_cluster in 1:n_cluster) 
+  for (selected_cluster in n_cluster) 
   {
     # print(selected_cluster)
     df_pro_one <- df_pro_condition[ , c("sample_id", "condition", as.character(selected_cluster))]
