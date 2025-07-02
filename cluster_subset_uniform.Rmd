@@ -654,9 +654,9 @@ if(bsp_num == 'bsp_248' & sampSet == "adaptive immune cells")
   cluster_n <- c("1", "3", "4", "5", "6", "7", "8")
   selected_k_values <- 10
 
-  sce_main_group_1 <- unguided_unsupervised_subcluster(sce_main_group, cluster_n, n_HVG = 4000, k_value = selected_k_values)
+  sce_main_group <- unguided_unsupervised_subcluster(sce_main_group, cluster_n, n_HVG = 4000, k_value = selected_k_values)
 }
-sce_main_group_corrected$cluster <- sce_main_group_1$cluster
+sce_main_group_corrected$cluster <- sce_main_group$cluster
 
 UMAP_color_by_cluster(sce_main_group_corrected, "batch effect corrected after re-clustering T cells, NK cells" )
 
@@ -674,7 +674,7 @@ assays(sce_main_group_corrected)$logcounts <- assays(sce_main_group)$logcounts[r
 
 sce_corrected <- sce_main_group_corrected
 
-
+########################################################################### 
 cell_n_cluster <- table(sce_corrected$cluster)
 
 
@@ -840,8 +840,9 @@ setwd(work_dir)
 
 # save.image(file = paste0(sampSet, "_", "k", clustK, "_with_refined_cluster.RData"))
 
-saveRDS(sce_corrected, file = paste0('sce_',sampSet,'_corrected_with_refined_cluster.rds'))
-saveRDS(sce, file = paste0('sce_',sampSet,'_with_refined_cluster.rds'))
+
+saveRDS(sce_main_group_corrected, file = paste0('sce_',sampSet,'_corrected_with_refined_cluster.rds'))
+saveRDS(sce_main_group, file = paste0('sce_',sampSet,'_with_refined_cluster.rds'))
 sessionInfo()
 
 ```
