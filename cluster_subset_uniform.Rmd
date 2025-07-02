@@ -630,11 +630,11 @@ unguided_unsupervised_subcluster <- function(sce, cluster_n = '12',n_HVG = 2000,
   # Loop through the numbers and assign new labels
   subcluster_vector <- NULL
   for (i in unique(sce_8_fastMNN_clust) ) {
-    new_cluster_lable <- paste0("re_", i)
+    new_cluster_lable <- paste0(i, "re")
     sce_8_fastMNN_clust[sce_8_fastMNN_clust == as.character(i)] <- new_cluster_lable
     subcluster_vector <- c(subcluster_vector, new_cluster_lable)
   }
-  # This will assign '1' with 're_1', '2' with 're_2', ..., '5' with 're_5', ...
+  # This will assign '1' with '1re', '2' with '2re', ..., '5' with '5re', ...
   
 
   
