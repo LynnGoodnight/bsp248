@@ -726,8 +726,8 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
   
 }
 
-direct_t_test(DPI_1, selected_DPI = "DPI_1")
-direct_t_test(DPI_12, selected_DPI = "DPI_12")
+# direct_t_test(DPI_1, selected_DPI = "DPI_1")
+# direct_t_test(DPI_12, selected_DPI = "DPI_12")
 ```
 
 
