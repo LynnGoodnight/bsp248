@@ -136,9 +136,12 @@ rm(sce_all, sce_all_corrected)
 
 ## add in cluster names as sce_all_filt$named_cluster
 #Long-form annotated version including cell subtypes
-if(grepl("subset", sampSet))
+if(sampSet == "innate immune cells")
 {
   munual_annotation <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)  
+}else if(sampSet == "adaptive immune cells")
+{
+  munual_annotation <- read.csv("munual_annotation_adaptive_immune_cells.csv", header = FALSE)
 }else
 {
   munual_annotation <- read.csv("munual_annotation.csv", header = FALSE) 
