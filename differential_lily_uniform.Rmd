@@ -310,7 +310,7 @@ p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster",
   ggtitle(paste('UMAP', sampSet)) 
 print(p1)  
 
-# save.image('differential_lily_develop.RData')
+
 
 
 ```
@@ -725,7 +725,7 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
   
   
 }
-
+save.image('differential_lily_develop.RData')
 # direct_t_test(DPI_1, selected_DPI = "DPI_1")
 # direct_t_test(DPI_12, selected_DPI = "DPI_12")
 ```
