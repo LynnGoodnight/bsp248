@@ -136,10 +136,10 @@ rm(sce_all, sce_all_corrected)
 
 ## add in cluster names as sce_all_filt$named_cluster
 #Long-form annotated version including cell subtypes
-if(sampSet == "innate immune cells")
+if(sampSet == "subset_innate_immune_cells")
 {
   munual_annotation <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)  
-}else if(sampSet == "adaptive immune cells")
+}else if(sampSet == "subset_adaptive immune cells")
 {
   munual_annotation <- read.csv("munual_annotation_adaptive_immune_cells.csv", header = FALSE)
 }else
@@ -442,8 +442,8 @@ if(bsp_num == "bsp_248" & !grepl("subset", sampSet))
 
 
 # # Update shiny app with filtered data for easier visualization and identification. For easier visualization in app, pre-convert counts metrics to log scale. 
-saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected', '_with_named_subcluster.rds'))
-saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_named_subcluster.rds'))
+saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected', '_with_named_refined_cluster.rds'))
+saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_named_refined_cluster.rds'))
 
 # save.image(file = paste0('differential_annotated.RData'))
 ```
