@@ -48,6 +48,8 @@ This script is usually run on the hpc, see "lily code/html/html_differential.sh"
 sce_all <- readRDS(paste0('sce_',sampSet,'_with_refined_cluster.rds'))
 sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_with_refined_cluster.rds'))
   
+unique(sce_all_corrected$cluster)
+# sce_all_corrected$cluster <- sce_all$cluster
 
 ```
 
@@ -92,7 +94,6 @@ Based on manual annotation from the clustered data using the generated marker ge
 ## first look at marker genes for sorting
 
 
-sce_all_corrected$cluster <- sce_all$cluster
 
 # plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD4'], x='cluster', exprs_values='logcounts')
 plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD4'], x='cluster')
@@ -129,7 +130,7 @@ Next we name the good quality clusters.
 ```{r name cell types for each cluster }
 sce_filt <- sce_all_corrected
 sce_all_filt <- sce_all
-
+unique(sce_filt$cluster)
 
 print(sce_all)
 rm(sce_all, sce_all_corrected)
@@ -161,13 +162,14 @@ df_grouped <- munual_annotation %>%
   ungroup()
 df_grouped$celltype_cluster <- paste(df_grouped$name, df_grouped$cluster_contained)
 
+unique(sce_filt$cluster)
 sce_all_filt$cluster <- as.character(sce_all_filt$cluster)
 if(bsp_num == "bsp_248")
 {
   for (i in unique(sce_all_filt$cluster))
   {
     
-    cell_type <- munual_annotation[ i, "name"]
+    cell_type <- munual_annotation[ munual_annotation$cluster == i, "name"]
     long_celltype <- as.character(df_grouped[ df_grouped$name == cell_type, "celltype_cluster"])         
     # print(paste(i, cell_type, long_celltype))
     # print(typeof(long_celltype))
@@ -177,7 +179,7 @@ if(bsp_num == "bsp_248")
 }
 table(sce_all_filt$long_named_cluster)
 # head(sce_all_filt$long_named_cluster)
-sce_all_filt$cluster <- as.integer(sce_all_filt$cluster)
+# sce_all_filt$cluster <- as.integer(sce_all_filt$cluster)
 
 unique(sce_all_filt$long_named_cluster)
 
@@ -302,7 +304,7 @@ p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster", 
   ggtitle(paste('UMAP', sampSet))
 
 print(p1)
-cell_type_colors <- output_color_code_in_UMAP (p1, "long_named_cluster")
+
 
 
 p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", point_size = selected_point_size) + 
@@ -434,6 +436,7 @@ add a bubbleplot of defining genes
 
 ```{r exclude suspicious clusters and bad quality samples}
 
+# when run this script on bsp248 data before subset cells, we remove sample_20 here
 if(bsp_num == "bsp_248" & !grepl("subset", sampSet))
 {
   sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
@@ -481,9 +484,6 @@ if(bsp_num == "bsp_248")
   
   
   subsets <- list(DPI_1 = DPI_1, DPI_12 = DPI_12)
-  
-  
-  
 }
 
 print(table(sce_all_filt$cluster))
@@ -504,7 +504,7 @@ We'll consider a change in abundance (proportion of one cluster) with condition 
 
 
 df_cluster_number_name  <- as.data.frame(unique(colData(sce_all_filt)[,c('named_cluster', 'cluster')]))
-rownames(df_cluster_number_name) <- 1:nrow(df_cluster_number_name)
+rownames(df_cluster_number_name) <- df_cluster_number_name$cluster
 # head(df_cluster_number_name)
 
 # conduct_DA conduct DA for DPI1, DPI12 for selected comparison
@@ -655,8 +655,7 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
   
   library(ggpubr)
   library(ggrepel)
-  abundances <- table(x$cluster, x$Sample)
-  abundances <- unclass(abundances)
+
   selected_anno <- annot[colnames(abundances), ]
   
   df_condition <- selected_anno[ , c("condition", "sample_id")]  
@@ -676,13 +675,14 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
     cell_type <- df_cluster_number_name[ selected_cluster, "named_cluster" ]
     library(ggpubr)    
     # View(df_pro_one)
-    colnames(df_pro_one)
+    # colnames(df_pro_one)
     p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
                     fill = "sample_id", color = "sample_id", 
                      size = 3) +
       ggtitle(paste("proportion of cluster", selected_cluster, 
                     cell_type, "across condition", selected_DPI))  +
-      guides(color = guide_legend(override.aes = list(size = 10))) 
+      guides(color = guide_legend(override.aes = list(size = 10))) +
+      facet_grid(. ~ condition,  scales="free_x" )
     
     # +
     #   stat_compare_means(comparisons = my_comparisons,
@@ -725,9 +725,9 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
   
   
 }
-save.image('differential_lily_develop.RData')
-# direct_t_test(DPI_1, selected_DPI = "DPI_1")
-# direct_t_test(DPI_12, selected_DPI = "DPI_12")
+# save.image('differential_lily_develop.RData')
+direct_t_test(DPI_1, selected_DPI = "DPI_1")
+direct_t_test(DPI_12, selected_DPI = "DPI_12")
 ```
 
 
@@ -745,6 +745,8 @@ visulize_abundance <- function(sce_all_filt, annot)
     mutate(proportion = n_cells / sum(n_cells)) %>% # Compute proportion
     ungroup()                                       # Remove grouping
   
+
+  
   dat$S_id <- gsub("sample_", "S", dat$sample_id ) 
   dat_annot <- merge(dat, annot[ , c("DPI", "condition", "sample_id")], by = "sample_id")
   dat_2 = data.frame(cluster_id = colData(sce_all_filt)$cluster,
@@ -752,9 +754,9 @@ visulize_abundance <- function(sce_all_filt, annot)
                      cell_type = colData(sce_all_filt)$named_cluster)
   dat_2 = unique(dat_2)  
   
+  # add cell type column in dat_annot
   dat_annot <- merge(dat_annot, dat_2, by.x = "cluster", by.y = "long_named_cluster",
                 all.x = TRUE)
-
   dat_annot$cluster_type <-  paste(dat_annot$cluster_id, dat_annot$cell_type, sep = "_")
   dat_annot$DPI <- paste0("DPI_", dat_annot$DPI)
   colnames(dat_annot)[1] <- "type_cluster"
@@ -771,7 +773,7 @@ visulize_abundance <- function(sce_all_filt, annot)
   dev.off()  
   
   
-  # head(dat_annot$cluster_id)
+  # head(dat_annot)
   dat_annot$cluster_id <- as.factor(dat_annot$cluster_id)
   # names(clusterid_colors) <- as.integer(names(clusterid_colors))
   p <- ggplot(data = dat_annot, aes(x = S_id, y = proportion, fill = cluster_id)) +
@@ -815,8 +817,26 @@ visulize_abundance <- function(sce_all_filt, annot)
   {
     DPI_dat_annot <- dat_annot[dat_annot$DPI == selected_DPI , ]
     
-    # need to choose a cluster that every sample has cells in this cluster, here we choose cluster 1
-    cluster_dat_annot <- dat_annot[dat_annot$cluster_id == 1 , ]
+    # code below is used to generate DPI_ordered_S_id, which order sample id in x-axis
+    # need to choose a cluster that every sample has cells in this cluster, we first find a cluster meet this requirement 
+    df_cluster_freq_in_sample <- 
+      dat_annot %>%
+      group_by(cluster_id) %>%
+      summarise(n = n())
+    
+    qualified_clusters  <- df_cluster_freq_in_sample$cluster_id[df_cluster_freq_in_sample$n == length(unique(dat_annot$sample_id) )]
+    if(length(qualified_clusters) > 0)
+    {
+    print(paste('select cluster', qualified_clusters[1], 'that every sample has cells in this cluster'))
+      
+    }else
+    {
+      print("warning: none cluster meet requirement that every sample has cells in this cluster")
+    }
+    
+
+    
+    cluster_dat_annot <- dat_annot[dat_annot$cluster_id == qualified_clusters[1] , ]
     cluster_dat_annot$S_id <- factor(cluster_dat_annot$S_id, levels= cluster_dat_annot$S_id[order(cluster_dat_annot$condition)])
     DPI_ordered_S_id <-  levels(cluster_dat_annot$S_id)[(levels(cluster_dat_annot$S_id) %in% unique(DPI_dat_annot$S_id))]
     

@@ -30,7 +30,6 @@ cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code/bsp
 export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/"
 export bsp_num="bsp_248"
 export clustK="25"
-
 export sampDPI="both"
 echo "sampSet" $sampSet
 ## sleep 10
