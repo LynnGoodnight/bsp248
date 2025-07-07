@@ -187,7 +187,7 @@ unique(sce_all_filt$long_named_cluster)
 ```
 
 
-```{r assign color to the good quality clusters}
+```{r manually assign color to the good quality clusters}
 # Create label and assign colour for each cluster for convenient annotation later
 
 # label every cell with its tissue type and the cluster it belong to
@@ -255,7 +255,7 @@ output_color_code_in_UMAP <- function(x = p1,
   df_mapping_unique <- unique(df_mapping)
   
   # Merge with extracted color info
-  library(dplyr)
+
   color_cluster_map <- df_colors %>%
     distinct(group, colour) %>%
     inner_join(df_mapping_unique, by = "group") %>%
@@ -738,7 +738,7 @@ visulize_abundance <- function(sce_all_filt, annot)
   
   dat <- as.data.frame(table(sce_all_filt$long_named_cluster, sce_all_filt$Sample))
   colnames(dat) <- c('cluster', 'sample_id', 'n_cells')
-  library(dplyr)
+
   # Calculate proportion per sample
   dat <- dat %>%
     group_by(sample_id) %>%                         # Group by sample
