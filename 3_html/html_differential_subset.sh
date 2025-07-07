@@ -19,7 +19,7 @@
 echo "Starting: in sbatch we asked for 3 thread and 128G mem"
 echo `date`
 
-module load R/R.4.2.1
+module load tools
 
 
 echo "here: " `pwd`
