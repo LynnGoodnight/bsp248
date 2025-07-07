@@ -738,7 +738,7 @@ visulize_abundance <- function(sce_all_filt, annot)
   
   dat <- as.data.frame(table(sce_all_filt$long_named_cluster, sce_all_filt$Sample))
   colnames(dat) <- c('cluster', 'sample_id', 'n_cells')
-
+  library(dplyr)
   # Calculate proportion per sample
   dat <- dat %>%
     group_by(sample_id) %>%                         # Group by sample
@@ -755,8 +755,7 @@ visulize_abundance <- function(sce_all_filt, annot)
   dat_2 = unique(dat_2)  
   
   # add cell type column in dat_annot
-  dat_annot <- merge(dat_annot, dat_2, by.x = "cluster", by.y = "long_named_cluster",
-                all.x = TRUE)
+  dat_annot <- merge(dat_annot, dat_2, by.x = "cluster", by.y = "long_named_cluster", all.x = TRUE)
   dat_annot$cluster_type <-  paste(dat_annot$cluster_id, dat_annot$cell_type, sep = "_")
   dat_annot$DPI <- paste0("DPI_", dat_annot$DPI)
   colnames(dat_annot)[1] <- "type_cluster"
