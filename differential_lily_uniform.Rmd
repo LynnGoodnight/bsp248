@@ -290,7 +290,7 @@ p1 <- plotUMAP(sce_filt, colour_by="cluster", text_by = "cluster",  point_size =
   theme(text = element_text(size = 20)) + ggtitle(paste('UMAP', sampSet))
 print(p1)
 clusterid_colors <- output_color_code_in_UMAP (p1, "cluster")
-  
+print(clusterid_colors)  
 
 p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
   guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
@@ -298,6 +298,8 @@ p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point
 
 print(p1)
 cell_type_colors <- output_color_code_in_UMAP (p1, "named_cluster")
+print(cell_type_colors)
+
 
 p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster", point_size = selected_point_size) +
   guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
@@ -725,7 +727,7 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
   
   
 }
-# save.image('differential_lily_develop.RData')
+
 direct_t_test(DPI_1, selected_DPI = "DPI_1")
 direct_t_test(DPI_12, selected_DPI = "DPI_12")
 ```
@@ -759,7 +761,7 @@ visulize_abundance <- function(sce_all_filt, annot)
   dat_annot$cluster_type <-  paste(dat_annot$cluster_id, dat_annot$cell_type, sep = "_")
   dat_annot$DPI <- paste0("DPI_", dat_annot$DPI)
   colnames(dat_annot)[1] <- "type_cluster"
-  
+  head(dat_annot)
   p <- ggplot(data=dat_annot, aes(x=S_id, y=proportion, fill=cell_type)) +
     geom_bar(stat="identity") + 
     facet_wrap(DPI ~ condition,  scales="free_x")+
@@ -868,6 +870,7 @@ visulize_abundance <- function(sce_all_filt, annot)
   
   
 }
+save.image('differential_lily_develop.RData')
 visulize_abundance(sce_all_filt, annot)
 
 
