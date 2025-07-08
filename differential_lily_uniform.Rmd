@@ -737,7 +737,7 @@ direct_t_test(DPI_12, selected_DPI = "DPI_12")
 
 visulize_abundance <- function(sce_all_filt, annot)
 {
-  head(dat)
+
   dat <- as.data.frame(table(sce_all_filt$cluster, sce_all_filt$Sample))
   colnames(dat) <- c('cluster_id', 'sample_id', 'n_cells')
   library(dplyr)
