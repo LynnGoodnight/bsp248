@@ -314,6 +314,18 @@ p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster",
   ggtitle(paste('UMAP', sampSet)) 
 print(p1)  
 
+# i will draw additional UMAP with cluster 11, 12 not been displayed
+if(bsp_num == "bsp_248" & sampSet == "subset_adaptive immune cells")
+{
+  sce_tem  <- sce_filt[, sce_filt$cluster != "11"]  
+  sce_tem  <- sce_tem[, sce_tem$cluster != "12"]
+
+  p1 <- plotUMAP(sce_tem, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
+  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
+  ggtitle(paste('UMAP', sampSet))
+  print(p1)  
+  
+}
 
 
 
