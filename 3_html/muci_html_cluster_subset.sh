@@ -52,6 +52,7 @@ cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code/bsp
 
 export sampSet="Non immune cells"
 echo "sampSet" $sampSet
+export clustK=35
 ## sleep 10
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_clustering_subset_${sampSet}_k${clustK}.html"
 /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/R-4.5.0/bin/R -e "rmarkdown::render('cluster_subset_uniform.Rmd',  output_file=\"${cF}\")"
