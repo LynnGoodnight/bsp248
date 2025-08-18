@@ -140,9 +140,12 @@ rm(sce_all, sce_all_corrected)
 if(sampSet == "subset_innate_immune_cells")
 {
   munual_annotation <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)  
-}else if(sampSet == "subset_adaptive immune cells")
+}else if(sampSet == "subset_adaptive_immune_cells")
 {
   munual_annotation <- read.csv("munual_annotation_adaptive_immune_cells.csv", header = FALSE)
+}else if(sampSet == "subset_non_immune_cells")
+{
+  munual_annotation <- read.csv("munual_annotation_non_immune_cells.csv", header = FALSE)
 }else
 {
   munual_annotation <- read.csv("munual_annotation.csv", header = FALSE) 
@@ -314,8 +317,8 @@ p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster",
   ggtitle(paste('UMAP', sampSet)) 
 print(p1)  
 
-# i will draw additional UMAP with cluster 11, 12 not been displayed
-if(bsp_num == "bsp_248" & sampSet == "subset_adaptive immune cells")
+# draw additional UMAP with cluster 11, 12 not been displayed for subset_adaptive_immune_cells requested by collaborators
+if(bsp_num == "bsp_248" & sampSet == "subset_adaptive_immune_cells")
 {
   sce_tem  <- sce_filt[, sce_filt$cluster != "11"]  
   sce_tem  <- sce_tem[, sce_tem$cluster != "12"]
