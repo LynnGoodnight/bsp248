@@ -153,9 +153,12 @@ if(sampSet == "subset_innate_immune_cells")
 
 
 colnames(munual_annotation) <- c("cluster", "name")
-
-# remove the content in parentheses as well as the parentheses
-munual_annotation$name <- sub(" \\(.*\\)", "", munual_annotation$name)
+if(sampSet == "subset_adaptive_immune_cells")
+{
+  # remove the content in parentheses as well as the parentheses
+  munual_annotation$name <- sub(" \\(.*\\)", "", munual_annotation$name)
+  
+}
 
 # add an column show all clusters belong to same cell types
 library(dplyr)
