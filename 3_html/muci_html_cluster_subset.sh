@@ -35,13 +35,13 @@ echo "clust date: " `date`
 
 cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code/bsp248
 
-# export sampSet="innate immune cells"
+# export sampSet="innate_immune_cells"
 # echo "sampSet" $sampSet
 # ## sleep 10
 # cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_clustering_subset_${sampSet}_k${clustK}.html"
 # /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('cluster_subset_uniform.Rmd',  output_file=\"${cF}\")"
 
-# export sampSet="adaptive immune cells"
+# export sampSet="adaptive_immune_cells"
 # echo "sampSet" $sampSet
 # ## sleep 10
 # cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_clustering_subset_${sampSet}_k${clustK}.html"
@@ -50,7 +50,7 @@ cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code/bsp
 # cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_test_reclustering_in_subset_${sampSet}.html"
 # /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/R-4.5.0/bin/R -e "rmarkdown::render('test_reclustering_in_subset.Rmd',  output_file=\"${cF}\")"
 
-export sampSet="Non immune cells"
+export sampSet="non_immune_cells"
 echo "sampSet" $sampSet
 export clustK=35
 ## sleep 10
