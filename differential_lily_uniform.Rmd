@@ -154,7 +154,7 @@ if(sampSet == "subset_innate_immune_cells")
 
 colnames(munual_annotation) <- c("cluster", "name")
 if(sampSet == "subset_adaptive_immune_cells")
-{
+{ 
   # remove the content in parentheses as well as the parentheses
   munual_annotation$name <- sub(" \\(.*\\)", "", munual_annotation$name)
   
@@ -1032,6 +1032,7 @@ plot_volcano <- function(df_re, title)
     geom_text_repel() +
     labs(title=title, x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
     geom_vline(xintercept=c(-0.6, 0.6), col="red") +
+    geom_vline(xintercept=c(-2, 2), col="green") +
     geom_hline(yintercept=-log10(0.05), col="red") +
     scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
     theme(axis.title.x = element_text(size = 15),                     # X-axis label font size
