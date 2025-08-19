@@ -1030,7 +1030,8 @@ plot_volcano <- function(df_re, title)
   ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
     geom_point() +
     geom_text_repel() +
-    labs(title=title, x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
+    ggtitle(title, paste("DE genes")) +
+    labs( x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
     geom_vline(xintercept=c(-0.6, 0.6), col="red") +
     geom_vline(xintercept=c(-2, 2), col="green") +
     geom_hline(yintercept=-log10(0.05), col="red") +
@@ -1087,7 +1088,7 @@ mod_data <- function(df_re, i, cell_type, flag)
     # Set p-value floor
     # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit 
     
-    p1 <- plot_volcano(df_re, title=paste(cell_type, flag, "DE genes across cells within cluster", i))
+    p1 <- plot_volcano(df_re, title=paste(cell_type, "cluster", i, "comparison", flag))
     # print(p1)
     
     png(filename = paste0('Results/DE_edgeR_', sampSet, flag, '_volcano_cluster', i, '.png') , height=1600, width=1600, res = 220)
