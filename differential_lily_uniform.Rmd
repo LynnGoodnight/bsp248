@@ -153,12 +153,12 @@ if(sampSet == "subset_innate_immune_cells")
 
 
 colnames(munual_annotation) <- c("cluster", "name")
-if(sampSet == "subset_adaptive_immune_cells")
-{ 
-  # remove the content in parentheses as well as the parentheses
-  munual_annotation$name <- sub(" \\(.*\\)", "", munual_annotation$name)
-  
-}
+# if(sampSet == "subset_adaptive_immune_cells")
+# { 
+#   # remove the content in parentheses as well as the parentheses
+#   munual_annotation$name <- sub(" \\(.*\\)", "", munual_annotation$name)
+#   
+# }
 
 # add an column show all clusters belong to same cell types
 library(dplyr)
@@ -1067,10 +1067,14 @@ mod_data <- function(df_re, i, cell_type, flag)
               sep=',', quote=FALSE, row.names = FALSE)  
   
   df_re_clean <- df_re[ df_re$diffexpressed != "NO", ]
-  # dir.create('Results')
-  write.table(df_re_clean, 
-              file=paste0('Results/DE_edgeR_', sampSet, flag, '_clean_cluster_', i, '.csv'),
-              sep=',', quote=FALSE, row.names = FALSE)  
+  if(nrow(df_re_clean) > 0)
+  {
+    # dir.create('Results')
+    write.table(df_re_clean, 
+                file=paste0('Results/DE_edgeR_', sampSet, flag, '_clean_cluster_', i, '.csv'),
+                sep=',', quote=FALSE, row.names = FALSE)     
+  }
+ 
   
   df_re$delabel <- NA
   if(sum(df_re$diffexpressed != "NO") == 0)
