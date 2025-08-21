@@ -8,8 +8,6 @@
 #SBATCH --job-name=muci_enrichment_subset
 ## %j is job number, %x is the job name above
 #SBATCH --output=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/logs/%x-%j-outs.txt
-## 10 hours
-#SBATCH --time=1-10:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=5
 #SBATCH --mem-per-cpu=100G
@@ -28,9 +26,21 @@ cd /mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/code/bsp
 
 export work_dir="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/"
 export bsp_num="bsp_248"
-export clustK="25"
-export sampSet="subset_innate_immune_cells"
 export sampDPI="both"
+
+export sampSet="subset_innate_immune_cells"
+echo "sampSet" $sampSet
+## sleep 10
+cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_enrichment_${sampSet}.html"
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/R-4.5.0/bin/R -e "rmarkdown::render('enrichment_analysis_uniform.Rmd',  output_file=\"${cF}\")"
+
+export sampSet="subset_non_immune_cells"
+echo "sampSet" $sampSet
+## sleep 10
+cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_enrichment_${sampSet}.html"
+/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/R-4.5.0/bin/R -e "rmarkdown::render('enrichment_analysis_uniform.Rmd',  output_file=\"${cF}\")"
+
+export sampSet="subset_adaptive_immune_cells"
 echo "sampSet" $sampSet
 ## sleep 10
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_enrichment_${sampSet}.html"
