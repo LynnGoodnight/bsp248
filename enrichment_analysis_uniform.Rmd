@@ -56,6 +56,10 @@ colnames(df_cell_type_cluster) <- c('cluster', 'annotated_type')
 # remove the content in parentheses as well as the parentheses
 # df_cell_type_cluster$annotated_type <- sub(" \\(.*\\)", "", df_cell_type_cluster$annotated_type)
 
+df_cell_type_cluster$annotated_type <- sub(" / ", " or ", df_cell_type_cluster$annotated_type)
+df_cell_type_cluster$annotated_type <- sub("/", " or ", df_cell_type_cluster$annotated_type)
+
+
 df_grouped <- df_cell_type_cluster %>%
   group_by(annotated_type) %>%
   summarise(cluster_numbers = paste(cluster, collapse = ", ")) %>%
