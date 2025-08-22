@@ -353,7 +353,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
         
         print(table(is.na(all_ENTREZID)))
         
-        
+        library(dplyr)
         ## Extract significant DE results
         sig_ENTREZID <- dplyr::filter(res_ids_entrez, p_adjust < 0.05)
         head(sig_ENTREZID)
@@ -772,7 +772,8 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
 ```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset , fig.width= 12}
 # save.image(file = paste0('EA_debug',sampSet,'.RData'))
 
-
+if(TRUE)
+{
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI12")
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI1")
  
@@ -782,6 +783,8 @@ conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_PRCV_DPI1"
 
 # conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_H1N1_DPI12")
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_H1N1_DPI1")
+  
+}
 
 ```
 
