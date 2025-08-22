@@ -370,24 +370,34 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
         
         ## Extract significant DE results
         sig_symbol <- dplyr::filter(res_ids, p_adjust < 0.05)
+        sig_symbol <- as.data.frame(sig_symbol)
         # sig_symbol <- dplyr::filter(res_ids, PValue < 0.05)
-        
+        # print(sig_symbol)
+        # print(nrow(sig_symbol))
         if(nrow(sig_symbol) == 0 )
         {
           print(paste("no sig DE genes for cluster ", file_path, ', skip over_represent method, only GSEA'))
           next
         }
         sig_symbol <- as.character(sig_symbol$symbol)         
-        print(paste("length of all_symbol:", length(all_symbol), "length of sig_symbol:", length(sig_symbol), file_path)  )
-        columns(org.Ss.eg.db)
-        
+
+        # columns(org.Ss.eg.db)
+        tryCatch({
         sig_ENTREZID <- mapIds(org.Ss.eg.db,
                                keys=sig_symbol,
                                column="ENTREZID",
                                keytype="SYMBOL",
-                               multiVals = "first")  
+                               multiVals = "first")          
+        }, error=function(e)
+        {
+          print("no valid sig ENTREZID, skip")
+
+        }
+        )
+
+  
         sig_ENTREZID <- as.character(sig_ENTREZID)   
-        
+        sig_ENTREZID <- sig_ENTREZID[!is.na(sig_ENTREZID)]
         all_ENTREZID <- mapIds(org.Ss.eg.db,
                                keys=all_symbol,
                                column="ENTREZID",
@@ -395,6 +405,13 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
                                multiVals = "first")
         
         all_ENTREZID <- as.character(all_ENTREZID)
+        all_ENTREZID <- all_ENTREZID[!is.na(all_ENTREZID)]
+        print(paste("length of all_ENTREZID:", length(all_ENTREZID), "length of sig_ENTREZID:", length(sig_ENTREZID), ";", file_path)  )
+        if(length(sig_ENTREZID) == 0)
+        {
+          print("valid sig_ENTREZID is 0, skip")
+          next
+        }
       }      
     }
     
@@ -468,7 +485,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
         # keyType = "ncbi-geneid",
       if(is.null(ego))
       {
-        print(paste(database, EA_method, file_path))
+        print(paste("ego is null", database, EA_method, file_path))
         next
       }
         GO_result_df <- ego@result
@@ -523,7 +540,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
       }
       if(is.null(KEGG_ORA))
       {
-        print(paste(database, EA_method, file_path))
+        print(paste("KEGG_ORA is null", database, EA_method, file_path))
         next
       }
       KEGG_ORA <- setReadable(KEGG_ORA, OrgDb = org.Ss.eg.db, keyType="ENTREZID")
@@ -620,7 +637,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     # Over Representation Analysis
     ################################################################
     selected_database <- "GO"
-    print(paste("selected_EA_method:", selected_EA_method, "selected_database:", selected_database))
+    print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))
     GO_multiple_cell_type <- NULL
     GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
                                                               GO_multiple_cell_type,
@@ -630,6 +647,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
                                                               EA_method = selected_EA_method,
                                                               universal_file_path = selected_file_path,
                                                               combine_flag = FALSE, id_type = "symbol")
+    
     if(is.null(GO_multiple_cell_type))
     {
       print(paste("no enriched", selected_database, "term in cell type: ", selected_cell_types))
@@ -752,10 +770,10 @@ conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI1
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI1")
  
 
-conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_PRCV_DPI12")
+# conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_PRCV_DPI12")
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_PRCV_DPI1")
 
-conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_H1N1_DPI12")
+# conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_H1N1_DPI12")
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_H1N1_DPI1")
 
 ```
