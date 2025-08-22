@@ -46,8 +46,6 @@ echo "sampSet" $sampSet
 cF="/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_248/lily/stages/step_enrichment_${sampSet}.html"
 /mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/R-4.5.0/bin/R -e "rmarkdown::render('enrichment_analysis_uniform.Rmd',  output_file=\"${cF}\")"
 
-/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/local/bin/R -e "rmarkdown::render('differential_lily_uniform.Rmd',  output_file=\"${cF}\")"
-
 echo `date`
 sleep 10
 echo "The End"

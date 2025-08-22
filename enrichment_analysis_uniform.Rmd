@@ -391,10 +391,15 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
         }, error=function(e)
         {
           print("no valid sig ENTREZID, skip")
+          sig_ENTREZID <- NULL
 
         }
         )
-
+        if(length(sig_ENTREZID) == 0)
+        {
+          print("valid sig_ENTREZID is 0, skip")
+          next
+        }
   
         sig_ENTREZID <- as.character(sig_ENTREZID)   
         sig_ENTREZID <- sig_ENTREZID[!is.na(sig_ENTREZID)]
@@ -675,6 +680,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
                                                               EA_method = selected_EA_method,
                                                               universal_file_path = selected_file_path,
                                                               combine_flag = FALSE, id_type = "symbol")
+    
     if(is.null(GO_multiple_cell_type))
     {
       print(paste("no enriched", selected_database, "term in cell type: ", selected_cell_types))
@@ -706,6 +712,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
                                                               EA_method = selected_EA_method,
                                                               universal_file_path = selected_file_path,
                                                               combine_flag = FALSE, id_type = "symbol")
+    
     if(is.null(GO_multiple_cell_type))
     {
       print(paste("no enriched", selected_database, "term in cell type: ", selected_cell_types))
