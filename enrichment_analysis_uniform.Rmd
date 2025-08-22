@@ -465,7 +465,12 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
       }
      
         
-        # keyType = "ncbi-geneid",       
+        # keyType = "ncbi-geneid",
+      if(is.null(ego))
+      {
+        print(paste(database, EA_method, file_path))
+        next
+      }
         GO_result_df <- ego@result
         if(sum(GO_result_df$pvalue < 0.05) == 0)
         {
