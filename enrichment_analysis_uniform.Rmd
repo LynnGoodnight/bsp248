@@ -521,7 +521,11 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
 
 
       }
-      
+      if(is.null(KEGG_ORA))
+      {
+        print(paste(database, EA_method, file_path))
+        next
+      }
       KEGG_ORA <- setReadable(KEGG_ORA, OrgDb = org.Ss.eg.db, keyType="ENTREZID")
       GO_result_df <- KEGG_ORA@result
       if(nrow(GO_result_df) == 0)
