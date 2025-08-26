@@ -379,27 +379,23 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
           print(paste("no sig DE genes for cluster ", file_path, ', skip over_represent method, only GSEA'))
           next
         }
-        sig_symbol <- as.character(sig_symbol$symbol)         
+        sig_symbol <- as.character(sig_symbol$symbol)    
+        # sometimes the only DEG doesn't have matched ENTREZID, so sig_ENTREZID will become empty, then don't continue over-present strategy
 
-        # columns(org.Ss.eg.db)
-        tryCatch({
-        sig_ENTREZID <- mapIds(org.Ss.eg.db,
-                               keys=sig_symbol,
-                               column="ENTREZID",
-                               keytype="SYMBOL",
-                               multiVals = "first")          
-        }, error=function(e)
-        {
+        sig_ENTREZID <- tryCatch({
+          mapIds(org.Ss.eg.db,
+                 keys     = sig_symbol,
+                 column   = "ENTREZID",
+                 keytype  = "SYMBOL",
+                 multiVals = "first")
+        }, error = function(e) {
           print("no valid sig ENTREZID, skip")
-          sig_ENTREZID <- NULL
-
-        }
-        )
-        if(length(sig_ENTREZID) == 0)
-        {
-          print("valid sig_ENTREZID is 0, skip")
-          next
-        }
+          NULL
+        })     
+        if (is.null(sig_ENTREZID)) {
+        
+          next   
+        }        
   
         sig_ENTREZID <- as.character(sig_ENTREZID)   
         sig_ENTREZID <- sig_ENTREZID[!is.na(sig_ENTREZID)]
@@ -776,7 +772,7 @@ save.image(file = paste0('EA_debug',sampSet,'.RData'))
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI12")
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI1")
  
-
+# bsp248 don't have DE comparison for _ctl_PRCV_DPI12, _ctl_H1N1_DPI12
 # conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_PRCV_DPI12")
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_PRCV_DPI1")
 
