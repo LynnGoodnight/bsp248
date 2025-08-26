@@ -342,7 +342,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
     }
     
     
-    # conduct enrichment analysis
+
     # prepare input data need for EA command
     if(EA_method == "over_represent")
     {
@@ -651,7 +651,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     
     if(is.null(GO_multiple_cell_type))
     {
-      print(paste("no hit in database", selected_database, "with method", EA_method))
+      print(paste("no hit in database", selected_database, "with method", selected_EA_method))
 
     }else
     {
@@ -679,7 +679,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     
     if(is.null(GO_multiple_cell_type))
     {
-      print(paste("no hit in database", selected_database, "with method", EA_method))
+      print(paste("no hit in database", selected_database, "with method", selected_EA_method))
 
     }else
     {
@@ -711,7 +711,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     
     if(is.null(GO_multiple_cell_type))
     {
-      print(paste("no hit in database", selected_database, "with method", EA_method))
+      print(paste("no hit in database", selected_database, "with method", selected_EA_method))
 
     }else
     {
@@ -742,7 +742,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
 
     if(is.null(GO_multiple_cell_type))
     {
-      print(paste("no hit in database", selected_database, "with method", EA_method))
+      print(paste("no hit in database", selected_database, "with method", selected_EA_method))
 
     }else
     {
