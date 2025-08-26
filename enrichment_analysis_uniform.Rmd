@@ -323,7 +323,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
     
     if(file.exists(file_path))
     {
-      print(paste('import DE results for ', file_list[i]))
+      print(paste('import DE results from file ', file_list[i]))
       res_ids = read.csv(file_path, header=TRUE)
       # head(res_ids)
     }else
@@ -376,7 +376,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
         # print(nrow(sig_symbol))
         if(nrow(sig_symbol) == 0 )
         {
-          print(paste("no sig DE genes for cluster ", file_path, ', skip over_represent method, only GSEA'))
+          print(paste("no sig DE genes for cluster ", file_path, ', skip over_represent method'))
           next
         }
         sig_symbol <- as.character(sig_symbol$symbol)    
@@ -389,7 +389,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
                  keytype  = "SYMBOL",
                  multiVals = "first")
         }, error = function(e) {
-          print("no valid sig ENTREZID, skip")
+          print("no valid ENTREZID for DEG, skip over_represent method")
           NULL
         })     
         if (is.null(sig_ENTREZID)) {
@@ -541,14 +541,14 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
       }
       if(is.null(KEGG_ORA))
       {
-        print(paste("KEGG_ORA is null", database, EA_method, file_path))
+        print(paste("KEGG_ORA is null",  EA_method, file_path))
         next
       }
       KEGG_ORA <- setReadable(KEGG_ORA, OrgDb = org.Ss.eg.db, keyType="ENTREZID")
       GO_result_df <- KEGG_ORA@result
       if(nrow(GO_result_df) == 0)
       {
-        print(paste('no enriched KEGG category in KEGG database', file_path))
+        print(paste('KEGG_ORA is empty', EA_method, file_path))
         next
       }
     
@@ -563,7 +563,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
     
     if(nrow(GO_result_df_sig) == 0) 
     {
-      print(paste('no significant enriched GO for cluster ', file_path))
+      print(paste('no significant hit for cluster ', file_path))
       next
     }     
     # print(paste(nrow(GO_result_df_sig), file_list[i]), names(file_list)[i])
@@ -588,7 +588,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
   # obtain enriched GO across all cluster within one cell type
   if(is.null(combined_GO_sig_df)) 
   {
-    print(paste('no enriched GO for all cluster within population: ', cell_type))
+    print(paste('no enriched hit for all cluster within population: ', EA_method, database))
     return(GO_multiple_cell_type)
   }else
   {
@@ -651,7 +651,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     
     if(is.null(GO_multiple_cell_type))
     {
-      print(paste("no enriched", selected_database, "term in cell type: ", selected_cell_types))
+      print(paste("no hit in database", selected_database, "with method", EA_method))
 
     }else
     {
@@ -666,7 +666,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     }
     ################################################################
     selected_database <- "KEGG"
-    print(paste("selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
+    print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
     GO_multiple_cell_type <- NULL
     GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
                                                               GO_multiple_cell_type,
@@ -679,7 +679,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     
     if(is.null(GO_multiple_cell_type))
     {
-      print(paste("no enriched", selected_database, "term in cell type: ", selected_cell_types))
+      print(paste("no hit in database", selected_database, "with method", EA_method))
 
     }else
     {
@@ -698,7 +698,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     # Gene Set Enrichment Analysis
     ################################################################    
     selected_database <- "GO"
-    print(paste("selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
+    print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
     GO_multiple_cell_type <- NULL
     GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
                                                               GO_multiple_cell_type,
@@ -711,7 +711,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     
     if(is.null(GO_multiple_cell_type))
     {
-      print(paste("no enriched", selected_database, "term in cell type: ", selected_cell_types))
+      print(paste("no hit in database", selected_database, "with method", EA_method))
 
     }else
     {
@@ -729,7 +729,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
     # symbol/ensemble_id to ncbi_id always induce repeats, so i add code randomly remain 1 ncbi_id for such situation
     # to conduct this analysis, better to use ncbi reference database in cell ranger count mapping step
     selected_database <- "KEGG"
-    print(paste("selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
+    print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
     GO_multiple_cell_type <- NULL
     GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
                                                               GO_multiple_cell_type,
@@ -742,7 +742,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
 
     if(is.null(GO_multiple_cell_type))
     {
-      print(paste("no enriched", selected_database, "term in cell type: ", selected_cell_types))
+      print(paste("no hit in database", selected_database, "with method", EA_method))
 
     }else
     {
