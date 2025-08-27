@@ -126,7 +126,7 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
       # length(unique(GO_multiple_cell_type$GO_ID))
       GO_multiple_cell_type$GO_description <- with(GO_multiple_cell_type, 
                                                    reorder(GO_description, GeneRatio_value))
-      
+
       # draw dot plot for all cell types that have significant GO terms, including all GO terms
       p1 <- ggplot(data = GO_multiple_cell_type, aes(x = named_cluster, y = GO_description, 
                                                      color = `p.adjust`, size = GeneRatio_value)) + 
@@ -148,9 +148,11 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
       print(p1)
       
       
-      png(filename=paste0('Results/EA_edgeR_', sampSet, "_BP_", database, "database_dotplot_mul_clusters", prefix , '_', cell_type, '_', EA_method, '.png'))
-      print(p1)
-      dev.off()
+      n_lines <- nrow(GO_multiple_cell_type)
+      height_of_plot <- n_lines * 0.25       
+      filename1 <- paste0('Results/EA_edgeR_', sampSet, "_BP_", database, "database_dotplot_mul_clusters", prefix , '_', cell_type, '_', EA_method, '.png')
+      ggsave(filename1, p1,  height = height_in, units = "in", dpi = 300)
+
       # png(filename=paste0('Results/EA_edgeR_', sampSet, "_BP_", database, "database_dotplot_mul_clusters", prefix , '_', cell_type, '_', EA_method, '.png'), height=9000, width=4000, res = 300)
       # print(p1)
       # dev.off()      
@@ -234,17 +236,27 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
         theme_bw() + 
         ylab("") + theme(axis.text.x = element_text(angle = 90)) + 
         xlab("") + facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-        ggtitle(paste(prefix, EA_method,  database, "enrichment dot plot for cell type: ", cell_type))  
+        ggtitle(label = paste(sampSet, prefix, EA_method,  database),
+              subtitle = paste("enrichment dot plot for cell type: ", cell_type) )  
       
       print(p1)
-      png(filename=paste0('Results/EA_edgeR_', sampSet, "_BP_", database, 
-                          "database_dotplot_mul_clusters",  prefix , '_', cell_type, '_', EA_method, '.png'))
+      ############
+      n_lines <- nrow(GO_multiple_cell_type)
+      height_of_plot <- n_lines * 0.25       
+      filename1 <- paste0('Results/EA_edgeR_', sampSet, "_BP_", database, 
+                          "database_dotplot_mul_clusters",  prefix , '_', cell_type, '_', EA_method, '.png')
+      ggsave(filename1, p1,  height = height_in, units = "in", dpi = 300)
+      ############
+      
       
       # png(filename=paste0('Results/EA_edgeR_', sampSet, "_BP_", database, 
-      #                     "database_dotplot_mul_clusters",  prefix , '_', cell_type, '_', EA_method, '.png'), height=1400, width=1300, res = 150)
-      
-      print(p1)
-      dev.off()
+      #                     "database_dotplot_mul_clusters",  prefix , '_', cell_type, '_', EA_method, '.png'))
+      # 
+      # # png(filename=paste0('Results/EA_edgeR_', sampSet, "_BP_", database, 
+      # #                     "database_dotplot_mul_clusters",  prefix , '_', cell_type, '_', EA_method, '.png'), height=1400, width=1300, res = 150)
+      # 
+      # print(p1)
+      # dev.off()
       
       ######################################## 
       # draw a bubble plot that only contain shared sig GO across 3 cell types
