@@ -137,7 +137,9 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
         theme_bw() + 
         ylab("") + theme(axis.text.x = element_text(angle = 90)) + 
         xlab("") + facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-        ggtitle(paste(prefix, EA_method, database, "enrichment dot plot for cell type: ", cell_type)) 
+        ggtitle(label = paste(sampSet, prefix, EA_method,  database),
+              subtitle = paste("enrichment dot plot for cell type: ", cell_type) )          
+
       
       
       if(EA_method == "GSEA")
