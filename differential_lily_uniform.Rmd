@@ -650,8 +650,8 @@ output_DA_excel <- function(DA, file_name_tag = '')
   # run_2 table contain the results of run 1+2
 }
 
-DA <- conduct_DA(subsets, selected_comparison = 3)
-output_DA_excel(DA, file_name_tag='_t1_t2_')
+DA_t1_t2 <- conduct_DA(subsets, selected_comparison = 3)
+output_DA_excel(DA_t1_t2, file_name_tag='_t1_t2_')
 
 # head(DA[["DPI_1"]])
 # typeof(DA)
@@ -983,6 +983,7 @@ boxplot_cluster_proportion <- function(selected_dataset, selected_cluster = '2',
   
 }
 
+sig_cluster <- DA_ctl_t1
 # if(sampSet == 'run_1' )
 # {
 #   # boxplot_cluster_proportion(selected_dataset = all, selected_cluster = '2', flag = 'total')
@@ -1359,8 +1360,9 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
   p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
                               fill = variable)) +
     geom_bar(stat = 'identity', position = 'identity') +
-    labs(x = 'named_cluster', y = 'Number of Genes',
-         title = paste(prefix, 'edgeR summary of DE genes per cluster')) +
+    labs(x = 'named_cluster', y = 'Number of Genes') +
+    ggtitle(label = sampSet,
+          subtitle = paste(prefix, 'edgeR summary of DE genes per cluster') ) +      
     scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
     theme_minimal() +
     geom_text(aes(label = value,
@@ -2035,7 +2037,7 @@ Save everything
 ```{r save rds}
 
 #
-# save.image(file = paste0('differential_edgeR_',sampSet,'.RData'))
+save.image(file = paste0('differential_edgeR_',sampSet,'.RData'))
 sessionInfo()
 # saveRDS(sce_all_filt, file=paste0('sce_',sampSet,'_cluster_filt.rds'))
 

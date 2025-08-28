@@ -786,7 +786,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
 
 
 ```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset , fig.width= 12}
-save.image(file = paste0('EA_debug',sampSet,'.RData'))
+# save.image(file = paste0('EA_debug',sampSet,'.RData'))
 
 
 conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI12")
