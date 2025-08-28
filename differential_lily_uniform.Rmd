@@ -908,7 +908,7 @@ Let's plot box plots of proportions between 2 conditions to have a look.
 # in bsp185, we only run code below to plot those clusters whose composition changed significantly in certain main populations
 
 boxplot_cluster_proportion <- function(selected_dataset, selected_cluster = '2',
-                                       flag = 'total', composition = FALSE, annot = annot)
+                                       flag = 'total', composition = FALSE)
 {
   if(composition)
   {
@@ -962,18 +962,21 @@ boxplot_cluster_proportion <- function(selected_dataset, selected_cluster = '2',
   ## calculate the proportion of cluster 2 in selected_dataset cells in each sample, 
   # eg: cells of cluster 2 composed 14% of cells in sample 1 in sorted CD4 population
   props <- prop.table(table(selected_dataset$cluster, selected_dataset$Sample), margin=2)[selected_cluster,]
-  print(props)
-  proptab <- annot[,c('sample', 'Condition')]
+
+  # print(props)
+  proptab <- annot[ ,c('sample_analysis_id', 'condition')]
   proptab$proportions <- props[rownames(proptab)]
+  proptab <-  proptab[!is.na(proptab$proportions) , ]
+
   # proptab$Condition <- factor(proptab$Condition)
-  proptab$Condition <- factor(proptab$Condition, levels = c('ISU1', '135'))
+  proptab$condition <- factor(proptab$condition, levels = c('control', 'H1N1', 'PRCV'))
   cell_type = df_cluster_number_name[df_cluster_number_name$cluster == selected_cluster, 'named_cluster']
-  group_colors <- c('135' = 'red', 'ISU1' = 'black')
+  group_colors <- c('PRCV' = 'red', 'H1N1' = 'green', 'control' = 'black')
   
-  p <- ggplot(data=proptab, aes(x=Condition, y=proportions)) +
+  p <- ggplot(data=proptab, aes(x=condition, y=proportions)) +
     geom_boxplot(outlier.shape = NA) +
-    geom_point(aes(col=Condition), position='jitter', size = 5) + 
-    ggtitle(paste(sampSet, 'proportion of cluster', selected_cluster, cell_type, '\n in', flag, 'cell populations between 2 Condition')) +
+    geom_point(aes(col=condition), position='jitter', size = 5) + 
+    ggtitle(paste(sampSet, flag , '\n', 'proportion of cluster', selected_cluster, cell_type)) +
     scale_color_manual(values = group_colors)
   print(p)
   
@@ -983,10 +986,35 @@ boxplot_cluster_proportion <- function(selected_dataset, selected_cluster = '2',
   
 }
 
-sig_cluster <- DA_ctl_t1
-# if(sampSet == 'run_1' )
-# {
-#   # boxplot_cluster_proportion(selected_dataset = all, selected_cluster = '2', flag = 'total')
+myList  <- list("DA_t1_t2" = DA_t1_t2, "DA_ctl_t1" = DA_ctl_t1, "DA_ctl_t2"= DA_ctl_t2)
+for (name in names(myList)) 
+{
+  print(name)
+  for(element_name in names(myList[[name]]))
+  {
+    print(element_name)
+    sig_cluster_df <- myList[[name]][[element_name]]
+    sig_cluster_df <- sig_cluster_df[sig_cluster_df$FDR < 0.05, ]
+    if(nrow(sig_cluster_df) > 0)
+    {
+      print(sig_cluster_df)
+      sig_clusters <- rownames(sig_cluster_df)
+      for(cluster1 in sig_clusters)
+      {
+        boxplot_cluster_proportion(selected_dataset = subsets[[element_name]], selected_cluster = cluster1, 
+                                   flag = paste(element_name, "DA"))
+      }
+    }
+  }
+  
+  
+
+}
+
+
+# # if(sampSet == 'run_1' )
+# # {
+  # boxplot_cluster_proportion(selected_dataset = subsets$DPI_12, selected_cluster = '2re', flag = 'DPI_12 DA')
 #   # boxplot_cluster_proportion(selected_dataset = CD8s, selected_cluster = '2', flag = 'CD8')
 #   # boxplot_cluster_proportion(selected_dataset = all, selected_cluster = '8c', flag = 'total')
 #   # boxplot_cluster_proportion(selected_dataset = CD8s, selected_cluster = '8c', flag = 'CD8')
