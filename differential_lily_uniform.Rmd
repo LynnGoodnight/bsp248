@@ -986,7 +986,7 @@ boxplot_cluster_proportion <- function(selected_dataset, selected_cluster = '2',
   
 }
 
-myList  <- list("DA_t1_t2" = DA_t1_t2, "DA_ctl_t1" = DA_ctl_t1, "DA_ctl_t2"= DA_ctl_t2)
+myList  <- list("H1N1_PRCV" = DA_t1_t2, "control_H1N1" = DA_ctl_t1, "control_PRCV"= DA_ctl_t2)
 for (name in names(myList)) 
 {
   print(name)
@@ -1002,7 +1002,7 @@ for (name in names(myList))
       for(cluster1 in sig_clusters)
       {
         boxplot_cluster_proportion(selected_dataset = subsets[[element_name]], selected_cluster = cluster1, 
-                                   flag = paste(element_name, "DA"))
+                                   flag = paste(name, element_name, "DA"))
       }
     }
   }
