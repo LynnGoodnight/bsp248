@@ -321,10 +321,17 @@ p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster",
 print(p1)  
 
 # draw additional UMAP with cluster 11, 12 not been displayed for subset_adaptive_immune_cells requested by collaborators
-if(bsp_num == "bsp_248" & sampSet == "subset_adaptive_immune_cells")
+if(bsp_num == "bsp_248" )
 {
-  sce_tem  <- sce_filt[, sce_filt$cluster != "11"]  
-  sce_tem  <- sce_tem[, sce_tem$cluster != "12"]
+  if(sampSet == "subset_adaptive_immune_cells")
+  {
+    sce_tem  <- sce_filt[, sce_filt$cluster != "11"]  
+    sce_tem  <- sce_tem[, sce_tem$cluster != "12"]    
+  }else if(sampSet == "subset_non_immune_cells")
+  {
+    sce_tem  <- sce_filt[, sce_filt$cluster != "22"]
+  }
+
 
   p1 <- plotUMAP(sce_tem, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
   guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
@@ -902,7 +909,7 @@ visulize_abundance(sce_all_filt, annot)
 
 Let's plot box plots of proportions between 2 conditions to have a look.
 
-```{r plot composition bar plots to visulize cell proportion between 2 conditions}
+```{r plot proportion box plots to visulize cell proportion between conditions}
 
 
 # in bsp185, we only run code below to plot those clusters whose composition changed significantly in certain main populations
@@ -969,9 +976,9 @@ boxplot_cluster_proportion <- function(selected_dataset, selected_cluster = '2',
   proptab <-  proptab[!is.na(proptab$proportions) , ]
 
   # proptab$Condition <- factor(proptab$Condition)
-  proptab$condition <- factor(proptab$condition, levels = c('control', 'H1N1', 'PRCV'))
+  proptab$condition <- factor(proptab$condition, levels = c('control', 'PRCV', 'H1N1'))
   cell_type = df_cluster_number_name[df_cluster_number_name$cluster == selected_cluster, 'named_cluster']
-  group_colors <- c('PRCV' = 'red', 'H1N1' = 'green', 'control' = 'black')
+  group_colors <- c('PRCV' = 'red', 'H1N1' = 'blue', 'control' = 'black')
   
   p <- ggplot(data=proptab, aes(x=condition, y=proportions)) +
     geom_boxplot(outlier.shape = NA) +
