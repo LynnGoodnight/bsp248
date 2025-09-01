@@ -330,6 +330,9 @@ if(bsp_num == "bsp_248" )
   }else if(sampSet == "subset_non_immune_cells")
   {
     sce_tem  <- sce_filt[, sce_filt$cluster != "22"]
+  }else
+  {
+    sce_tem  <- sce_filt
   }
 
 
