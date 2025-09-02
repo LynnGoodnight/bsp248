@@ -340,7 +340,7 @@ if(bsp_num == "bsp_248" )
   guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
   ggtitle(paste('UMAP', sampSet))
   print(p1)  
-  p1 <- plotUMAP(sce_tem, colour_by = "cluster", text_by = "cluster", point_size = selected_point_size) +
+  p1 <- plotUMAP(sce_tem, colour_by = "long_named_cluster", text_by = "cluster", point_size = selected_point_size) +
   guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
   ggtitle(paste('UMAP', sampSet))
   print(p1)    
