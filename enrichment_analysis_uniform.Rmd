@@ -363,7 +363,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
     
     
 
-    # prepare input data need for EA command
+    # prepare input data need for EA command for over_represent strategy 
     if(EA_method == "over_represent")
     {
       if(id_type == "entrez")
@@ -439,7 +439,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
       ## Create background dataset for hypergeometric testing using all genes tested for significance in the results                 
       ## Extract significant DE results   
 
-      
+    # prepare input data, sorted gene list, need for EA command for GSEA strategy 
     if(EA_method == "GSEA")
     {
       # sort gene order
@@ -543,11 +543,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
       
       # 	KEGG only includes genes that are mapped to known pathways. If a gene in your background is not annotated in KEGG (e.g., novel genes or genes with unknown functions), it will not be used in the analysis.
       #	This is a common issue for non-model organisms like pigs, as the KEGG annotation for pigs may be incomplete compared to more studied species like humans or mice.
-      
-      
-      
 
-         
       }else if(EA_method == "GSEA")
       {
         KEGG_ORA <- gseKEGG(geneList= geneList,
@@ -555,6 +551,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
                        keyType = "ncbi-geneid",
                        minGSSize    = 120,
                        pvalueCutoff = 0.05,
+                       pAdjustMethod = "BH",
                        verbose      = FALSE)
 
 
@@ -592,7 +589,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
     
     
     ######################################## 
-    # check if there is a GO term contain superfamily which is too long
+    # check if there is a GO term contain superfamily which is too long, and i choose to truncate it. this GO term appeared in bsp185
     pos <- grep('superfamily', GO_result_df_sig$Description)
     if(length(pos) == 1)
     {
@@ -639,7 +636,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
   
 }
 
-
+selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI12"
 conduct_EA_main <- function(selected_DE_method, selected_prefix)
 {
   selected_file_path <- paste0('Results/DE_', selected_DE_method, '_', sampSet, selected_prefix, '_cluster_')

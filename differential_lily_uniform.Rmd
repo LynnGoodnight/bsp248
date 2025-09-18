@@ -1354,110 +1354,108 @@ pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
 
 }
 
-```
-
-
-```{r  plot up and down DE genes number per cluster bar plot }
-
-DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
-{
-  # plot up and down DE genes number per cluster bar plot
-  # Melt the data frame for ggplot2
-  library(reshape2)
-  summary_df$cluster <-  gsub("cluster_", "", rownames(summary_df))
-  summary_df$NO <- NULL
-
-  
-  df_cell_type_cluster = data.frame(cluster = colData(sce_all_filt)$cluster,
-                                    cell_type = colData(sce_all_filt)$named_cluster)
-  df_cell_type_cluster = unique(df_cell_type_cluster)
-  
-  # merge two data frames by ID and Country
-  summary_df <- merge(df_cell_type_cluster ,summary_df ,by=c("cluster"))
-  summary_df$named_cluster <- paste(summary_df$cluster, summary_df$cell_type, sep = ', ' )
-
-  # reduce the length of some cell type names
-  # summary_df$cell_type[grep('Monocytes', summary_df$cell_type)] <- 'Monocyte'
-  # summary_df$cell_type[grep('conventional', summary_df$cell_type)] <- 'NCT'
-  # summary_df$cell_type[grep('T regs', summary_df$cell_type)] <- 'Tregs'
-  
-  # summary_df$cell_type[grep('Mitotic CD4 T Cells', summary_df$cell_type)] <- 'mCD4T'
-  # summary_df$cell_type[grep('Mitotic CD8 T Cells', summary_df$cell_type)] <- 'mCD8T'
-  # 
-  # summary_df$cell_type[grep('CD8 T Cells', summary_df$cell_type)] <- 'CD8T'
-  # summary_df$cell_type[grep('CD4 T Cells', summary_df$cell_type)] <- 'CD4T'
-  
-  
-  summary_df_sim <- summary_df[,c("DOWN", "UP", "named_cluster")]
-  melted_df <- melt(summary_df_sim, id.vars = 'named_cluster')
-  melted_df <- merge(melted_df ,summary_df[,c('named_cluster', 'cell_type')] ,by=c("named_cluster"))
-  
-  
-  
-  # Plotting overview
-  p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
-                              fill = variable)) +
-    geom_bar(stat = 'identity', position = 'identity') +
-    labs(x = 'named_cluster', y = 'Number of Genes') +
-    ggtitle(label = sampSet,
-          subtitle = paste(prefix, 'edgeR summary of DE genes per cluster') ) +      
-    scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
-    theme_minimal() +
-    geom_text(aes(label = value,
-                  vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
-              color = "black",
-              size = 3) +
-    theme(axis.text.x = element_text(angle = 90)) +
-    facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-    theme(
-      strip.background = element_rect(color = "black", fill = "white", linewidth = 1))  # Add black rectangle border
-  
-  print(p1)
-  
-  
-  
-  
-  # # monocytes, macrophages, cDCs, pDCs, NCT, CD8T, mCD8T, CD4T, mCD4T, Tregs (please without a blank between "T" and "regs") B cells, plasma cells.
-  # # assign order of clusters in x-axis
-  # melted_df$cell_type <- factor(melted_df$cell_type, levels = c('Monocyte', 'Macrophages',
-  #                                                               'cDCs', 'pDCs', "NCT", "CD8T","mCD8T","CD4T","mCD4T",
-  #                                                               'Tregs', 'B Cells', "Plasma Cells" ))
-  # unique(melted_df$cell_type)
-  
-  # Save the plot with larger dimensions for better clarity
-  png(filename = paste0('Results/DE_edgeR_', sampSet, prefix, '_DEG_num_overview.png'),
-      height = 1000, width = 2000, res = 150)  # Adjust height, width, and resolution for better clarity
-  p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
-                              fill = variable)) +
-    geom_bar(stat = 'identity', position = 'identity') +
-    labs(x = 'annotated cluster',  # Custom x-axis title
-         y = 'Number of DE Genes',  # Custom y-axis title
-         title = paste(prefix, 'edgeR summary of DE genes per cluster'),  # Custom plot title
-         fill = 'change') +  # Custom legend title
-    scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
-    theme_minimal() +
-    geom_text(aes(label = value,
-                  vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
-              color = "black",
-              size = 4) +  # Increase text size inside bars
-    theme(axis.text.x = element_text(angle = 90, size = 10),  # Increase x-axis text size
-          axis.text.y = element_text(size = 10),  # Increase y-axis text size
-          axis.title.x = element_text(size = 10, face = "bold"),  # Increase x-axis label size
-          axis.title.y = element_text(size = 10, face = "bold"),  # Increase y-axis label size
-          plot.title = element_text(size = 10, face = "bold", hjust = 0.5),  # Increase title size and center
-          strip.text = element_text(size = 9),  # Increase facet label size
-          legend.text = element_text(size = 10),  # Increase legend text size
-          legend.title = element_text(size = 10, face = "bold")) +  # Increase legend title size
-    facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-    theme(strip.background = element_rect(color = "black", fill = "white"))  # Add black rectangle border
-  print(p1)
-  dev.off()
-  return(melted_df)
-  
-}
+# plot up and down DE genes number per cluster bar plot
+# DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
+# {
+#   # plot up and down DE genes number per cluster bar plot
+#   # Melt the data frame for ggplot2
+#   library(reshape2)
+#   summary_df$cluster <-  gsub("cluster_", "", rownames(summary_df))
+#   summary_df$NO <- NULL
+# 
+#   
+#   df_cell_type_cluster = data.frame(cluster = colData(sce_all_filt)$cluster,
+#                                     cell_type = colData(sce_all_filt)$named_cluster)
+#   df_cell_type_cluster = unique(df_cell_type_cluster)
+#   
+#   # merge two data frames by ID and Country
+#   summary_df <- merge(df_cell_type_cluster ,summary_df ,by=c("cluster"))
+#   summary_df$named_cluster <- paste(summary_df$cluster, summary_df$cell_type, sep = ', ' )
+# 
+#   # reduce the length of some cell type names
+#   # summary_df$cell_type[grep('Monocytes', summary_df$cell_type)] <- 'Monocyte'
+#   # summary_df$cell_type[grep('conventional', summary_df$cell_type)] <- 'NCT'
+#   # summary_df$cell_type[grep('T regs', summary_df$cell_type)] <- 'Tregs'
+#   
+#   # summary_df$cell_type[grep('Mitotic CD4 T Cells', summary_df$cell_type)] <- 'mCD4T'
+#   # summary_df$cell_type[grep('Mitotic CD8 T Cells', summary_df$cell_type)] <- 'mCD8T'
+#   # 
+#   # summary_df$cell_type[grep('CD8 T Cells', summary_df$cell_type)] <- 'CD8T'
+#   # summary_df$cell_type[grep('CD4 T Cells', summary_df$cell_type)] <- 'CD4T'
+#   
+#   
+#   summary_df_sim <- summary_df[,c("DOWN", "UP", "named_cluster")]
+#   melted_df <- melt(summary_df_sim, id.vars = 'named_cluster')
+#   melted_df <- merge(melted_df ,summary_df[,c('named_cluster', 'cell_type')] ,by=c("named_cluster"))
+#   
+#   
+#   
+#   # Plotting overview
+#   p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
+#                               fill = variable)) +
+#     geom_bar(stat = 'identity', position = 'identity') +
+#     labs(x = 'named_cluster', y = 'Number of Genes') +
+#     ggtitle(label = sampSet,
+#           subtitle = paste(prefix, 'edgeR summary of DE genes per cluster') ) +      
+#     scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
+#     theme_minimal() +
+#     geom_text(aes(label = value,
+#                   vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
+#               color = "black",
+#               size = 3) +
+#     theme(axis.text.x = element_text(angle = 90)) +
+#     facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
+#     theme(
+#       strip.background = element_rect(color = "black", fill = "white", linewidth = 1))  # Add black rectangle border
+#   
+#   print(p1)
+#   
+#   
+#   
+#   
+#   # # monocytes, macrophages, cDCs, pDCs, NCT, CD8T, mCD8T, CD4T, mCD4T, Tregs (please without a blank between "T" and "regs") B cells, plasma cells.
+#   # # assign order of clusters in x-axis
+#   # melted_df$cell_type <- factor(melted_df$cell_type, levels = c('Monocyte', 'Macrophages',
+#   #                                                               'cDCs', 'pDCs', "NCT", "CD8T","mCD8T","CD4T","mCD4T",
+#   #                                                               'Tregs', 'B Cells', "Plasma Cells" ))
+#   # unique(melted_df$cell_type)
+#   
+#   # Save the plot with larger dimensions for better clarity
+#   png(filename = paste0('Results/DE_edgeR_', sampSet, prefix, '_DEG_num_overview.png'),
+#       height = 1000, width = 2000, res = 150)  # Adjust height, width, and resolution for better clarity
+#   p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
+#                               fill = variable)) +
+#     geom_bar(stat = 'identity', position = 'identity') +
+#     labs(x = 'annotated cluster',  # Custom x-axis title
+#          y = 'Number of DE Genes',  # Custom y-axis title
+#          title = paste(prefix, 'edgeR summary of DE genes per cluster'),  # Custom plot title
+#          fill = 'change') +  # Custom legend title
+#     scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
+#     theme_minimal() +
+#     geom_text(aes(label = value,
+#                   vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
+#               color = "black",
+#               size = 4) +  # Increase text size inside bars
+#     theme(axis.text.x = element_text(angle = 90, size = 10),  # Increase x-axis text size
+#           axis.text.y = element_text(size = 10),  # Increase y-axis text size
+#           axis.title.x = element_text(size = 10, face = "bold"),  # Increase x-axis label size
+#           axis.title.y = element_text(size = 10, face = "bold"),  # Increase y-axis label size
+#           plot.title = element_text(size = 10, face = "bold", hjust = 0.5),  # Increase title size and center
+#           strip.text = element_text(size = 9),  # Increase facet label size
+#           legend.text = element_text(size = 10),  # Increase legend text size
+#           legend.title = element_text(size = 10, face = "bold")) +  # Increase legend title size
+#     facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
+#     theme(strip.background = element_rect(color = "black", fill = "white"))  # Add black rectangle border
+#   print(p1)
+#   dev.off()
+#   return(melted_df)
+#   
+# }
 
 
 ```
+
+
 
 
 ```{r apply method 2 conduct DE analysis between 2 virus condition for each cluster and output formal DE results,  fig.width= 12, fig.height=8}
@@ -1542,14 +1540,6 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
   #######################################################################
   
   
-  
-  
-  
-  
-  
-  
-  
-  
   clusts <- as.character(levels(factor(summed.filt$cluster)))
   de.results.any <- vector('list', length(clusts))
   
@@ -1571,18 +1561,170 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
 }
 
 # compare between 2 virus in same DPI
-DE_analysis(sce_all_filt, selected_DPI = 1,  Select_comparison= 3, comparison_prefix = "_H1N1_PRCV")
-DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 3, comparison_prefix = "_H1N1_PRCV")
+summary_df_DPI1_H1N1_PRCV <- DE_analysis(sce_all_filt, selected_DPI = 1,  Select_comparison= 3, comparison_prefix = "_H1N1_PRCV")
+summary_df_DPI12_H1N1_PRCV <- DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 3, comparison_prefix = "_H1N1_PRCV")
 
 
-DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 2, comparison_prefix = "_ctl_PRCV")
+summary_df_DPI1_ctl_PRCV <- DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 2, comparison_prefix = "_ctl_PRCV")
 # DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 2, comparison_prefix = "_ctl_t2")
 
 
-DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 1, comparison_prefix = "_ctl_H1N1")
+summary_df_DPI1_ctl_H1N1 <- DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 1, comparison_prefix = "_ctl_H1N1")
 # DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 1, comparison_prefix = "_ctl_t1")
 
 ```
+
+
+
+```{r use holm to correct for multiple test due to overlapping comparisons}
+# three overlapping comparisons (control-H1N1, control-PRCV, H1N1-PRCV at 1 dpi)
+# sampSet = "subset_innate_immune_cells"
+# Create the table in R
+df_logFC_threshold <- data.frame(
+  DPI = c(12, 1, 1, 1),
+  log2FC_threshold = c(1.83, 2.75, 3.18, 3.62),
+  comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
+)
+
+mod_data_holm <- function(df_re, i, comparison_flag) 
+{
+  y_limit <- 1.0e-20
+  # add a column of NAs
+  df_re$diffexpressed <- "NO"
+  # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP"
+  df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust_holm < 0.05] <- "UP"
+  # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
+  df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust_holm < 0.05] <- "DOWN"
+  
+  table(df_re$diffexpressed)
+
+  write.table(df_re, file=paste0('Results/DE_edgeR_', sampSet, comparison_flag, '_cluster_', i, '_holm.csv'),
+            sep=',', quote=FALSE, row.names = FALSE)     
+  
+  df_re_clean <- df_re[ df_re$diffexpressed != "NO", ]
+  if(nrow(df_re_clean) > 0)
+  {
+    # dir.create('Results')
+    write.table(df_re_clean, 
+                file=paste0('Results/DE_edgeR_', sampSet, comparison_flag, '_clean_cluster_', i, '_holm.csv'),
+                sep=',', quote=FALSE, row.names = FALSE)     
+  }
+ 
+  
+  df_re$delabel <- NA
+  if(sum(df_re$diffexpressed != "NO") == 0)
+  {
+    
+    # print(paste('no qualified DE genes observed in this cluster', i, ', no volcano plot'))
+    return(df_re)
+  }else
+  {
+    
+    # print(paste('qualified DE genes observed in this cluster', i, ', show volcano plot'))
+    df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]
+    # for row/gene who up/down, its delabel column will store the gene symbol again
+    # for row/gene who is not DE, its delabel column is NA
+    # Set p-value floor
+    # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit 
+
+
+
+    selected_logFC_threshold = df_logFC_threshold$log2FC_threshold[(df_logFC_threshold$DPI == 1 & df_logFC_threshold$comparison == comparison_flag)] 
+
+    p1 <- plot_volcano_holm(df_re, title=paste( "cluster", i, "comparison", comparison_flag),
+                             selected_logFC_threshold)
+        
+    # p1 <- plot_volcano_holm(df_re, title=paste(cell_type, "cluster", i, "comparison", flag))
+    # print(p1)
+    
+    png(filename = paste0('Results/DE_edgeR_', sampSet, comparison_flag, '_volcano_cluster', i, '_holm.png') , height=1600, width=1600, res = 220)
+    # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space 
+    print(p1)
+    dev.off()    
+  }
+  
+  return(df_re)
+}
+
+
+plot_volcano_holm <- function(df_re, title, logFC_threshold=2) 
+{
+  # code below use p values rather than p adjusted value to try
+  # df_re$p_adjust <- df_re$PValue
+    print(logFC_threshold)
+  logFC_threshold <- as.numeric(logFC_threshold)
+
+  ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust_holm), col=diffexpressed, label=delabel)) +
+    geom_point() +
+    geom_text_repel() +
+    ggtitle(title, paste("DE genes holm, bespoke logFC_threshold")) +
+    labs( x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
+    geom_vline(xintercept=c(-0.6, 0.6), col="red") +
+    geom_vline(xintercept=c(-logFC_threshold, logFC_threshold), col="green") +
+    geom_hline(yintercept=-log10(0.05), col="red") +
+    scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
+    theme(axis.title.x = element_text(size = 15),                     # X-axis label font size
+          axis.title.y = element_text(size = 15)   )
+
+}  
+
+
+for(cluster_id in unique(sce_all_filt$cluster))
+{
+  # correct for multiple test using holm, only DPI1 need adjust in bsp248
+  # Files to read and write
+  in_files <- c(
+    paste0("Results/DE_edgeR_", sampSet,  "_ctl_PRCV_DPI1_cluster_", cluster_id, ".csv"),
+    paste0("Results/DE_edgeR_", sampSet,  "_ctl_H1N1_DPI1_cluster_", cluster_id, ".csv"),
+    paste0("Results/DE_edgeR_", sampSet,  "_H1N1_PRCV_DPI1_cluster_", cluster_id, ".csv") )
+  
+  
+  if (any(!file.exists(in_files)) ) 
+  {
+    print(paste("File not found, skip: cluster", cluster_id))
+    print(in_files[!file.exists(in_files)] )
+    next 
+  }
+  
+  comparison1 <- read.csv(in_files[1])
+  comparison2 <- read.csv(in_files[2])
+  comparison3 <- read.csv(in_files[3])
+  
+  comparison1$p_adjust_holm <- NA
+  comparison2$p_adjust_holm <- NA
+  comparison3$p_adjust_holm <- NA
+  
+  
+  total_ens_id <- union(comparison1$ensemble_id, comparison2$ensemble_id)
+  total_ens_id <- union(total_ens_id, comparison3$ensemble_id)
+  
+  
+  for (selected_ens_id in total_ens_id) 
+  {
+    comparison1_p <- comparison1[comparison1$ensemble_id == selected_ens_id , 'p_adjust']
+    comparison2_p <- comparison2[comparison2$ensemble_id == selected_ens_id , 'p_adjust']  
+    comparison3_p <- comparison3[comparison3$ensemble_id == selected_ens_id , 'p_adjust']  
+    
+    p_holm <- p.adjust(c(comparison1_p, comparison2_p, comparison3_p), method = "holm")
+    comparison1[comparison1$ensemble_id == selected_ens_id , 'p_adjust_holm'] <- p_holm[1]
+    comparison2[comparison2$ensemble_id == selected_ens_id , 'p_adjust_holm']  <- p_holm[2]
+    comparison3[comparison3$ensemble_id == selected_ens_id , 'p_adjust_holm'] <- p_holm[3]
+    
+  }
+  # output table after holm correction, draw volcano plot and add bespoke logFC threshold, need to do those for DPI12 data too
+  mod_data_holm(comparison1, cluster_id, "ctl_PRCV")  
+  
+  mod_data_holm(comparison2, cluster_id, "ctl_H1N1")  
+  
+  mod_data_holm(comparison3, cluster_id, "H1N1_PRCV")  
+  
+}
+
+
+
+```
+
+
 
 
 # check if up & down direction consistent VennDiagrams and shared-gene-tables
