@@ -1763,23 +1763,23 @@ holm_logFC_thresh_main <- function(sce_all_filt, df_logFC_threshold)
 # 
 # holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold)
 # 
-# when desired power of 50%
-df_logFC_threshold <- data.frame(
-  DPI = c(12, 1, 1, 1),
-  log2FC_threshold = c(1.195, 1.98, 2.35, 2.65),
-  comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
-)
-
-holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold)
-# 
-# # when desired power of 20% 
+# # when desired power of 50%
 # df_logFC_threshold <- data.frame(
 #   DPI = c(12, 1, 1, 1),
-#   log2FC_threshold = c(1.07, 1.43, 1.92, 2.23),
+#   log2FC_threshold = c(1.195, 1.98, 2.35, 2.65),
 #   comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
 # )
 # 
 # holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold)
+
+# when desired power of 20%
+df_logFC_threshold <- data.frame(
+  DPI = c(12, 1, 1, 1),
+  log2FC_threshold = c(1.07, 1.43, 1.92, 2.23),
+  comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
+)
+
+holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold)
 
 ```
 
