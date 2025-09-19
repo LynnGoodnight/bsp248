@@ -1580,13 +1580,8 @@ summary_df_DPI1_ctl_H1N1 <- DE_analysis(sce_all_filt, selected_DPI = 1, Select_c
 # three overlapping comparisons (control-H1N1, control-PRCV, H1N1-PRCV at 1 dpi)
 # sampSet = "subset_innate_immune_cells"
 # Create the table in R
-df_logFC_threshold <- data.frame(
-  DPI = c(12, 1, 1, 1),
-  log2FC_threshold = c(1.83, 2.75, 3.18, 3.62),
-  comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
-)
 
-mod_data_holm <- function(df_re, i, comparison_flag) 
+mod_data_holm <- function(df_re, i, comparison_flag, write_table_flag = TRUE) 
 {
   y_limit <- 1.0e-20
   # add a column of NAs
@@ -1598,16 +1593,23 @@ mod_data_holm <- function(df_re, i, comparison_flag)
   
   table(df_re$diffexpressed)
 
-  write.table(df_re, file=paste0('Results/DE_edgeR_', sampSet, comparison_flag, '_cluster_', i, '_holm.csv'),
-            sep=',', quote=FALSE, row.names = FALSE)     
+  if(write_table_flag)
+  {
+    write.table(df_re, file=paste0('Results/DE_edgeR_', sampSet, comparison_flag, '_cluster_', i, '_holm.csv'),
+              sep=',', quote=FALSE, row.names = FALSE)      
+  }
+   
   
   df_re_clean <- df_re[ df_re$diffexpressed != "NO", ]
   if(nrow(df_re_clean) > 0)
   {
     # dir.create('Results')
-    write.table(df_re_clean, 
-                file=paste0('Results/DE_edgeR_', sampSet, comparison_flag, '_clean_cluster_', i, '_holm.csv'),
-                sep=',', quote=FALSE, row.names = FALSE)     
+    if(write_table_flag)
+    {
+      write.table(df_re_clean, 
+                  file=paste0('Results/DE_edgeR_', sampSet, comparison_flag, '_clean_cluster_', i, '_holm.csv'),
+                  sep=',', quote=FALSE, row.names = FALSE)           
+    }
   }
  
   
@@ -1668,59 +1670,109 @@ plot_volcano_holm <- function(df_re, title, logFC_threshold=2)
 
 }  
 
-
-for(cluster_id in unique(sce_all_filt$cluster))
+holm_logFC_thresh_main <- function(sce_all_filt, df_logFC_threshold) 
 {
-  # correct for multiple test using holm, only DPI1 need adjust in bsp248
-  # Files to read and write
-  in_files <- c(
-    paste0("Results/DE_edgeR_", sampSet,  "_ctl_PRCV_DPI1_cluster_", cluster_id, ".csv"),
-    paste0("Results/DE_edgeR_", sampSet,  "_ctl_H1N1_DPI1_cluster_", cluster_id, ".csv"),
-    paste0("Results/DE_edgeR_", sampSet,  "_H1N1_PRCV_DPI1_cluster_", cluster_id, ".csv") )
-  
-  
-  if (any(!file.exists(in_files)) ) 
+  # only DPI1 comparison need holm correct
+  for(cluster_id in unique(sce_all_filt$cluster))
   {
-    print(paste("File not found, skip: cluster", cluster_id))
-    print(in_files[!file.exists(in_files)] )
-    next 
+    # correct for multiple test using holm, only DPI1 need adjust in bsp248
+    # Files to read and write
+    in_files <- c(
+      paste0("Results/DE_edgeR_", sampSet,  "_ctl_PRCV_DPI1_cluster_", cluster_id, ".csv"),
+      paste0("Results/DE_edgeR_", sampSet,  "_ctl_H1N1_DPI1_cluster_", cluster_id, ".csv"),
+      paste0("Results/DE_edgeR_", sampSet,  "_H1N1_PRCV_DPI1_cluster_", cluster_id, ".csv") )
+    
+    
+    if (any(!file.exists(in_files)) ) 
+    {
+      print(paste("File not found, skip: cluster", cluster_id))
+      print(in_files[!file.exists(in_files)] )
+      next 
+    }
+    
+    comparison1 <- read.csv(in_files[1])
+    comparison2 <- read.csv(in_files[2])
+    comparison3 <- read.csv(in_files[3])
+    
+    comparison1$p_adjust_holm <- NA
+    comparison2$p_adjust_holm <- NA
+    comparison3$p_adjust_holm <- NA
+    
+    total_ens_id <- union(comparison1$ensemble_id, comparison2$ensemble_id)
+    total_ens_id <- union(total_ens_id, comparison3$ensemble_id)
+    
+    
+    for (selected_ens_id in total_ens_id) 
+    {
+      comparison1_p <- comparison1[comparison1$ensemble_id == selected_ens_id , 'p_adjust']
+      comparison2_p <- comparison2[comparison2$ensemble_id == selected_ens_id , 'p_adjust']  
+      comparison3_p <- comparison3[comparison3$ensemble_id == selected_ens_id , 'p_adjust']  
+      
+      p_holm <- p.adjust(c(comparison1_p, comparison2_p, comparison3_p), method = "holm")
+      comparison1[comparison1$ensemble_id == selected_ens_id , 'p_adjust_holm'] <- p_holm[1]
+      comparison2[comparison2$ensemble_id == selected_ens_id , 'p_adjust_holm']  <- p_holm[2]
+      comparison3[comparison3$ensemble_id == selected_ens_id , 'p_adjust_holm'] <- p_holm[3]
+      
+    }
+    # output table after holm correction, draw volcano plot and add bespoke logFC threshold, need to do those for DPI12 data too
+    mod_data_holm(comparison1, cluster_id, "ctl_PRCV")  
+    
+    mod_data_holm(comparison2, cluster_id, "ctl_H1N1")  
+    
+    mod_data_holm(comparison3, cluster_id, "H1N1_PRCV")  
+    
   }
   
-  comparison1 <- read.csv(in_files[1])
-  comparison2 <- read.csv(in_files[2])
-  comparison3 <- read.csv(in_files[3])
   
-  comparison1$p_adjust_holm <- NA
-  comparison2$p_adjust_holm <- NA
-  comparison3$p_adjust_holm <- NA
-  
-  
-  total_ens_id <- union(comparison1$ensemble_id, comparison2$ensemble_id)
-  total_ens_id <- union(total_ens_id, comparison3$ensemble_id)
-  
-  
-  for (selected_ens_id in total_ens_id) 
+  #  DPI12 only add bespoke logFC threshold
+  for(cluster_id in unique(sce_all_filt$cluster))
   {
-    comparison1_p <- comparison1[comparison1$ensemble_id == selected_ens_id , 'p_adjust']
-    comparison2_p <- comparison2[comparison2$ensemble_id == selected_ens_id , 'p_adjust']  
-    comparison3_p <- comparison3[comparison3$ensemble_id == selected_ens_id , 'p_adjust']  
+    # correct for multiple test using holm, only DPI1 need adjust in bsp248
+    # Files to read and write
+    in_files <- paste0("Results/DE_edgeR_", sampSet,  "_H1N1_PRCV_DPI12_cluster_", cluster_id, ".csv")
     
-    p_holm <- p.adjust(c(comparison1_p, comparison2_p, comparison3_p), method = "holm")
-    comparison1[comparison1$ensemble_id == selected_ens_id , 'p_adjust_holm'] <- p_holm[1]
-    comparison2[comparison2$ensemble_id == selected_ens_id , 'p_adjust_holm']  <- p_holm[2]
-    comparison3[comparison3$ensemble_id == selected_ens_id , 'p_adjust_holm'] <- p_holm[3]
+    
+    if (!file.exists(in_files)) 
+    {
+      print(paste("File not found, skip: cluster", cluster_id))
+      print(in_files )
+      next 
+    }
+    
+    comparison1 <- read.csv(in_files)
+  
+    #  draw volcano plot and add bespoke logFC threshold, need to do those for DPI12 data too
+    mod_data_holm(comparison1, cluster_id, "H1N1_PRCV", write_table_flag = FALSE)  
     
   }
-  # output table after holm correction, draw volcano plot and add bespoke logFC threshold, need to do those for DPI12 data too
-  mod_data_holm(comparison1, cluster_id, "ctl_PRCV")  
-  
-  mod_data_holm(comparison2, cluster_id, "ctl_H1N1")  
-  
-  mod_data_holm(comparison3, cluster_id, "H1N1_PRCV")  
   
 }
+# when desired power of 80% 
+df_logFC_threshold <- data.frame(
+  DPI = c(12, 1, 1, 1),
+  log2FC_threshold = c(1.83, 2.75, 3.18, 3.62),
+  comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
+)
 
-
+holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold)
+# 
+# # when desired power of 50% 
+# df_logFC_threshold <- data.frame(
+#   DPI = c(12, 1, 1, 1),
+#   log2FC_threshold = c(1.195, 1.98, 2.35, 2.65),
+#   comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
+# )
+# 
+# holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold)
+# 
+# # when desired power of 20% 
+# df_logFC_threshold <- data.frame(
+#   DPI = c(12, 1, 1, 1),
+#   log2FC_threshold = c(1.07, 1.43, 1.92, 2.23),
+#   comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
+# )
+# 
+# holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold)
 
 ```
 
