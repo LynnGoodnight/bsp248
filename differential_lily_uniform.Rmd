@@ -1722,11 +1722,11 @@ holm_logFC_thresh_main <- function(sce_all_filt, df_logFC_threshold, power_flag 
  
     # output table after holm correction, draw volcano plot and add bespoke logFC threshold, need to do those for DPI12 data too
 
-    mod_data_holm(comparison1, cluster_id, "ctl_PRCV", power_flag)  
+    mod_data_holm(comparison1, cluster_id, "ctl_PRCV", write_table_flag = FALSE, power_flag)  
     
-    mod_data_holm(comparison2, cluster_id, "ctl_H1N1", power_flag)  
+    mod_data_holm(comparison2, cluster_id, "ctl_H1N1", write_table_flag = FALSE, power_flag)  
     
-    mod_data_holm(comparison3, cluster_id, "H1N1_PRCV", power_flag)  
+    mod_data_holm(comparison3, cluster_id, "H1N1_PRCV", write_table_flag = FALSE, power_flag)  
     
   }
   
@@ -1750,7 +1750,7 @@ holm_logFC_thresh_main <- function(sce_all_filt, df_logFC_threshold, power_flag 
     comparison1$p_holm_adjust <- comparison1$p_adjust
   
     #  draw volcano plot and add bespoke logFC threshold, need to do those for DPI12 data too
-    mod_data_holm(comparison1, cluster_id, "H1N1_PRCV", write_table_flag = FALSE)  
+    mod_data_holm(comparison1, cluster_id, "H1N1_PRCV", write_table_flag = FALSE, power_flag)  
     
   }
   
