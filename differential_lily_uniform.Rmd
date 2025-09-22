@@ -1581,7 +1581,7 @@ summary_df_DPI1_ctl_H1N1 <- DE_analysis(sce_all_filt, selected_DPI = 1, Select_c
 # sampSet = "subset_innate_immune_cells"
 # Create the table in R
 
-mod_data_holm <- function(df_re, i, comparison_flag, write_table_flag = TRUE) 
+mod_data_holm <- function(df_re, i, comparison_flag, write_table_flag = TRUE, power_flag = "power80") 
 {
   y_limit <- 1.0e-20
   # add a column of NAs
@@ -1633,13 +1633,13 @@ mod_data_holm <- function(df_re, i, comparison_flag, write_table_flag = TRUE)
 
     selected_logFC_threshold = df_logFC_threshold$log2FC_threshold[(df_logFC_threshold$DPI == 1 & df_logFC_threshold$comparison == comparison_flag)] 
 
-    p1 <- plot_volcano_holm(df_re, title=paste( "cluster", i, "comparison", comparison_flag),
+    p1 <- plot_volcano_holm(df_re, title=paste( "cluster", i, "comparison", comparison_flag, power_flag),
                              selected_logFC_threshold)
         
     # p1 <- plot_volcano_holm(df_re, title=paste(cell_type, "cluster", i, "comparison", flag))
     # print(p1)
     
-    png(filename = paste0('Results/DE_edgeR_', sampSet, comparison_flag, '_volcano_cluster', i, '_holm.png') , height=1600, width=1600, res = 220)
+    png(filename = paste0('Results/DE_edgeR_', sampSet, comparison_flag, '_volcano_cluster', i, power_flag, '_holm.png') , height=1600, width=1600, res = 220)
     # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space 
     print(p1)
     dev.off()    
@@ -1670,7 +1670,7 @@ plot_volcano_holm <- function(df_re, title, logFC_threshold=2)
 
 }  
 
-holm_logFC_thresh_main <- function(sce_all_filt, df_logFC_threshold) 
+holm_logFC_thresh_main <- function(sce_all_filt, df_logFC_threshold, power_flag = "power80") 
 {
   # only DPI1 comparison need holm correct
   for(cluster_id in unique(sce_all_filt$cluster))
@@ -1721,11 +1721,12 @@ holm_logFC_thresh_main <- function(sce_all_filt, df_logFC_threshold)
     comparison3$p_holm_adjust <- p.adjust(comparison3$p_holm, method='BH')    
  
     # output table after holm correction, draw volcano plot and add bespoke logFC threshold, need to do those for DPI12 data too
-    mod_data_holm(comparison1, cluster_id, "ctl_PRCV")  
+
+    mod_data_holm(comparison1, cluster_id, "ctl_PRCV", power_flag)  
     
-    mod_data_holm(comparison2, cluster_id, "ctl_H1N1")  
+    mod_data_holm(comparison2, cluster_id, "ctl_H1N1", power_flag)  
     
-    mod_data_holm(comparison3, cluster_id, "H1N1_PRCV")  
+    mod_data_holm(comparison3, cluster_id, "H1N1_PRCV", power_flag)  
     
   }
   
@@ -1754,23 +1755,23 @@ holm_logFC_thresh_main <- function(sce_all_filt, df_logFC_threshold)
   }
   
 }
-# # when desired power of 80% 
-# df_logFC_threshold <- data.frame(
-#   DPI = c(12, 1, 1, 1),
-#   log2FC_threshold = c(1.83, 2.75, 3.18, 3.62),
-#   comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
-# )
-# 
-# holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold)
-# 
-# # when desired power of 50%
-# df_logFC_threshold <- data.frame(
-#   DPI = c(12, 1, 1, 1),
-#   log2FC_threshold = c(1.195, 1.98, 2.35, 2.65),
-#   comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
-# )
-# 
-# holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold)
+# when desired power of 80%
+df_logFC_threshold <- data.frame(
+  DPI = c(12, 1, 1, 1),
+  log2FC_threshold = c(1.83, 2.75, 3.18, 3.62),
+  comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
+)
+
+holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold, power_flag = "power80")
+
+# when desired power of 50%
+df_logFC_threshold <- data.frame(
+  DPI = c(12, 1, 1, 1),
+  log2FC_threshold = c(1.195, 1.98, 2.35, 2.65),
+  comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1", power_flag = "power50")
+)
+
+holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold)
 
 # when desired power of 20%
 df_logFC_threshold <- data.frame(
@@ -1779,7 +1780,7 @@ df_logFC_threshold <- data.frame(
   comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
 )
 
-holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold)
+holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold, power_flag = "power20")
 
 ```
 
