@@ -744,88 +744,188 @@ saveWorkbook(wb, file = paste0('Results/clustering_', sampSet, '_',
 
 
 
-```{r draw heatmap for selected markers across clusters}
+```{r draw marker genes expression heatmap for selected genes across clusters, fig.width= 12, fig.height=8}
+
+if(bsp_num == "bsp_248" )
+{
+
+  library(readxl)
+  df_cell_type_annotation <- read_excel("references/heatmap procine adaptive gene ID.xlsx")
+  selected_marker_genes <- df_cell_type_annotation$`Gene ID`
+  defining_genes_final <- unique(selected_marker_genes) 
+
+# sce_main_group <- readRDS("sce_subset_adaptive_immune_cells_with_named_refined_cluster.rds")
+
+
+# n_cluster <- length(levels(sce_run_x_corrected_clust))
+n_cluster <- length(unique(sce_main_group$cluster))  
+sce <- sce_main_group
+
+selected_markers_flag <- (rowData(sce)$Symbol %in% defining_genes_final)
+# table(selected_markers_flag)
+# obtain the gene metadata information for selected genes， and save in data frame
+selected_markers <- as.data.frame(rowData(sce)[selected_markers_flag , ])
+
+
+print('marker genes not found in our data:')
+print(defining_genes_final[!(defining_genes_final %in% selected_markers$Symbol)])
+# length(unique(selected_markers$Symbol))
+# filter the gene list to make sure all genes are measured and can be found in our seq data 
+defining_genes_final <-  defining_genes_final[(defining_genes_final %in% selected_markers$Symbol)]
+
+# generate a table contain the average gene expression values per gene per cluster
+sce_selected_markers <- sce
+rownames(sce_selected_markers) <- rowData(sce)$Symbol
+rowData(sce_selected_markers) <- rowData(sce_selected_markers)[, c("ID", "Symbol")]
+#subset sce_selected_markers to only store measurements of defining genes and calculate mean logcounts
+sce_selected_markers <- sce_selected_markers[rownames(sce_selected_markers) %in% defining_genes_final, ]
+# calculate the mean expression value for each gene within each cluster
+selected_markers_matrix_average_expression <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics='mean', use.assay.type='logcounts')))
+selected_markers_matrix_average_expression$gene_symbol <- rownames(selected_markers_matrix_average_expression)
+# head(selected_markers_matrix_average_expression)
+
+library(tidyr)
+# change the df from short format to long format to facilitate plotting 
+average_expression_df <- pivot_longer(data = selected_markers_matrix_average_expression,
+                                      cols = !gene_symbol,
+                                      names_to = "Cluster",  values_to = "AverageExpression" )
+df_cell_type_annotation <- read.csv("munual_annotation_adaptive_immune_cells.csv", header = FALSE)
+colnames(df_cell_type_annotation) <- c("Cluster", "clean_cell_type")
+
+
+df_cell_type_annotation$Cluster <- as.character(df_cell_type_annotation$Cluster)
+average_expression_df <- merge(average_expression_df, df_cell_type_annotation, all.x = TRUE)
+# head(df_cell_type_annotation)
+# head(average_expression_df)
+
+# calculate the proportion of cells expressed certain gene within certain cluster
+# and calculate such proportion for each gene in each cluster
+selected_markers_matrix_percent_expressed <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics="prop.detected", use.assay.type='logcounts')))
+selected_markers_matrix_percent_expressed$gene_symbol <- rownames(selected_markers_matrix_percent_expressed)
+percent_expressed_df <- pivot_longer(data = selected_markers_matrix_percent_expressed,
+                                     cols = !gene_symbol,
+                                     names_to = "Cluster",  values_to = "PercentExpressed" )
+
+# percent_expressed_df <- gather(selected_markers_matrix_percent_expressed, Cluster,  PercentExpressed, 
+#                                all_of(n_cluster) )
+
+# Merge 2 data frames store the average_expression and percent detected information by Gene and Cluster
+plot_data <- merge(average_expression_df, percent_expressed_df, by = c("gene_symbol", "Cluster"))
+# head(percent_expressed_df)
+# order the gene in y-axis, order cluster in x-axis
+# plot_data$Cluster <- factor(plot_data$Cluster, levels = sort(as.numeric(unique(plot_data$Cluster))))
+plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = rev(defining_genes_final))
+table(defining_genes_final)
+
+
+library(stringr)
+library(plyr)
+library(dplyr)
+
+var_width = 10
+plot_data$clean_cell_type = str_wrap(plot_data$clean_cell_type, width = var_width)
+
+
+# generate a vector store color of each cell type used for plot
+library(dplyr)
+
+celltype_map <- plot_data %>%
+  distinct(Cluster, clean_cell_type)
+
+n_cell_types <- length(unique(celltype_map$clean_cell_type))
+
+celltype_colors <- setNames(
+  colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))(n_cell_types),
+  unique(celltype_map$clean_cell_type))
+
+# Add cell type annotation bar under x-axis
+# Use geom_tile with y positioned just below genes (e.g., y = -1 or a new 'CellType' row)
+celltype_map$y <- -1  # Place the annotation below the lowest gene row
+
+################################################# 
+# desired_cell_type_order <- read_excel("references/desired_cell_type_order.xlsx", col_names = FALSE)
+
+desired_cell_type_order <- unique(sce_main_group$named_cluster)
+desired_gene_order <- defining_genes_final
+
+
+# Specify desired order as a character or integer vector
+# desired_cell_type_order <- as.data.frame(desired_cell_type_order)[,1] 
+# desired_cell_type_order <- str_wrap(desired_cell_type_order, width = var_width)
 # 
-# if(bsp_num == "bsp_248")
-# {
-#     defining_genes_185 <- c("CD163", "FLT3", "CD14", "CD4", "CADM1", "CSF1R", "FCGR1A", "BCL6", "CCL17", "IRF8", "ADAM8", "PRDM1", "IRF4", "JCHAIN" , "TNFRSF17", "TNFRSF13B", "CD19", "PAX5", "EBF1", "MS4A1", "CD79B", "IRF8", "CD28", "CD5", "CD3D", "CD3E", "CD8A", "CD8B", "FOXP3", "E2F1", "E2F2", "KLRK1", "KLRB1", "KIT", "NCR1", "TBX21", "EOMES", "GATA3", "IL1RL1", "IL7R", "ID3", "ACTG1", "GPR37", "NAPSA", "SFTPA1", "RPS3A", "RPS26", "RPS11", "RPL37")
+# plot_data$clean_cell_type <- factor(plot_data$clean_cell_type, levels = desired_cell_type_order)
+# celltype_map$clean_cell_type <- factor(celltype_map$clean_cell_type, levels = desired_cell_type_order)
 # 
-#     defining_genes_external <- c(
-#       "CD2", "CD3E", "CD4", "CD8A", "CCR7", "GZMH", "NCR1", "NKG7", "SOX13", "CD69",
-#       "CXCR3", "CXCR6", "KCNQ5", "LRRC43", "RUNX2", "ST6GALNAC3", "CD19", "CD40", "CXCR5",
-#       "PAX5", "SLA-DQB1", "TBX21", "DUT", "IRF4", "JCHAIN", "PRDM1", "XBP1", "BATF3",
-#       "CXCR4", "FLT3", "ID2", "IDO1", "IL4I1", "IRAK2", "LY75", "NAV1", "C2", "C3", "CD93",
-#       "IRF8", "NRP1", "TNF", "APOE", "ARG1", "CCL2", "CCL8", "CCR2", "CD14", "CD163",
-#       "CX3CR1", "FCN1", "IL1B", "IL4R", "LAMP1", "TNFRSF1B", "MSR1", "PPARG", "SIGLEC1",
-#       "CD24", "CXCL8", "IL18", "S100A8", "FCER1A", "GATA2", "HDC", "KIT", "LTC4S", "MS4A2",
-#       "ACTA2", "ACTG2", "CAV1", "CAVIN2", "CCDC80", "CCL11", "CD34", "CD9", "CNN1",
-#       "COL3A1", "MYH11", "PECAM1", "TIMP3")
-#     added_markers  <- !(defining_genes_185 %in% defining_genes_external)
-#     defining_genes_final <- c(defining_genes_external, defining_genes_185[added_markers])
-#     length(defining_genes_final)
-# 
-# 
-#     n_cluster <-  length(levels(sce_run_x_corrected_clust))
-#     selected_markers_flag <- (rowData(sce)$Symbol %in% defining_genes_final)
-#     # table(selected_markers_flag)
-#     selected_markers <- as.data.frame(rowData(sce)[selected_markers_flag , ])
-# 
-# 
-#     print('maker genes not found in sce:')
-#     print(defining_genes_final[!(defining_genes_final %in% selected_markers$Symbol)])
-#     # length(unique(selected_markers$Symbol))
-# 
-#     defining_genes_final <-  defining_genes_final[(defining_genes_final %in% selected_markers$Symbol)]
-# 
-# 
-#     sce_selected_markers <- sce
-#     rownames(sce_selected_markers) <- rowData(sce)$Symbol
-#     rowData(sce_selected_markers) <- rowData(sce_selected_markers)[, c("ID", "Symbol")]
-#     #subset to defining genes and calculate mean logcounts
-#     sce_selected_markers <- sce_selected_markers[rownames(sce_selected_markers) %in% defining_genes_final, ]
-#     selected_markers_matrix_average_expression <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics='mean', use.assay.type='logcounts')))
-#     selected_markers_matrix_average_expression$gene_symbol <- rownames(selected_markers_matrix_average_expression)
-# 
-#     library(tidyr)
-#     average_expression_df <- gather(selected_markers_matrix_average_expression, Cluster,  AverageExpression,
-#                         1:n_cluster )
-# 
-# 
-#     selected_markers_matrix_percent_expressed <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics="prop.detected", use.assay.type='logcounts')))
-#     selected_markers_matrix_percent_expressed$gene_symbol <- rownames(selected_markers_matrix_percent_expressed)
-# 
-#     percent_expressed_df <- gather(selected_markers_matrix_percent_expressed, Cluster,  PercentExpressed,
-#                                     1:n_cluster )
-# 
-#     # Merge both data frames by Gene and Cluster
-#     plot_data <- merge(average_expression_df, percent_expressed_df, by = c("gene_symbol", "Cluster"))
-#     plot_data$Cluster <- factor(plot_data$Cluster, levels = sort(as.numeric(unique(plot_data$Cluster))))
-# 
-#     plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = rev(defining_genes_final))
-# 
-# 
-#     png(filename='markers_clusters_heatmap.png', height=1500, width=1000)
-#     # Draw the dot plot using ggplot2
-#     ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
-#       geom_point(aes(size = PercentExpressed, color = AverageExpression)) +
-#       scale_size_continuous(range = c(0.5, 6)) + # Adjust the size range as needed
-#       scale_color_gradient(low = "white", high = "red") + # Set gradient colors for average expression
-#       labs(
-#         x = "Cluster",
-#         y = "gene_symbol",
-#         color = "Average Expression",
-#         size = "Percent Expressed"
-#       ) +
-#       theme_minimal() +
-#       theme(
-#         axis.text.x = element_text(angle = 45, hjust = 1),
-#         panel.grid.major = element_blank(),  # Remove major grid lines
-#         panel.grid.minor = element_blank()   # Remove minor grid lines
-#       )
-#     dev.off()
-# 
-# }
-# 
+# desired_gene_order <- read_excel("references/desired_gene_order_bsp293 WG 25.07.19.xlsx", col_names = FALSE)
+# # Specify desired order as a character or integer vector
+# desired_gene_order <- as.data.frame(desired_gene_order)[,1] 
+
+length(unique(plot_data$gene_symbol))
+plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = desired_gene_order)
+
+
+plot_data = plot_data[ !is.na(plot_data$gene_symbol), ]
+if(sampSet == "subset_adaptive_immune_cells")
+{
+  library(dplyr)
+  plot_data <- plot_data %>%
+     filter(!grepl("remove", clean_cell_type))
+  desired_cell_type_order <- desired_cell_type_order[!grepl("remove", desired_cell_type_order)]  
+  celltype_map <- celltype_map[ !grepl("remove", celltype_map$clean_cell_type), ]
+  
+}
+
+head(plot_data)
+# desired_gene_order[! desired_gene_order %in% unique(plot_data$gene_symbol)]
+########################################################################### 
+# Draw the dot plot using ggplot2
+p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
+  geom_point(aes(size = PercentExpressed, color = AverageExpression)) +
+  scale_size_continuous(range = c(0.5, 6)) + # Adjust the size range as needed
+  scale_color_gradient(low = "white", high = "red") + # Set gradient colors for average expression
+  labs(
+    x = "Cluster",
+    y = "gene_symbol",
+    color = "Average Expression",
+    size = "Percent Expressed"
+  ) + 
+  facet_grid(. ~ clean_cell_type,  scales="free_x") +
+  theme_bw()  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank()   # Remove minor grid lines
+  )
+
+p1 <- p + 
+  geom_tile(
+    data = celltype_map, 
+    aes(x = factor(Cluster), y = y, fill = clean_cell_type), 
+    height = 0.5
+  ) +
+  scale_fill_manual(values = celltype_colors, name = "Cell type") +
+  # Expand y axis so the new row is visible
+  scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) +
+  facet_grid(. ~ clean_cell_type,  scales="free_x") +
+  guides(fill = guide_legend(override.aes = list(size = 5)))+
+  theme(strip.text.x = element_text(size = 8))
+
+
+# scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) 
+# 0.5 extra units at the bottom (for your annotation bar below genes)
+# 1.5 extra units at the top (above your highest gene)
+
+print(p1)
+png(filename = paste0('Results/clustering_markers_per_clusters_', sampSet, '_heatmap.png'), 
+    height=1500, width=1500, res = 130)
+print(p1)
+dev.off()
+
+
+# save.image("cluster_develop.RData")
+
+  
+}
 
 
 
