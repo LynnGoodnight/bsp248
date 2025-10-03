@@ -636,7 +636,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
   
 }
 
-selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI12"
+# selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI12"
 conduct_EA_main <- function(selected_DE_method, selected_prefix)
 {
   selected_file_path <- paste0('Results/DE_', selected_DE_method, '_', sampSet, selected_prefix, '_cluster_')
@@ -799,6 +799,158 @@ conduct_EA_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_H1N1_DPI1"
 
 
 ```
+
+
+
+```{r conduct Enrichment analysis only for over-represent strategy with DEGs after Holm correction and bespoke logFC thresholds }
+# DE_edgeR_subset_adaptive_immune_cellsctl_H1N1_clean_cluster_2_holm.csv
+# selected_DE_method = "edgeR", selected_prefix = "H1N1_PRCV12"
+conduct_EA_main_using_Holm <- function(selected_DE_method, selected_prefix)
+{
+  selected_file_path <- paste0('Results/DE_', selected_DE_method, '_', sampSet, selected_prefix, '_cluster_')
+  
+  
+  for (selected_cell_types in df_grouped$annotated_type) 
+  {
+    print(selected_cell_types)
+    selected_Cluster <- as.character(df_grouped[df_grouped$annotated_type == 
+                                                  selected_cell_types, "cluster_numbers"])
+    selected_Cluster <-  strsplit(selected_Cluster, split = ", ")[[1]] 
+    print(selected_Cluster)
+    
+    ################################################################
+    selected_EA_method <- "over_represent"
+    # Over Representation Analysis
+    ################################################################
+    selected_database <- "GO"
+    print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))
+    GO_multiple_cell_type <- NULL
+    GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
+                                                              GO_multiple_cell_type,
+                                                              database = selected_database,
+                                                              cell_type = selected_cell_types,
+                                                              DE_method = selected_DE_method,
+                                                              EA_method = selected_EA_method,
+                                                              universal_file_path = selected_file_path,
+                                                              combine_flag = FALSE, id_type = "symbol")
+    
+    if(is.null(GO_multiple_cell_type))
+    {
+      print(paste("no hit in database", selected_database, "with method", selected_EA_method))
+
+    }else
+    {
+      write.table(GO_multiple_cell_type, paste0("Results/EA_", selected_DE_method, "_", sampSet,
+                                                "_BP_", selected_database, "database_dotplot_mul_clusters",
+                                                selected_prefix, selected_cell_types, "_", selected_EA_method, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+
+      draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database,
+                                 cell_type = selected_cell_types, prefix= selected_prefix,
+                                 EA_method = selected_EA_method)
+
+    }
+    ################################################################
+    selected_database <- "KEGG"
+    print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
+    GO_multiple_cell_type <- NULL
+    GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
+                                                              GO_multiple_cell_type,
+                                                              database = selected_database,
+                                                              cell_type = selected_cell_types,
+                                                              DE_method = selected_DE_method,
+                                                              EA_method = selected_EA_method,
+                                                              universal_file_path = selected_file_path,
+                                                              combine_flag = FALSE, id_type = "symbol")
+    
+    if(is.null(GO_multiple_cell_type))
+    {
+      print(paste("no hit in database", selected_database, "with method", selected_EA_method))
+
+    }else
+    {
+      write.table(GO_multiple_cell_type, paste0("Results/EA_", selected_DE_method, "_", sampSet,
+                                                "_BP_", selected_database, "database_dotplot_mul_clusters",
+                                                selected_prefix, selected_cell_types, "_", selected_EA_method, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+
+      draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database,
+                                 cell_type = selected_cell_types, prefix= selected_prefix,
+                                 EA_method = selected_EA_method)
+
+    }
+
+    ################################################################
+    selected_EA_method <- "GSEA"
+    # Gene Set Enrichment Analysis
+    ################################################################    
+    selected_database <- "GO"
+    print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
+    GO_multiple_cell_type <- NULL
+    GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
+                                                              GO_multiple_cell_type,
+                                                              database = selected_database,
+                                                              cell_type = selected_cell_types,
+                                                              DE_method = selected_DE_method,
+                                                              EA_method = selected_EA_method,
+                                                              universal_file_path = selected_file_path,
+                                                              combine_flag = FALSE, id_type = "symbol")
+    
+    if(is.null(GO_multiple_cell_type))
+    {
+      print(paste("no hit in database", selected_database, "with method", selected_EA_method))
+
+    }else
+    {
+      write.table(GO_multiple_cell_type, paste0("Results/EA_", selected_DE_method, "_", sampSet,
+                                                "_BP_", selected_database, "database_dotplot_mul_clusters",
+                                                selected_prefix, selected_cell_types, "_", selected_EA_method, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+
+      draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database,
+                                 cell_type = selected_cell_types, prefix= selected_prefix,
+                                 EA_method = selected_EA_method)
+
+    }
+    ################################################################
+    # KEGG GSEA doesn't accept repeat ncbi_id, but the conversion from 
+    # symbol/ensemble_id to ncbi_id always induce repeats, so i add code randomly remain 1 ncbi_id for such situation
+    # to conduct this analysis, better to use ncbi reference database in cell ranger count mapping step
+    selected_database <- "KEGG"
+    print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
+    GO_multiple_cell_type <- NULL
+    GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
+                                                              GO_multiple_cell_type,
+                                                              database = selected_database,
+                                                              cell_type = selected_cell_types,
+                                                              DE_method = selected_DE_method,
+                                                              EA_method = selected_EA_method,
+                                                              universal_file_path = selected_file_path,
+                                                              combine_flag = FALSE, id_type = "symbol")
+
+    if(is.null(GO_multiple_cell_type))
+    {
+      print(paste("no hit in database", selected_database, "with method", selected_EA_method))
+
+    }else
+    {
+      write.table(GO_multiple_cell_type, paste0("Results/EA_", selected_DE_method, "_", sampSet,
+                                                "_BP_", selected_database, "database_dotplot_mul_clusters",
+                                                selected_prefix, selected_cell_types, "_", selected_EA_method, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+
+      draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database,
+                                 cell_type = selected_cell_types, prefix= selected_prefix,
+                                 EA_method = selected_EA_method)
+    }
+
+  }
+}  
+
+
+
+
+
+```
+
+
+
 
 ```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset and select only immune related KEGG ids}
 # 

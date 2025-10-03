@@ -68,6 +68,7 @@ There are 2 conditions: virus1 vs virus1 vs control, 2 time point: DPI 1 vs DPI 
 # Loading the packages
 
 ```{r load packages}
+
 library(SingleCellExperiment)
 library(DropletUtils)
 library(edgeR)
@@ -1064,21 +1065,26 @@ plot_volcano <- function(df_re, title)
 {
   # here we use p values rather than p adjusted value to try
   # df_re$p_adjust <- df_re$PValue
-  
-  
+  set.seed(1)
   ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
-    geom_point() +
+    geom_point( alpha = 0.3, position = "jitter") +
     geom_text_repel() +
     ggtitle(title, paste("DE genes")) +
     labs( x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
-    geom_vline(xintercept=c(-0.6, 0.6), col="red") +
-    geom_vline(xintercept=c(-2, 2), col="green") +
     geom_hline(yintercept=-log10(0.05), col="red") +
     scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
     theme(axis.title.x = element_text(size = 15),                     # X-axis label font size
-          axis.title.y = element_text(size = 15)   )
+          axis.title.y = element_text(size = 15),
+          plot.margin = margin(5.5, 60, 5.5, 5.5),
+          axis.text=element_text(size=10)) + # extra right margin for labels
+    # 4) compress buttom region, expand upper 
+  coord_cartesian(clip = "off") +
+    scale_y_continuous(trans = scales::modulus_trans(p = 5)) 
+  
   # xlim(-3, 3) + ylim(0, -log10(y_limit)) +     
   # plot.title = element_text(size = 20),        # Title font size and style
+      # geom_vline(xintercept=c(-2, 2), col="green") +
+      # geom_vline(xintercept=c(-0.6, 0.6), col="red") +
 ## Warning: Removed 7866 rows containing missing values or values outside the scale range
 ## (`geom_text_repel()`).
 ## Warning: ggrepel: 191 unlabeled data points (too many overlaps). Consider
@@ -1596,7 +1602,7 @@ mod_data_holm <- function(df_re, i, comparison_flag, write_table_flag = TRUE, po
 
   if(write_table_flag)
   {
-    write.table(df_re, file=paste0('Results/DE_edgeR_', sampSet, comparison_flag,'_DPI',DPI_flag, '_cluster_', i, '_holm.csv'),
+    write.table(df_re, file=paste0('Results/DE_edgeR_', sampSet, '_', comparison_flag,'_DPI',DPI_flag, '_cluster_', i, '_holm.csv'),
               sep=',', quote=FALSE, row.names = FALSE)      
   }
    
@@ -1608,7 +1614,7 @@ mod_data_holm <- function(df_re, i, comparison_flag, write_table_flag = TRUE, po
     if(write_table_flag)
     {
       write.table(df_re_clean, 
-                  file=paste0('Results/DE_edgeR_', sampSet, comparison_flag, '_DPI',DPI_flag, '_clean_cluster_', i, '_holm.csv'),
+                  file=paste0('Results/DE_edgeR_', sampSet, '_', comparison_flag, '_DPI',DPI_flag, '_clean_cluster_', i, '_holm.csv'),
                   sep=',', quote=FALSE, row.names = FALSE)           
     }
   }
@@ -1640,7 +1646,7 @@ mod_data_holm <- function(df_re, i, comparison_flag, write_table_flag = TRUE, po
     # p1 <- plot_volcano_holm(df_re, title=paste(cell_type, "cluster", i, "comparison", flag))
     # print(p1)
     
-    png(filename = paste0('Results/DE_edgeR_', sampSet, comparison_flag, DPI_flag, '_volcano_cluster', i,  power_flag, '_holm.png') , height=1600, width=1600, res = 220)
+    png(filename = paste0('Results/DE_edgeR_', sampSet, '_', comparison_flag, DPI_flag, '_volcano_cluster', i, '_',  power_flag, '_holm.png') , height=1600, width=1600, res = 220)
     # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space 
     print(p1)
     dev.off()    
