@@ -897,7 +897,7 @@ if(sampSet == "subset_adaptive_immune_cells")
 {
   library(dplyr)
   plot_data <- plot_data %>%
-     filter(!grepl("remove", clean_cell_type))
+     dplyr::filter(!grepl("remove", clean_cell_type))
   desired_cell_type_order <- desired_cell_type_order[!grepl("remove", desired_cell_type_order)]  
   celltype_map <- celltype_map[ !grepl("remove", celltype_map$clean_cell_type), ]
   
@@ -925,29 +925,40 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
     panel.grid.minor = element_blank()   # Remove minor grid lines
   )
 
-p1 <- p + 
-  geom_tile(
-    data = celltype_map, 
-    aes(x = factor(Cluster), y = y, fill = clean_cell_type), 
-    height = 0.5
-  ) +
-  scale_fill_manual(values = celltype_colors, name = "Cell type") +
-  # Expand y axis so the new row is visible
-  scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) +
-  facet_grid(. ~ clean_cell_type,  scales="free_x") +
-  guides(fill = guide_legend(override.aes = list(size = 5)))+
-  theme(strip.text.x = element_text(size = 8))
+  p1 <- p + 
+    geom_tile(
+      data = celltype_map, 
+      aes(x = factor(Cluster), y = y, fill = clean_cell_type), 
+      height = 0.5
+    ) +
+    scale_fill_manual(values = celltype_colors, name = "Cell type") +
+    # Expand y axis so the new row is visible
+    scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) +
+    facet_grid(. ~ clean_cell_type,  scales="free_x") +
+    guides(fill = guide_legend(override.aes = list(size = 5)))+
+    theme(strip.text.x = element_text(size = 8))
 
 
 # scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) 
 # 0.5 extra units at the bottom (for your annotation bar below genes)
 # 1.5 extra units at the top (above your highest gene)
+    n_clusters <- length(unique(plot_data$Cluster))
+    width_of_plot <- n_clusters * 0.6 + 5
 
-print(p1)
-png(filename = paste0('Results/clustering_markers_per_clusters_', sampSet, '_heatmap.png'), 
-    height=1500, width=1500, res = 130)
-print(p1)
-dev.off()
+       
+  print(p1)
+  
+  filename1 <- paste0('Results/clustering_markers_per_clusters_', sampSet, '_heatmap.png')
+  # png(filename = filename1,
+  #     height=1500, width=1500, res = 130)
+  # print(p1)
+  # dev.off()
+  ggsave( filename = filename1,
+    plot = p1,
+    height = 1500/130, # tranfer pixels into inches
+    width  = width_of_plot,
+    units  = "in",
+    dpi    = 150)
 
 
 # save.image("cluster_develop.RData")
