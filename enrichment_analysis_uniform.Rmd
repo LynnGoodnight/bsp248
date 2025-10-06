@@ -318,7 +318,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
                                              cell_type = "CD8T", DE_method = "edgeR", 
                                              EA_method= "over_represent",
                                              universal_file_path = 'run_2_edgeR_DE_cluster_',
-                                             combine_flag = TRUE, database = "GO",
+                                             combine_multiple_cell_types_flag = TRUE, database = "GO",
                                              id_type = "symbol")
 {
   # print(paste('start run function combined_GO_dotplots_mul_cluster for', cell_type))
@@ -333,7 +333,7 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
     entrez_map <- read.csv(file = '/mnt/lustre/RDS-ephemeral/bioinformatics/analysis/scrna/proj/bsp_185/lily/stages/references/ensembl_entrez_map.csv')
   }
   
-  # iterate all clusters within one main population
+  # iterate all clusters within one cell type
   for (i in 1:length(file_list)) 
   {
     # generate correct input for EA command, like gseKEGG
@@ -605,7 +605,8 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
   # obtain enriched GO across all cluster within one cell type
   if(is.null(combined_GO_sig_df)) 
   {
-    print(paste('no enriched hit for all cluster within population: ', EA_method, database))
+    print(paste('no enriched hit for all cluster within population: ', EA_method, database, clusters, cell_type))
+    # GO_multiple_cell_type is the data frame we input into this function, combined_GO_sig_df is the data frame we generate after run EA across all clusters of certain cell type 
     return(GO_multiple_cell_type)
   }else
   {
@@ -625,10 +626,13 @@ combined_GO_dotplots_mul_cluster <- function(clusters = c("1", "9c"),
     combined_GO_sig_df$GeneRatio_value <- combined_GO_sig_df$setSize  
     }
    
-    if(combine_flag == FALSE)
+    if(combine_multiple_cell_types_flag)
     {
       GO_multiple_cell_type <- rbind(GO_multiple_cell_type, combined_GO_sig_df)
       return(GO_multiple_cell_type)    
+    }else
+    {
+      return(combined_GO_sig_df)
     }
     
     
@@ -664,7 +668,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
                                                               DE_method = selected_DE_method,
                                                               EA_method = selected_EA_method,
                                                               universal_file_path = selected_file_path,
-                                                              combine_flag = FALSE, id_type = "symbol")
+                                                              combine_multiple_cell_types_flag = FALSE, id_type = "symbol")
     
     if(is.null(GO_multiple_cell_type))
     {
@@ -692,7 +696,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
                                                               DE_method = selected_DE_method,
                                                               EA_method = selected_EA_method,
                                                               universal_file_path = selected_file_path,
-                                                              combine_flag = FALSE, id_type = "symbol")
+                                                              combine_multiple_cell_types_flag = FALSE, id_type = "symbol")
     
     if(is.null(GO_multiple_cell_type))
     {
@@ -724,7 +728,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
                                                               DE_method = selected_DE_method,
                                                               EA_method = selected_EA_method,
                                                               universal_file_path = selected_file_path,
-                                                              combine_flag = FALSE, id_type = "symbol")
+                                                              combine_multiple_cell_types_flag = FALSE, id_type = "symbol")
     
     if(is.null(GO_multiple_cell_type))
     {
@@ -755,7 +759,7 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
                                                               DE_method = selected_DE_method,
                                                               EA_method = selected_EA_method,
                                                               universal_file_path = selected_file_path,
-                                                              combine_flag = FALSE, id_type = "symbol")
+                                                              combine_multiple_cell_types_flag = FALSE, id_type = "symbol")
 
     if(is.null(GO_multiple_cell_type))
     {
@@ -776,9 +780,181 @@ conduct_EA_main <- function(selected_DE_method, selected_prefix)
 }  
 
 
+conduct_EA_merge_all_cell_type_main <- function(selected_DE_method, selected_prefix)
+{
+  selected_file_path <- paste0('Results/DE_', selected_DE_method, '_', sampSet, selected_prefix, '_cluster_')
+  
+  for(selected_database in c("KEGG", "GO"))
+  {
+    GO_multiple_cell_type <- NULL
+    for (selected_cell_types in df_grouped$annotated_type) 
+    {
+      print(selected_cell_types)
+      selected_Cluster <- as.character(df_grouped[df_grouped$annotated_type == 
+                                                    selected_cell_types, "cluster_numbers"])
+      selected_Cluster <-  strsplit(selected_Cluster, split = ", ")[[1]] 
+      print(selected_Cluster)
+      
+      ################################################################
+      selected_EA_method <- "GSEA"
+      # Gene Set Enrichment Analysis
+      
+      ################################################################
+      # KEGG GSEA doesn't accept repeat ncbi_id, but the conversion from
+      # symbol/ensemble_id to ncbi_id always induce repeats, so i add code randomly remain 1 ncbi_id for such situation
+      # to conduct this analysis, better to use ncbi reference database in cell ranger count mapping step
+      # selected_database <- "KEGG"
+      print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))
+  
+      GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
+                                                                GO_multiple_cell_type,
+                                                                database = selected_database,
+                                                                cell_type = selected_cell_types,
+                                                                DE_method = selected_DE_method,
+                                                                EA_method = selected_EA_method,
+                                                                universal_file_path = selected_file_path,
+                                                                combine_multiple_cell_types_flag = TRUE, id_type = "symbol")
+      
+      if(is.null(GO_multiple_cell_type))
+      {
+        print(paste("no hit in all clusters", selected_Cluster, "within cell type", selected_cell_types,  "under database", selected_database, "with method", selected_EA_method))
+  
+      }
+    }  
+    
+    write.table(GO_multiple_cell_type, paste0("Results/EA_", selected_DE_method, "_", sampSet,
+                                            "_BP_", selected_database, "database_dotplot_mul_clusters",
+                                            selected_prefix, "all_cell_types", "_", selected_EA_method, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+  
+  
+  ################################################################
+    if(!is.null(GO_multiple_cell_type))
+    {
+      draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database,
+                               cell_type = "all_cell_types", prefix= selected_prefix,
+                               EA_method = selected_EA_method)  
+    }else
+    {
+      
+      print(paste("no any significant GO hits in all cell types under database", selected_database, selected_DE_method, selected_prefix))
+    }
+    
+  }
+
+  
+}  
+
+conduct_EA_merge_all_cell_type_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_PRCV_DPI1")
+
+conduct_EA_merge_all_cell_type_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_H1N1_DPI1")
+
+conduct_EA_merge_all_cell_type_main(selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI12")
+
+conduct_EA_merge_all_cell_type_main(selected_DE_method = "edgeR", selected_prefix = "_H1N1_PRCV_DPI1")
+
 
 ```
 
+
+```{r code bank, save for possible future use}
+
+   # ################################################################
+   #  selected_EA_method <- "over_represent"
+   #  # Over Representation Analysis
+   # 
+   #  ################################################################
+   #  selected_database <- "GO"
+   #  print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))
+   # 
+   #  GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
+   #                                                            GO_multiple_cell_type,
+   #                                                            database = selected_database,
+   #                                                            cell_type = selected_cell_types,
+   #                                                            DE_method = selected_DE_method,
+   #                                                            EA_method = selected_EA_method,
+   #                                                            universal_file_path = selected_file_path,
+   #                                                            combine_multiple_cell_types_flag = TRUE, id_type = "symbol")
+   # 
+   #  # ################################################################
+   #  # selected_database <- "KEGG"
+   #  # print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))    
+   #  # GO_multiple_cell_type <- NULL
+   #  # GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
+   #  #                                                           GO_multiple_cell_type,
+   #  #                                                           database = selected_database,
+   #  #                                                           cell_type = selected_cell_types,
+   #  #                                                           DE_method = selected_DE_method,
+   #  #                                                           EA_method = selected_EA_method,
+   #  #                                                           universal_file_path = selected_file_path,
+   #  #                                                           combine_multiple_cell_types_flag = TRUE, id_type = "symbol")
+   #  # 
+   #  # if(is.null(GO_multiple_cell_type))
+   #  # {
+   #  #   print(paste("no hit in database", selected_database, "with method", selected_EA_method))
+   #  # 
+   #  # }else
+   #  # {
+   #  #   write.table(GO_multiple_cell_type, paste0("Results/EA_", selected_DE_method, "_", sampSet,
+   #  #                                             "_BP_", selected_database, "database_dotplot_mul_clusters",
+   #  #                                             selected_prefix, selected_cell_types, "_", selected_EA_method, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+   #  # 
+   #  #   draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database,
+   #  #                              cell_type = selected_cell_types, prefix= selected_prefix,
+   #  #                              EA_method = selected_EA_method)
+   #  # 
+   #  # }
+   #  # 
+   #  ################################################################
+   #  selected_EA_method <- "GSEA"
+   #  # Gene Set Enrichment Analysis
+   #  
+   #  ################################################################
+   #  selected_database <- "GO"
+   #  print(paste("start selected_EA_method:", selected_EA_method, "selected_database:", selected_database))
+   #  GO_multiple_cell_type <- NULL
+   #  GO_multiple_cell_type <- combined_GO_dotplots_mul_cluster(clusters = selected_Cluster,
+   #                                                            GO_multiple_cell_type,
+   #                                                            database = selected_database,
+   #                                                            cell_type = selected_cell_types,
+   #                                                            DE_method = selected_DE_method,
+   #                                                            EA_method = selected_EA_method,
+   #                                                            universal_file_path = selected_file_path,
+   #                                                            combine_multiple_cell_types_flag = TRUE, id_type = "symbol")
+   # 
+   #  if(is.null(GO_multiple_cell_type))
+   #  {
+   #    print(paste("no hit in database", selected_database, "with method", selected_EA_method))
+   # 
+   #  }else
+   #  {
+   #    write.table(GO_multiple_cell_type, paste0("Results/EA_", selected_DE_method, "_", sampSet,
+   #                                              "_BP_", selected_database, "database_dotplot_mul_clusters",
+   #                                              selected_prefix, selected_cell_types, "_", selected_EA_method, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+   # 
+   #    draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database,
+   #                               cell_type = selected_cell_types, prefix= selected_prefix,
+   #                               EA_method = selected_EA_method)
+   # 
+   #  }
+   #  if(is.null(GO_multiple_cell_type))
+   #  {
+   #    print(paste("no hit in database", selected_database, "with method", selected_EA_method))
+   # 
+   #  }else
+   #  {
+   #    write.table(GO_multiple_cell_type, paste0("Results/EA_", selected_DE_method, "_", sampSet,
+   #                                              "_BP_", selected_database, "database_dotplot_mul_clusters",
+   #                                              selected_prefix, selected_cell_types, "_", selected_EA_method, ".tsv"), sep="\t", quote=FALSE, row.names = FALSE)
+   # 
+   #    draw_dot_plots_mul_cluster(GO_multiple_cell_type, database = selected_database,
+   #                               cell_type = selected_cell_types, prefix= selected_prefix,
+   #                               EA_method = selected_EA_method)
+   #  }
+   # 
+   #  
+   #  
+   #  
+```
 
 
 
@@ -832,7 +1008,7 @@ conduct_EA_main_using_Holm <- function(selected_DE_method, selected_prefix)
                                                               DE_method = selected_DE_method,
                                                               EA_method = selected_EA_method,
                                                               universal_file_path = selected_file_path,
-                                                              combine_flag = FALSE, id_type = "symbol")
+                                                              combine_multiple_cell_types_flag = FALSE, id_type = "symbol")
     
     if(is.null(GO_multiple_cell_type))
     {
@@ -860,7 +1036,7 @@ conduct_EA_main_using_Holm <- function(selected_DE_method, selected_prefix)
                                                               DE_method = selected_DE_method,
                                                               EA_method = selected_EA_method,
                                                               universal_file_path = selected_file_path,
-                                                              combine_flag = FALSE, id_type = "symbol")
+                                                              combine_multiple_cell_types_flag = FALSE, id_type = "symbol")
     
     if(is.null(GO_multiple_cell_type))
     {
@@ -892,7 +1068,7 @@ conduct_EA_main_using_Holm <- function(selected_DE_method, selected_prefix)
                                                               DE_method = selected_DE_method,
                                                               EA_method = selected_EA_method,
                                                               universal_file_path = selected_file_path,
-                                                              combine_flag = FALSE, id_type = "symbol")
+                                                              combine_multiple_cell_types_flag = FALSE, id_type = "symbol")
     
     if(is.null(GO_multiple_cell_type))
     {
@@ -923,7 +1099,7 @@ conduct_EA_main_using_Holm <- function(selected_DE_method, selected_prefix)
                                                               DE_method = selected_DE_method,
                                                               EA_method = selected_EA_method,
                                                               universal_file_path = selected_file_path,
-                                                              combine_flag = FALSE, id_type = "symbol")
+                                                              combine_multiple_cell_types_flag = FALSE, id_type = "symbol")
 
     if(is.null(GO_multiple_cell_type))
     {
