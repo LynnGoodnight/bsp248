@@ -745,6 +745,7 @@ saveWorkbook(wb, file = paste0('Results/clustering_', sampSet, '_',
 
 
 ```{r draw marker genes expression heatmap for selected genes across clusters, fig.width= 12, fig.height=8}
+# sce_main_group <- readRDS("sce_subset_adaptive_immune_cells_with_named_refined_cluster.rds")
 
 if(bsp_num == "bsp_248" )
 {
@@ -762,11 +763,12 @@ if(bsp_num == "bsp_248" )
     df_cell_type_annotation <- read_excel("references/heatmap porcine Non immune cell gene list.xlsx")    
    
   }
+  df_cell_type_annotation <- as.data.frame(df_cell_type_annotation)
+  # head(df_cell_type_annotation)
 
-  selected_marker_genes <- df_cell_type_annotation$`Gene ID`
+  selected_marker_genes <- df_cell_type_annotation[,1]
   defining_genes_final <- unique(selected_marker_genes) 
 
-# sce_main_group <- readRDS("sce_subset_adaptive_immune_cells_with_named_refined_cluster.rds")
 
 
 # n_cluster <- length(levels(sce_run_x_corrected_clust))
@@ -801,7 +803,21 @@ library(tidyr)
 average_expression_df <- pivot_longer(data = selected_markers_matrix_average_expression,
                                       cols = !gene_symbol,
                                       names_to = "Cluster",  values_to = "AverageExpression" )
-df_cell_type_annotation <- read.csv("munual_annotation_adaptive_immune_cells.csv", header = FALSE)
+
+  if(sampSet == "innate_immune_cells")
+  {
+    df_cell_type_annotation <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)    
+  }else if(sampSet == "adaptive_immune_cells")
+  {
+    df_cell_type_annotation <- read.csv("munual_annotation_adaptive_immune_cells.csv", header = FALSE)  
+  }else if(sampSet == "non_immune_cells")
+  {
+    df_cell_type_annotation <- read.csv("munual_annotation_non_immune_cells.csv", header = FALSE)    
+  }
+
+
+
+
 colnames(df_cell_type_annotation) <- c("Cluster", "clean_cell_type")
 
 
