@@ -888,11 +888,11 @@ desired_gene_order <- defining_genes_final
 # # Specify desired order as a character or integer vector
 # desired_gene_order <- as.data.frame(desired_gene_order)[,1] 
 
-length(unique(plot_data$gene_symbol))
-plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = desired_gene_order)
+# length(unique(plot_data$gene_symbol))
 
 
 plot_data = plot_data[ !is.na(plot_data$gene_symbol), ]
+
 if(sampSet == "subset_adaptive_immune_cells")
 {
   library(dplyr)
@@ -902,6 +902,7 @@ if(sampSet == "subset_adaptive_immune_cells")
   celltype_map <- celltype_map[ !grepl("remove", celltype_map$clean_cell_type), ]
   
 }
+plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = desired_gene_order)
 
 head(plot_data)
 # desired_gene_order[! desired_gene_order %in% unique(plot_data$gene_symbol)]
@@ -958,7 +959,7 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
     height = 1500/130, # tranfer pixels into inches
     width  = width_of_plot,
     units  = "in",
-    dpi    = 150)
+    dpi    = 300)
 
 
 # save.image("cluster_develop.RData")
