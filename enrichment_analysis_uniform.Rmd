@@ -154,7 +154,7 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
       height_of_plot <- n_lines * 0.25 + 5       
       filename1 <- paste0('Results/EA_edgeR_', sampSet, "_BP_", database, "database_dotplot_mul_clusters", prefix , '_', cell_type, '_', EA_method, '.png')
       # ggsave(filename1, p1, height = height_of_plot, units = "in", dpi = 300)
-      ggsave(filename1, p1, height = height_of_plot)
+      ggsave(filename1, p1, height = height_of_plot, limitsize = FALSE)
       # png(filename=paste0('Results/EA_edgeR_', sampSet, "_BP_", database, "database_dotplot_mul_clusters", prefix , '_', cell_type, '_', EA_method, '.png'), height=9000, width=4000, res = 300)
       # print(p1)
       # dev.off()      
@@ -844,6 +844,13 @@ conduct_EA_merge_all_cell_type_main <- function(selected_DE_method, selected_pre
   
 }  
 
+
+
+```
+
+
+```{r draw bubble plots contain each cluster as one column, and group all cell types in one bubble plot, using GSEA method}
+
 conduct_EA_merge_all_cell_type_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_PRCV_DPI1")
 
 conduct_EA_merge_all_cell_type_main(selected_DE_method = "edgeR", selected_prefix = "_ctl_H1N1_DPI1")
@@ -854,6 +861,8 @@ conduct_EA_merge_all_cell_type_main(selected_DE_method = "edgeR", selected_prefi
 
 
 ```
+
+
 
 
 ```{r code bank, save for possible future use}
@@ -958,7 +967,7 @@ conduct_EA_merge_all_cell_type_main(selected_DE_method = "edgeR", selected_prefi
 
 
 
-```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset , fig.width= 12}
+```{r draw 2 dot plots contain each cluster as one column, and group columns based on main cell population, using KEGG dataset, fig.width= 12}
 # save.image(file = paste0('EA_debug',sampSet,'.RData'))
 
 
