@@ -750,7 +750,19 @@ if(bsp_num == "bsp_248" )
 {
 
   library(readxl)
-  df_cell_type_annotation <- read_excel("references/heatmap procine adaptive gene ID.xlsx")
+  if(sampSet == "innate_immune_cells")
+  {
+    df_cell_type_annotation <- read_excel("references/heatmap porcine_innate_clusters_genes_ordered.xlsx")    
+   
+  }else if(sampSet == "adaptive_immune_cells")
+  {
+    df_cell_type_annotation <- read_excel("references/heatmap procine adaptive gene ID.xlsx")    
+  }else if(sampSet == "non_immune_cells")
+  {
+    df_cell_type_annotation <- read_excel("references/heatmap porcine Non immune cell gene list.xlsx")    
+   
+  }
+
   selected_marker_genes <- df_cell_type_annotation$`Gene ID`
   defining_genes_final <- unique(selected_marker_genes) 
 
