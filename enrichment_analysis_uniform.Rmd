@@ -256,9 +256,7 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
       n_clusters <- length(unique(GO_multiple_cell_type$named_cluster))
       height_cap <- 49
       width_of_plot <- n_clusters * 3 + 30
-
-      n_lines <- nrow(GO_multiple_cell_type)
-      height_of_plot <- n_lines * 0.25 + 5       
+    
       filename1 <- paste0('Results/EA_edgeR_', sampSet, "_BP_", database, 
                           "database_dotplot_mul_clusters",  prefix , '_', cell_type, '_', EA_method, '.png')
       # ggsave(filename1, p1, height = height_of_plot, units = "in", dpi = 300)
