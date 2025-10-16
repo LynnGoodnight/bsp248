@@ -1066,21 +1066,48 @@ plot_volcano <- function(df_re, title)
   # here we use p values rather than p adjusted value to try
   # df_re$p_adjust <- df_re$PValue
   set.seed(1)
+################################################# 
+  # v1.14.2
+  # ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
+  #   geom_point( alpha = 0.3) +
+  #   geom_text_repel() +
+  #   ggtitle(title, paste("DE genes")) +
+  #   labs( x = "logFC", y = "p_adjust**-0.5") + 
+  #   geom_hline(yintercept=0.05**-0.5, col="red") +
+  #   scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
+  #   theme(axis.title.x = element_text(size = 15),                    
+  #         axis.title.y = element_text(size = 15),
+  #         plot.margin = margin(5.5, 60, 5.5, 5.5),
+  #         axis.text=element_text(size=10)) + 
+  #   coord_cartesian(clip = "off")  +
+  #   scale_y_continuous(breaks = c(0, 0.05**-0.5, 0.01**-0.5, 0.001**-0.5, 0.0001**-0.5) )
+
+  ################################################# 
+  # v1.14.1
   ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
-    geom_point( alpha = 0.3, position = "jitter") +
+    geom_point( alpha = 0.3) +
     geom_text_repel() +
     ggtitle(title, paste("DE genes")) +
-    labs( x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
+    labs( x = "logFC", y = "-log10(p value)") +
     geom_hline(yintercept=-log10(0.05), col="red") +
     scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
-    theme(axis.title.x = element_text(size = 15),                     # X-axis label font size
+    theme(axis.title.x = element_text(size = 15),
           axis.title.y = element_text(size = 15),
           plot.margin = margin(5.5, 60, 5.5, 5.5),
-          axis.text=element_text(size=10)) + # extra right margin for labels
-    # 4) compress buttom region, expand upper 
-  coord_cartesian(clip = "off") +
-    scale_y_continuous(trans = scales::modulus_trans(p = 5)) 
+          axis.text=element_text(size=10)) +
+    coord_cartesian(clip = "off")  +
+    scale_y_continuous(trans = scales::modulus_trans(p = 5),  breaks = c(0, 1, 2, 3, 4) )
+
   
+      
+  #   ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
+
+  #     geom_point( alpha = 0.3, position = "jitter") +
+ # Customize axis labels here if needed
+                   # X-axis label font size
+# extra right margin for labels
+    # 4) compress buttom region, expand upper 
+  # trim anything below 0
   # xlim(-3, 3) + ylim(0, -log10(y_limit)) +     
   # plot.title = element_text(size = 20),        # Title font size and style
       # geom_vline(xintercept=c(-2, 2), col="green") +
@@ -1112,6 +1139,11 @@ mod_data <- function(df_re, i, cell_type, flag)
               sep=',', quote=FALSE, row.names = FALSE)  
   
   df_re_clean <- df_re[ df_re$diffexpressed != "NO", ]
+  df_re$delabel <- NA
+  df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]  
+  df_re$delabel[startsWith(df_re$delabel, "ENSSSCG")] <- NA 
+  
+  
   if(nrow(df_re_clean) > 0)
   {
     # dir.create('Results')
@@ -1121,7 +1153,7 @@ mod_data <- function(df_re, i, cell_type, flag)
   }
  
   
-  df_re$delabel <- NA
+  
   if(sum(df_re$diffexpressed != "NO") == 0)
   {
     
@@ -1131,7 +1163,7 @@ mod_data <- function(df_re, i, cell_type, flag)
   {
     
     # print(paste('qualified DE genes observed in this cluster', i, ', show volcano plot'))
-    df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]
+
     # for row/gene who up/down, its delabel column will store the gene symbol again
     # for row/gene who is not DE, its delabel column is NA
     # Set p-value floor
