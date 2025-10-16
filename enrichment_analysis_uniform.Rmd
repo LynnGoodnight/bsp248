@@ -135,7 +135,7 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
         scale_size_continuous(limits = c(min(GO_multiple_cell_type$GeneRatio_value),
                                          max(GO_multiple_cell_type$GeneRatio_value)), range = c(3, 7)) + 
         theme_bw() + 
-        ylab("") + theme(axis.text.x = element_text(angle = 90)) + 
+        ylab("") + theme(axis.text.x = element_text(angle = 90), strip.text.x = element_blank()) + 
         xlab("") + facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
         ggtitle(label = paste(sampSet, prefix, EA_method,  database),
               subtitle = paste("enrichment dot plot for cell type: ", cell_type) )          
@@ -242,7 +242,7 @@ draw_dot_plots_mul_cluster <- function(GO_multiple_cell_type, database = "GO",
         scale_size_continuous(limits = c(min(GO_multiple_cell_type$GeneRatio_value),
                                          max(GO_multiple_cell_type$GeneRatio_value)), range = c(3, 7)) + 
         theme_bw() + 
-        ylab("") + theme(axis.text.x = element_text(angle = 90)) + 
+        ylab("") + theme(axis.text.x = element_text(angle = 90), strip.text.x = element_blank()) + 
         xlab("") + facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
         ggtitle(label = paste(sampSet, prefix, EA_method,  database),
               subtitle = paste("enrichment dot plot for cell type: ", cell_type) )  
