@@ -746,11 +746,17 @@ saveWorkbook(wb, file = paste0('Results/clustering_', sampSet, '_',
 
 ```{r draw marker genes expression heatmap for selected genes across clusters, fig.width= 12, fig.height=8}
 # sce_main_group <- readRDS("sce_subset_adaptive_immune_cells_with_named_refined_cluster.rds")
+library(stringr)
+library(plyr)
+library(dplyr)
+library(readxl)
+library(tidyr)
+
 
 if(bsp_num == "bsp_248" )
 {
 
-  library(readxl)
+
   if(sampSet == "innate_immune_cells")
   {
     df_cell_type_annotation <- read_excel("references/heatmap porcine_innate_clusters_genes_ordered.xlsx")    
@@ -797,10 +803,10 @@ sce_selected_markers <- sce_selected_markers[rownames(sce_selected_markers) %in%
 selected_markers_matrix_average_expression <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics='mean', use.assay.type='logcounts')))
 selected_markers_matrix_average_expression$gene_symbol <- rownames(selected_markers_matrix_average_expression)
 # head(selected_markers_matrix_average_expression)
+################################################# 
 
-library(tidyr)
 # change the df from short format to long format to facilitate plotting 
-average_expression_df <- pivot_longer(data = selected_markers_matrix_average_expression,
+average_expression_df <- tidyr::pivot_longer(data = selected_markers_matrix_average_expression,
                                       cols = !gene_symbol,
                                       names_to = "Cluster",  values_to = "AverageExpression" )
 
@@ -843,19 +849,17 @@ plot_data <- merge(average_expression_df, percent_expressed_df, by = c("gene_sym
 # order the gene in y-axis, order cluster in x-axis
 # plot_data$Cluster <- factor(plot_data$Cluster, levels = sort(as.numeric(unique(plot_data$Cluster))))
 plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = rev(defining_genes_final))
-table(defining_genes_final)
+# table(defining_genes_final)
+# unique(plot_data$clean_cell_type)
 
 
-library(stringr)
-library(plyr)
-library(dplyr)
 
 var_width = 10
 plot_data$clean_cell_type = str_wrap(plot_data$clean_cell_type, width = var_width)
 
 
 # generate a vector store color of each cell type used for plot
-library(dplyr)
+
 
 celltype_map <- plot_data %>%
   distinct(Cluster, clean_cell_type)
@@ -871,37 +875,74 @@ celltype_colors <- setNames(
 celltype_map$y <- -1  # Place the annotation below the lowest gene row
 
 ################################################# 
-# desired_cell_type_order <- read_excel("references/desired_cell_type_order.xlsx", col_names = FALSE)
+# order cell types displayed in the plot
+if(bsp_num == "bsp_248")
+{
+  if(sampSet == "innate_immune_cells")
+  {
+    desired_cell_type_order <- read_excel("references/Heatmap cell type order 25.10.07.xlsx", 
+                                        col_names = TRUE, sheet = "Meyloid cells") 
+    
+  }else if(sampSet == "adaptive_immune_cells")
+  {
+    desired_cell_type_order <- read_excel("references/Heatmap cell type order 25.10.07.xlsx", 
+                                        col_names = TRUE, sheet = "T, B and NK-like cells")   
+    
+  }else if(sampSet == "non_immune_cells")
+  {
+    desired_cell_type_order <- read_excel("references/Heatmap cell type order 25.10.07.xlsx", 
+                                        col_names = TRUE, sheet = "non-immune structural cells")   
+    
+  }
+  
+  # Specify desired order as a character or integer vector
+  desired_cell_type_order <- colnames(as.data.frame(desired_cell_type_order)) 
+  
+  # remove the content in parentheses as well as the parentheses
+  desired_cell_type_order <- sub(" \\(.*\\)", "", desired_cell_type_order)
+  
+  desired_cell_type_order <- str_wrap(desired_cell_type_order, width = var_width)
+  
+  plot_data = plot_data[ !stringr::str_detect(plot_data$clean_cell_type, "remove"), ]
 
-desired_cell_type_order <- unique(sce_main_group$named_cluster)
-desired_gene_order <- defining_genes_final
+  
+  # unique(plot_data$clean_cell_type)
+  # head(plot_data)
+
+}else
+{
+  desired_cell_type_order <- unique(sce_main_group$named_cluster)  
+  # automatic alphabetic ordering 
+}
+# head(desired_cell_type_order)
 
 
-# Specify desired order as a character or integer vector
-# desired_cell_type_order <- as.data.frame(desired_cell_type_order)[,1] 
-# desired_cell_type_order <- str_wrap(desired_cell_type_order, width = var_width)
-# 
-# plot_data$clean_cell_type <- factor(plot_data$clean_cell_type, levels = desired_cell_type_order)
-# celltype_map$clean_cell_type <- factor(celltype_map$clean_cell_type, levels = desired_cell_type_order)
-# 
+
+
+
+plot_data$clean_cell_type <- factor(plot_data$clean_cell_type, levels = desired_cell_type_order)
+celltype_map = celltype_map[ !stringr::str_detect(celltype_map$clean_cell_type, "remove"), ]
+celltype_map$clean_cell_type <- factor(celltype_map$clean_cell_type, levels = desired_cell_type_order)
+
+######################### 
 # desired_gene_order <- read_excel("references/desired_gene_order_bsp293 WG 25.07.19.xlsx", col_names = FALSE)
 # # Specify desired order as a character or integer vector
 # desired_gene_order <- as.data.frame(desired_gene_order)[,1] 
 
 # length(unique(plot_data$gene_symbol))
 
-
+desired_gene_order <- defining_genes_final
 plot_data = plot_data[ !is.na(plot_data$gene_symbol), ]
 
-if(sampSet == "subset_adaptive_immune_cells")
-{
-  library(dplyr)
-  plot_data <- plot_data %>%
-     dplyr::filter(!grepl("remove", clean_cell_type))
-  desired_cell_type_order <- desired_cell_type_order[!grepl("remove", desired_cell_type_order)]  
-  celltype_map <- celltype_map[ !grepl("remove", celltype_map$clean_cell_type), ]
-  
-}
+# if(sampSet == "subset_adaptive_immune_cells")
+# {
+#   library(dplyr)
+#   plot_data <- plot_data %>%
+#      dplyr::filter(!grepl("remove", clean_cell_type))
+#   desired_cell_type_order <- desired_cell_type_order[!grepl("remove", desired_cell_type_order)]  
+#   celltype_map <- celltype_map[ !grepl("remove", celltype_map$clean_cell_type), ]
+#   
+# }
 plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = desired_gene_order)
 
 head(plot_data)
@@ -918,7 +959,6 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
     color = "Average Expression",
     size = "Percent Expressed"
   ) + 
-  facet_grid(. ~ clean_cell_type,  scales="free_x") +
   theme_bw()  +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
@@ -978,7 +1018,7 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
 # save the R variables
 setwd(work_dir)
 
-# save.image(file = paste0(sampSet, "_", "k", clustK, "_with_refined_cluster.RData"))
+save.image(file = paste0(sampSet, "_", "k", clustK, "_with_refined_cluster.RData"))
 
 
 saveRDS(sce_main_group_corrected, file = paste0('sce_subset_',sampSet,'_corrected_with_refined_cluster.rds'))
