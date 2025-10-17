@@ -21,7 +21,6 @@ if (clustK == "") {
    # default
 }
 
-
 print(paste('work_dir', work_dir, 'sampSet', sampSet, 'bsp_num', bsp_num, 'clustK', clustK))              
 pfx <- paste0(work_dir,"Results/")
 dir.create(pfx, showWarnings = FALSE)
@@ -39,7 +38,8 @@ library(ggbeeswarm)
 library(bluster)
 library(scran)
 library(scater)
-
+library(readxl)
+library(stringr)
 
 ```
 
@@ -59,34 +59,42 @@ Load the data.
 
 ```{r load processed data produced at end of initial clustering script, subset selected cells, overview cell number per sample, fig.width=10}
 
-sce_all <- readRDS("sce_all_with_named_subcluster.rds")
+
+
 
 # ensure sample 20 has been deleted 
 # read in a table record which initial clusters belong to which subset, extract the clusters id for one subset
-library(readxl)
-population_divide <- read_excel("Population devision.xlsx")
+
+population_divide <- readxl::read_excel("references/Population devision.xlsx")
 # selected_main_group <-  as.character(population_divide[1, 1])
 selected_main_group <-  sampSet
 population_divide <- as.data.frame(population_divide)
-if(bsp_num = "bsp_248")
+if(bsp_num == "bsp_248")
 {
   rownames(population_divide) <-  population_divide[,1]
   selected_cluster <- as.character(population_divide[selected_main_group, 3])
   selected_cluster <- strsplit(selected_cluster, split = ",")[[1]]
+  sce_all <- readRDS("sce_all_with_named_subcluster.rds")
   
-}else if(bsp_num = "bsp_306")
+}else if(bsp_num == "bsp_306")
 {
+  sce_all <- readRDS("sce_all_with_refined_annotated_cluster.rds") 
   
+  selected_cluster <- population_divide[ , colnames(population_divide) == selected_main_group]
+  selected_cluster <- selected_cluster[-1]
+  selected_cluster <- as.integer(selected_cluster)
+  sce_all$cluster <- as.integer(sce_all$cluster)
 }
 
-library(stringr)
-selected_cluster <- str_replace_all(selected_cluster, fixed(" "), "") 
+
+selected_cluster <- stringr::str_replace_all(selected_cluster, fixed(" "), "") 
 # remove any blank 
 # save.image('cluster_subset_uniform_debug.RData')
 # load('cluster_subset_uniform_debug.RData')
 print(selected_cluster)
-
+# head(sce_all$cluster)
 # extract cells belong to selected initial clusters
+
 sce_main_group <- sce_all[ , (sce_all$cluster %in% selected_cluster) ]
 table(sce_main_group$Sample)
 overview_cell_number_per_sample <- function(sce, flag)
