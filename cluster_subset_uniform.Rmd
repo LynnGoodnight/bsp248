@@ -68,12 +68,20 @@ population_divide <- read_excel("Population devision.xlsx")
 # selected_main_group <-  as.character(population_divide[1, 1])
 selected_main_group <-  sampSet
 population_divide <- as.data.frame(population_divide)
-rownames(population_divide) <-  population_divide[,1]
-selected_cluster <- as.character(population_divide[selected_main_group, 3])
-selected_cluster <- strsplit(selected_cluster, split = ",")[[1]]
+if(bsp_num = "bsp_248")
+{
+  rownames(population_divide) <-  population_divide[,1]
+  selected_cluster <- as.character(population_divide[selected_main_group, 3])
+  selected_cluster <- strsplit(selected_cluster, split = ",")[[1]]
+  
+}else if(bsp_num = "bsp_306")
+{
+  
+}
 
 library(stringr)
-selected_cluster <- str_replace_all(selected_cluster, fixed(" "), "")
+selected_cluster <- str_replace_all(selected_cluster, fixed(" "), "") 
+# remove any blank 
 # save.image('cluster_subset_uniform_debug.RData')
 # load('cluster_subset_uniform_debug.RData')
 print(selected_cluster)
@@ -745,7 +753,8 @@ saveWorkbook(wb, file = paste0('Results/clustering_', sampSet, '_',
 
 
 ```{r draw marker genes expression heatmap for selected genes across clusters, fig.width= 12, fig.height=8}
-# sce_main_group <- readRDS("sce_subset_adaptive_immune_cells_with_named_refined_cluster.rds")
+# sce_main_group <- readRDS("sce_subset_non_immune_cells_with_named_refined_cluster.rds")
+# sampSet = "non_immune_cells"
 library(stringr)
 library(plyr)
 library(dplyr)
@@ -755,7 +764,6 @@ library(tidyr)
 
 if(bsp_num == "bsp_248" )
 {
-
 
   if(sampSet == "innate_immune_cells")
   {
@@ -851,12 +859,20 @@ plot_data <- merge(average_expression_df, percent_expressed_df, by = c("gene_sym
 plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = rev(defining_genes_final))
 # table(defining_genes_final)
 # unique(plot_data$clean_cell_type)
+# head(plot_data)
+# unique(plot_data[ , c("clean_cell_type", "Cluster")])
 
-
-
+################################################# 
 var_width = 10
 plot_data$clean_cell_type = str_wrap(plot_data$clean_cell_type, width = var_width)
 
+plot_data = plot_data[ !stringr::str_detect(plot_data$clean_cell_type, "remove"), ]
+
+if(sampSet == "non_immune_cells")
+{
+ plot_data = plot_data[ !stringr::str_detect(plot_data$clean_cell_type, "noise"), ]
+ plot_data = plot_data[ !stringr::str_detect(plot_data$clean_cell_type, "Not known"), ]   
+}
 
 # generate a vector store color of each cell type used for plot
 
@@ -897,15 +913,17 @@ if(bsp_num == "bsp_248")
   
   # Specify desired order as a character or integer vector
   desired_cell_type_order <- colnames(as.data.frame(desired_cell_type_order)) 
-  
+  if(sampSet == "adaptive_immune_cells")
+  {
+    # as i didn't manually update and delete parentheses for T, B and NK-like cells sheet in Heatmap cell type order 25.10.07.xlsx
+    desired_cell_type_order <- sub(" \\(.*\\)", "", desired_cell_type_order)    
+  }
   # remove the content in parentheses as well as the parentheses
-  desired_cell_type_order <- sub(" \\(.*\\)", "", desired_cell_type_order)
-  
+
+  desired_cell_type_order <- unique(desired_cell_type_order)
   desired_cell_type_order <- str_wrap(desired_cell_type_order, width = var_width)
   
-  plot_data = plot_data[ !stringr::str_detect(plot_data$clean_cell_type, "remove"), ]
 
-  
   # unique(plot_data$clean_cell_type)
   # head(plot_data)
 
@@ -977,17 +995,21 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
     scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) +
     facet_grid(. ~ clean_cell_type,  scales="free_x") +
     guides(fill = guide_legend(override.aes = list(size = 5)))+
-    theme(strip.text.x = element_text(size = 8))
+    theme(strip.text.x = element_text(size = 5)  ) +
+    coord_cartesian(clip = "off")
 
-
+# add space inside strips
 # scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) 
 # 0.5 extra units at the bottom (for your annotation bar below genes)
 # 1.5 extra units at the top (above your highest gene)
     n_clusters <- length(unique(plot_data$Cluster))
     width_of_plot <- n_clusters * 0.6 + 5
+  if(sampSet == "innate_immune_cells" & sampSet == "non_immune_cells")
+  {
+    width_of_plot <- n_clusters * 5 + 5
+  }
 
-       
-  print(p1)
+  # print(p1)
   
   filename1 <- paste0('Results/clustering_markers_per_clusters_', sampSet, '_heatmap.png')
   # png(filename = filename1,
