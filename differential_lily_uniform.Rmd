@@ -293,14 +293,14 @@ selected_point_size = 0.2
 # plot automatic assigned color for each cell type and cluster in UMAP
 sce_filt
 p1 <- plotUMAP(sce_filt, colour_by="cluster", text_by = "cluster",  point_size = selected_point_size) + 
-  guides(colour = guide_legend(override.aes = list(size=8, alpha = 1))) + 
+  guides(colour = guide_legend(override.aes = list(size=15, alpha = 1))) + 
   theme(text = element_text(size = 20)) + ggtitle(paste('UMAP', sampSet))
 print(p1)
 clusterid_colors <- output_color_code_in_UMAP (p1, "cluster")
 print(clusterid_colors)  
 
 p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
-  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
+  guides(colour = guide_legend(override.aes = list(size = 15, alpha = 1))) +
   ggtitle(paste('UMAP', sampSet))
 
 print(p1)
@@ -309,7 +309,7 @@ print(cell_type_colors)
 
 
 p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster", point_size = selected_point_size) +
-  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
+  guides(colour = guide_legend(override.aes = list(size = 15, alpha = 1))) +
   ggtitle(paste('UMAP', sampSet))
 
 print(p1)
@@ -317,7 +317,7 @@ print(p1)
 
 
 p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", point_size = selected_point_size) + 
-  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1), title = 'Cell type')) + 
+  guides(colour = guide_legend(override.aes = list(size = 15, alpha = 1), title = 'Cell type')) + 
   ggtitle(paste('UMAP', sampSet)) 
 print(p1)  
 
@@ -338,11 +338,11 @@ if(bsp_num == "bsp_248" )
 
 
   p1 <- plotUMAP(sce_tem, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
-  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
+  guides(colour = guide_legend(override.aes = list(size = 15, alpha = 1))) +
   ggtitle(paste('UMAP', sampSet))
   print(p1)  
   p1 <- plotUMAP(sce_tem, colour_by = "long_named_cluster", text_by = "cluster", point_size = selected_point_size) +
-  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
+  guides(colour = guide_legend(override.aes = list(size = 15, alpha = 1))) +
   ggtitle(paste('UMAP', sampSet))
   print(p1)    
 }
@@ -1071,14 +1071,14 @@ plot_volcano <- function(df_re, title)
   logp_to_power <- function(y) (10^(-y))^(-0.5)  # inverse for breaks
 
   ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
+    geom_hline(yintercept=0.05**-0.5, col="red") +
     geom_point( alpha = 0.3) +
     geom_text_repel() +
     ggtitle(title, paste("DE genes")) +
     labs( x = "logFC", y = "-log10(adjusted p-value)") +
-    geom_hline(yintercept=0.05**-0.5, col="red") +
     scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
-    theme(axis.title.x = element_text(size = 15),
-          axis.title.y = element_text(size = 15),
+    theme(axis.title.x = element_text(size = 30),
+          axis.title.y = element_text(size = 30),
           plot.margin = margin(5.5, 60, 5.5, 5.5),
           axis.text=element_text(size=10)) +
     coord_cartesian(clip = "off")  +
