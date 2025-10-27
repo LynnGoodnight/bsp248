@@ -175,7 +175,6 @@ if(bsp_num == "bsp_248")
 {
   for (i in unique(sce_all_filt$cluster))
   {
-    
     cell_type <- munual_annotation[ munual_annotation$cluster == i, "name"]
     long_celltype <- as.character(df_grouped[ df_grouped$name == cell_type, "celltype_cluster"])         
     # print(paste(i, cell_type, long_celltype))
