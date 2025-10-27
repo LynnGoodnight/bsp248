@@ -1014,7 +1014,7 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
     width_of_plot <- n_clusters * 5 + 5
   }
 
-  # print(p1)
+  print(p1)
   
   filename1 <- paste0('Results/clustering_markers_per_clusters_', sampSet, '_heatmap.png')
   # png(filename = filename1,
