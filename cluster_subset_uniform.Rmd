@@ -724,8 +724,8 @@ for(i in unique(names(marker.info.corrected)) )
 
 
 
-  pfx <- paste0(work_dir,"markers_",sampSet,'_k',clustK)
-  dir.create(pfx, showWarnings = FALSE)
+  # pfx <- paste0(work_dir,"markers_",sampSet,'_k',clustK)
+  # dir.create(pfx, showWarnings = FALSE)
 
 
 

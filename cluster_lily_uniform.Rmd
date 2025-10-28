@@ -4,7 +4,7 @@ author: "lily yang"
 date: "`r Sys.Date()`"
 output: html_document
 ---
-
+# set up
 ```{r, setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -18,13 +18,14 @@ knitr::opts_knit$set(root.dir = work_dir)
 
 
 if (clustK == "") {
-   clustK <- 20          # defaulty
+   clustK <- 20          # default
 }
 print(clustK)
 
 current_run <- sampSet
 print(paste('work_dir', work_dir, 'sampSet', sampSet, bsp_num))              
-
+pfx <- paste0(work_dir,"Results/")
+dir.create(pfx, showWarnings = FALSE)
 ```
 
 
@@ -133,7 +134,7 @@ sce_run_x$cluster <- sce_run_x_corrected_clust
 
 
 ### Basic dim reduction plots
-```{r create basic UMAP plots, fig.width=10}
+```{r create basic UMAP plots, fig.width=15, fig.height=9 }
 # since r shiny use sce to plot UMAP, to make figure consistent, i change the input file to sce, and don't use sce_corrected with HGV 5000 as input 
 sce_corrected <- sce_run_x_corrected
 sce <- sce_run_x
@@ -348,7 +349,9 @@ summary_purity_df <- data.frame(misclassifed_counts = adjusted_sums,
 # df$misclassifed_proportion <- adjusted_sums/diagonal_values
 print(df)
 print(summary_purity_df)
-print(paste(sum(summary_purity_df$misclassifed_counts),sum(summary_purity_df$misclassifed_proportion)))
+num_cells_misclassifed <- sum(summary_purity_df$misclassifed_counts)
+n_cells <-  dim(selected_sce)[2]
+print(paste(num_cells_misclassifed, num_cells_misclassifed/n_cells))
 
 
 
@@ -553,23 +556,38 @@ prop.table(table(sce_corrected$cluster, sce_corrected$query_doublet), margin=1)
 
 # visualize cxds_score and estimated Doublet in each cluster
 
-doublet.tab <- data.frame(colData(sce_corrected)[,c('cxds_score', 'cluster', 'query_doublet', 'sum_counts')])
+violin_plot_doublet_inspection <- function(sce_corrected,
+                                      title_flag = "before filtering estimated Doublet")
+{
+  # visualize cxds_score and estimated Doublet in each cluster
+  doublet.tab <- data.frame(colData(sce_corrected)[,c('cxds_score', 'cluster', 'query_doublet', 'sum_counts')])
 
-ggplot(doublet.tab, aes(x=cluster, y=cxds_score, colour=query_doublet)) +
-    ggbeeswarm::geom_quasirandom(method="smiley")
+  p1 <- ggplot(doublet.tab, aes(x=cluster, y=cxds_score, colour=query_doublet)) +
+      ggbeeswarm::geom_quasirandom(method="smiley") +
+    ggtitle(paste("doublet inspection",  title_flag))
+  print(p1)
 
-ggplot(doublet.tab, aes(x=cluster, y=sum_counts, colour=query_doublet)) +
-    ggbeeswarm::geom_quasirandom(method="smiley")
+  p1 <- ggplot(doublet.tab, aes(x=cluster, y=sum_counts, colour=query_doublet)) +
+      ggbeeswarm::geom_quasirandom(method="smiley")  +
+    ggtitle(paste("doublet inspection",  title_flag))
+  print(p1)
+}
+if(bsp_num != "bsp_293")
+{
+  violin_plot_doublet_inspection(sce_corrected)
+  
+  sce_corrected <- sce_corrected[ , !sce_corrected$query_doublet]
+  
+  violin_plot_doublet_inspection(sce_corrected)  
+}
+
 ```
 
-#### for run 1:
-These data suggest that none of our cluster are largely composed of doublets.
+for bsp 293:
+estimated doublets distributed across many clusters, and no cluster is mainly composed of doublets. so here we filter estimated doublets
 
-cluster 14 has a little percentage of suspected doublets. Let's look at this cluster in more detail.
 
-we also check cluster 12 to explore if it contain doublets or cells from multiple cell types since it has high heterogeneity and very pure.
-
-```{r check doublets distribution and marker gene expression of suspicious clusters, fig.width=12}
+```{r check doublets distribution and marker gene expression of selected suspicious clusters, fig.width=12}
 library(patchwork)
 visulize_doublets_markers <- function(selected_sce,selected_cluster = '22')
 {
@@ -658,12 +676,12 @@ cluster 12 only has a few predicted doublets, and cluster 12 express CD163 clear
 
 ```
 
-# save workspace image
+## save initial cluster workspace image
 ```{r save workspace image after first time clustering}
 # save the R variables
 setwd(work_dir)
 
-save.image(file = paste0(sampSet, "_", "k", clustK, "_initial_cluster.RData"))
+# save.image(file = paste0(sampSet, "_", "k", clustK, "_initial_cluster.RData"))
 
 saveRDS(sce_corrected, file = paste0('sce_',sampSet,'_corrected_initial_cluster.rds'))
 saveRDS(sce, file = paste0('sce_',sampSet,'_initial_cluster.rds'))
@@ -672,302 +690,12 @@ saveRDS(sce, file = paste0('sce_',sampSet,'_initial_cluster.rds'))
 ```
 
 # sub cluster certain clusters
-Upon closer inspection and attempted annotation, we discovered that there are a couple of clusters that might benefit from subclustering.
-#### for run 1:
-Specifically, clusters 8,9,11,12 are composed of a mixture of CD4, NK, cDC, Monocytes,  CD8 T cells, and to run differential abundance analyses according to sorted cell types we'll need to separate these.
+Upon closer inspection and attempted annotation, we discovered that there are a couple of clusters that might benefit from sub-clustering.
 
 
 
-### unsupervised CD4 CD8 guided sub-clustering
-#### for run 1:
-In an ideal world, for example, CD4 and CD8 T cell-associated genes would dominate the highly variable genes and enable unsupervised sub-clustering to separate the cell types.
-```{r create a function to visulize sub clusters in UMAP}
 
 
-# check the location of these 4 sub clusters in UMAP
-
-check_sample_contribution_location_for_selected_subcluster <- function(selected_sce,cluster_n = c('8a','8b','8c'))
-  {
-  # check the sample contribution for cluster
-  the_cluster <- prop.table(table(selected_sce$cluster, selected_sce$Sample), margin=1)[cluster_n,]
-
-
-  the_cluster <- as.data.frame(the_cluster)
-  colnames(the_cluster) <- c('sub_cluster','sample','contribution' )
-
-
-  p <-   ggplot(data=the_cluster, aes(x = sub_cluster , y=contribution, fill=sample)) +
-    geom_bar(stat="identity")  + ggtitle('sample contribution in sub_cluster')
-
-  print(p)
-
-  p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="Sample", point_size=1) + ggtitle('sub cluster')
-  print(p)
-
-  p <-  plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="condition", point_size=1) + ggtitle('sub cluster')
-  print(p)
-
-  p <- plotUMAP(selected_sce[,selected_sce$cluster %in% cluster_n], colour_by="cluster", point_size=1) + ggtitle('sub cluster')
-  p <- p + guides(colour = guide_legend(override.aes = list(size=6)))
-  print(p)
-
-  }
-
-
-
-```
-
-
-
-```{r CD4 CD8 guided unsupervised subcluster }
-guided_unsupervised_subcluster <- function(sce, cluster_n = '8',n_HVG = 1000, k_value = 20)
-  {
-  c8 <- sce$cluster == cluster_n
-
-  CD4 <- counts(sce)['ENSSSCG00000000687',c8]
-  # the CD4 gene counts of all cells in cluster 8
-  CD8 <- counts(sce)['ENSSSCG00000008213',c8]
-  # the CD8B gene counts of all cells in cluster 8
-  library(scran)
-  # extract all cells in cluster 8, and get the top 1000 (n_HVG) HVG in these cells
-  varmod8 <- modelGeneVar(sce[,c8], block=sce[,c8]$run)
-  vargenes8 <- getTopHVGs(varmod8, n=n_HVG)
-
-  CD4corr <- vector('numeric', length(vargenes8))
-  CD8corr <- CD4corr
-
-  # BiocManager::install("scHOT")
-  library(scHOT)
-  file_path1 = paste0('CD4 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds')
-  file_path2 = paste0('CD8 corr_', 'subcluster', cluster_n, '_',sampSet,'.rds')
-  if(file.exists(file_path1) && file.exists(file_path2))
-  {
-    CD4corr = readRDS(file = file_path1)
-    CD8corr = readRDS(file = file_path2)
-  }else
-  {
-    for(i in 1:length(vargenes8)){
-
-      # the weightedZIKendall function calculates weighted Tau*, where Tau* is described in Pimentel et al (2015). This association measure is defined for zero-inflated, non-negative random variables.
-      CD4corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000000687', c8],
-                                   logcounts(sce)[vargenes8[i], c8])
-    # calculate numeric weighted Tau* association value between gene CD4 and each HVG
-
-    #   ‘exprs(sce)['ENSSSCG00000000687', c8]’ is the log counts of gene CD4 in selected cells.
-    # ‘exprs(sce)[vargenes8[i], c8]’ is the log counts of one of the HVG gene in selected cells.
-
-
-      CD8corr[i] <- weightedZIKendall(logcounts(sce)['ENSSSCG00000008213', c8],
-                                   logcounts(sce)[vargenes8[i], c8])
-      # calculate numeric weighted Tau* association value between gene CD8 and each HVG
-    }
-    saveRDS(CD8corr, file = file_path2)
-    saveRDS(CD4corr, file = file_path1)
-
-  }
-
-
-
-  # select HVGs who positively co-expressed with CD4 and CD8  or have little to no monotonic association with CD4 and CD8 in cells in cluster 8
-
-  # select HVGs whose association value with CD4 and CD8 both higher than 0.1
-  # A value close to 1 indicates a strong positive association, meaning that as the expression of CD4 increases, the expression of the HVG also tends to increase across the selected cells
-  # - **Value Close to Zero**: Indicates little to no monotonic association between the expression levels of the two genes.
-
-  top <- vargenes8[c(which(CD4corr > 0.1), which(CD8corr > 0.1))]
-  print(length(top))
-  if (length(top) < 5)
-  {
-    print('too few related genes, not appropriate for guided strategy ')
-    return(sce)
-  }
-  top <- c(top, 'ENSSSCG00000000687', 'ENSSSCG00000008213')
-  top <- top[!duplicated(top)]
-
-  # we don't batch correct there, but only reduce the genes we use for downstream sub-cluster
-  # BiocManager::install("batchelor")
-
-  library(batchelor)
-  set.seed(100)
-  sce_8_fastMNN <- fastMNN(sce[,c8], batch=sce[,c8]$run, subset.row = top, get.variance = TRUE)
-
-
-  # BiocManager::install("scran")
-  library(scran)
-  set.seed(200)
-  sce_8_fastMNN_clust <- clusterCells(sce_8_fastMNN,use.dimred="corrected",
-                                      BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy"))
-
-  # check the number of cells in each sub cluster, and add this annotation
-
-  print(table(sce_8_fastMNN_clust))
-  sce_8_fastMNN$cluster <- sce_8_fastMNN_clust
-  assays(sce_8_fastMNN)$logcounts <- assays(sce)$logcounts[rownames(sce_8_fastMNN), c8]
-
-  # draw the violin plots of the gene expression of CD4 CD8 in each cluster
-  CD4CD8 <- rownames(sce)[rowData(sce)$hgnc_symbol %in% c('CD4', 'CD8B')]
-  library(scater)
-  p <- plotExpression(sce_8_fastMNN, features=CD4CD8, x='cluster', exprs_values='logcounts')
-  print(p)
-
-    #################################
-    # Ensure sce_8_fastMNN_clust  is a character vector
-  sce_8_fastMNN_clust  <- as.character(sce_8_fastMNN_clust )
-
-  # Loop through the numbers and assign labels
-  subcluster_vector <- NULL
-  for (i in 1:length(unique(sce_8_fastMNN_clust ))) {
-    sce_8_fastMNN_clust [sce_8_fastMNN_clust  == as.character(i)] <- paste0(cluster_n, letters[i])
-    subcluster_vector <- c(subcluster_vector,paste0(cluster_n, letters[i]))
-  }
-
-  # This will assign '1' with '12a', '2' with '12b', ..., '5' with '12e', ...
-
-
-    cs <- as.character(sce$cluster)
-    cs[c8] <- sce_8_fastMNN_clust
-    sce$cluster <- cs
-    check_sample_contribution_location_for_selected_subcluster(sce,subcluster_vector)
-
-
-    return(sce)
-}
-if(bsp_num == "bsp_185")
-{
-    if(sampSet == 'run_1' )
-    {
-      sce <- guided_unsupervised_subcluster(sce,'8',n_HVG = 1000, k_value = 30)
-      sce <- guided_unsupervised_subcluster(sce,'14',n_HVG = 1000, k_value = 20)
-    }
-    if(sampSet == 'run_2' )
-    {
-      sce <- guided_unsupervised_subcluster(sce,'9', n_HVG = 1000, k_value = 30)
-    }  
-}
-
-
-```
-
-#### for run 1:
-This subclusters nicely. So let's change cluster 8 labels to 8a, 8b, 8c to reflect the sub-setting.
-
-
-### unsupervised no guided gene sub-clustering
-
-```{r no guided gene unsupervised subcluster }
-unguided_unsupervised_subcluster <- function(sce, cluster_n = '12',n_HVG = 2000, k_value = 20)
-{
-# try cluster 12 run 1
-  c12 <- (sce$cluster == cluster_n)
-  varmod12 <- modelGeneVar(sce[,c12], block=sce[,c12]$run)
-  vargenes12 <- getTopHVGs(varmod12, n=n_HVG)
-
-  set.seed(100)
-  sce_12 <- fastMNN(sce[,c12], batch=sce[,c12]$run, subset.row = vargenes12, get.variance = TRUE)
-  library(scran)
-  set.seed(200)
-  sce_12_clust <- clusterCells(sce_12, use.dimred="corrected",
-BLUSPARAM=SNNGraphParam(k=k_value,type="jaccard",cluster.fun="fast_greedy" ))
-
-  print(table(sce_12_clust))
-
-
-  # Ensure sce_12_clust is a character vector
-  sce_12_clust <- as.character(sce_12_clust)
-
-  # Loop through the numbers and assign labels
-  subcluster_vector <- NULL
-  for (i in 1:length(unique(sce_12_clust))) {
-    sce_12_clust[sce_12_clust == as.character(i)] <- paste0(cluster_n, letters[i])
-    subcluster_vector <- c(subcluster_vector,paste0(cluster_n, letters[i]))
-  }
-  # This will assign '1' with '12a', '2' with '12b', ..., '5' with '12e', ...
-
-
-  cs <- as.character(sce$cluster)
-  cs[c12] <- sce_12_clust
-  sce$cluster <- cs
-  check_sample_contribution_location_for_selected_subcluster(sce,subcluster_vector)
-
-
-  return(sce)
-}
-if(bsp_num == "bsp_185")
-{
-  if(sampSet == 'run_1')
-  {
-    sce <- unguided_unsupervised_subcluster(sce,'3',n_HVG = 2000, k_value = 20)
-    sce <- unguided_unsupervised_subcluster(sce,'9',n_HVG = 2000, k_value = 40)
-    sce <- unguided_unsupervised_subcluster(sce,'11', n_HVG = 1000, k_value = 50)
-    sce <- unguided_unsupervised_subcluster(sce,'12',n_HVG = 2000, k_value = 50)
-  }
-  
-  if(sampSet == 'run_2')
-  {
-    sce <- unguided_unsupervised_subcluster(sce,'2',n_HVG = 1000, k_value = 50)
-    sce <- unguided_unsupervised_subcluster(sce,'4',n_HVG = 2000, k_value = 40)
-    sce <- unguided_unsupervised_subcluster(sce,'15', n_HVG = 2000, k_value = 50)
-    sce <- unguided_unsupervised_subcluster(sce, '19',n_HVG = 2000, k_value = 30)
-  
-  }
-  
-}
-
-```
-
-
-
-```{r check the subclusters QC metrics }
-visulize_QC_doublets_RMDS <- function(sce_corrected)
-  {
-  rmsd <- clusterRMSD(reducedDim(sce_corrected, "corrected"), sce_corrected$cluster)
-
-  df <- as.data.frame(rmsd)
-  df$cluster <- as.factor(unique(sce_corrected$cluster))
-
-  library(ggplot2)
-  # Basic barplot
-  p  <- ggplot(data=df, aes(x=cluster, y=rmsd)) +
-    geom_bar(stat="identity")+
-    geom_text(aes(label=cluster), vjust=-0.3, size=3.5) +
-    ggtitle("examine heterogeneity within each cluster")
-  print(p)
-
-  ########################
-  QC.tab <- data.frame(colData(sce_corrected)[,c('cluster', 'sum_counts', 'mito_proportion', 'genes_detected')])
-
-  p <-  ggplot(QC.tab, aes(x=cluster, y=log2(sum_counts) )) +
-    ggbeeswarm::geom_quasirandom(method="smiley")
-  print(p)
-
-
-  p <-  ggplot(QC.tab, aes(x=cluster, y=log2(genes_detected) )) +
-    ggbeeswarm::geom_quasirandom(method="smiley")
-  print(p)
-
-  p <-  ggplot(QC.tab, aes(x=cluster, y=mito_proportion)) +
-    ggbeeswarm::geom_quasirandom(method="smiley")
-  print(p)
-
-  ########################
-
-  # visualize cxds_score and estimated Doublet in each cluster
-
-  doublet.tab <- data.frame(colData(sce_corrected)[,c('cxds_score', 'cluster', 'query_doublet', 'sum_counts')])
-
-  p <-  ggplot(doublet.tab, aes(x=cluster, y=cxds_score, colour=query_doublet)) +
-      ggbeeswarm::geom_quasirandom(method="smiley")
-  print(p)
-  p <-  ggplot(doublet.tab, aes(x=cluster, y=sum_counts, colour=query_doublet)) +
-      ggbeeswarm::geom_quasirandom(method="smiley")
-  print(p)
-
-  }
-sce_corrected$cluster <- sce$cluster
-visulize_QC_doublets_RMDS(sce_corrected)
-
-
-```
 
 # remove tiny subclusters and low-quality clusters
 ```{r remove tiny subclusters and low-quality clusters and combine some subclusters and plot UMAP, fig.width=12}
@@ -1015,10 +743,10 @@ ggplot(dat, aes(fill=sample, y=n_cells, x=cluster)) +
 
 ```
 
-# output DE genes for all clusters
+# output DE genes for all clusters， draw heatmap
 Finally, we need to re-run our marker scoring because we have added some clusters. For this, we will only write to file the scores for the clusters we have added.
 
-```{r obtain DE genes for each clusters including new sub-clusters}
+```{r obtain DE genes for each clusters including new sub-clusters and save each cluster seperately}
 # marker.info.perbatch <- scoreMarkers(sce_corrected,
 #                                      groups=sce_corrected$cluster,
 #                                      block=sce_corrected$run,
@@ -1051,7 +779,7 @@ Finally, we need to re-run our marker scoring because we have added some cluster
 
 
 
-```{r save top DE genes in excel file for new produced sub cluster}
+```{r obtain DE genes for each clusters including new sub-clusters, and save all clusters results in one excel file}
 
 cell_n_cluster <- table(sce_corrected$cluster)
 
@@ -1073,17 +801,17 @@ for(i in unique(names(marker.info.corrected)))
   # print(i)
   ord <- marker.info.corrected[[i]][order(marker.info.corrected[[i]]$mean.logFC.cohen, decreasing=TRUE),]
   
-  if(bsp_num == "bsp_248")
+  if(bsp_num == "bsp_248"| reference_genome_version == "pig_113")
   {
-    if(reference_genome_version == "108")
+    if(reference_genome_version == "pig_108")
     {
       ord$symbol <- rowData(sce)[rownames(ord), 'ENTREZ_symbol']      
-    }else if(reference_genome_version == "113")
+    }else if(reference_genome_version == "pig_113")
     {
       ord$symbol <- rowData(sce)[rownames(ord), 'Symbol']      
     }      
   }
-  if(bsp_num == "bsp_247")
+  if(bsp_num == "bsp_247" | reference_genome_version == "chicken_106")
   {
       ord$symbol <- rowData(sce)[rownames(ord), 'Symbol']       
   }
@@ -1116,88 +844,386 @@ saveWorkbook(wb, file = paste0(pfx,'/', sampSet, "_DE_per_cluster.xlsx"), overwr
 
 
 
-# save.image('clustering_develop_code.RData')
+
 ```
 
-```{r draw heatmap for selected markers across clusters}
 
-if(bsp_num == "bsp_248")
+```{r draw expression level heatmap for selected markers across clusters, fig.width= 12, fig.height=8}
+
+if(bsp_num == "bsp_248" & bsp_num == "bsp_293")
 {
-    defining_genes_185 <- c("CD163", "FLT3", "CD14", "CD4", "CADM1", "CSF1R", "FCGR1A", "BCL6", "CCL17", "IRF8", "ADAM8", "PRDM1", "IRF4", "JCHAIN" , "TNFRSF17", "TNFRSF13B", "CD19", "PAX5", "EBF1", "MS4A1", "CD79B", "IRF8", "CD28", "CD5", "CD3D", "CD3E", "CD8A", "CD8B", "FOXP3", "E2F1", "E2F2", "KLRK1", "KLRB1", "KIT", "NCR1", "TBX21", "EOMES", "GATA3", "IL1RL1", "IL7R", "ID3", "ACTG1", "GPR37", "NAPSA", "SFTPA1", "RPS3A", "RPS26", "RPS11", "RPL37")
+  if(bsp_num == "bsp_248")
+{
+  defining_genes_185 <- c("CD163", "FLT3", "CD14", "CD4", "CADM1", "CSF1R", "FCGR1A", "BCL6", "CCL17", "IRF8", "ADAM8", "PRDM1", "IRF4", "JCHAIN" , "TNFRSF17", "TNFRSF13B", "CD19", "PAX5", "EBF1", "MS4A1", "CD79B", "IRF8", "CD28", "CD5", "CD3D", "CD3E", "CD8A", "CD8B", "FOXP3", "E2F1", "E2F2", "KLRK1", "KLRB1", "KIT", "NCR1", "TBX21", "EOMES", "GATA3", "IL1RL1", "IL7R", "ID3", "ACTG1", "GPR37", "NAPSA", "SFTPA1", "RPS3A", "RPS26", "RPS11", "RPL37")
+  
+  defining_genes_external <- c(
+    "CD2", "CD3E", "CD4", "CD8A", "CCR7", "GZMH", "NCR1", "NKG7", "SOX13", "CD69",
+    "CXCR3", "CXCR6", "KCNQ5", "LRRC43", "RUNX2", "ST6GALNAC3", "CD19", "CD40", "CXCR5",
+    "PAX5", "SLA-DQB1", "TBX21", "DUT", "IRF4", "JCHAIN", "PRDM1", "XBP1", "BATF3",
+    "CXCR4", "FLT3", "ID2", "IDO1", "IL4I1", "IRAK2", "LY75", "NAV1", "C2", "C3", "CD93",
+    "IRF8", "NRP1", "TNF", "APOE", "ARG1", "CCL2", "CCL8", "CCR2", "CD14", "CD163",
+    "CX3CR1", "FCN1", "IL1B", "IL4R", "LAMP1", "TNFRSF1B", "MSR1", "PPARG", "SIGLEC1",
+    "CD24", "CXCL8", "IL18", "S100A8", "FCER1A", "GATA2", "HDC", "KIT", "LTC4S", "MS4A2",
+    "ACTA2", "ACTG2", "CAV1", "CAVIN2", "CCDC80", "CCL11", "CD34", "CD9", "CNN1",
+    "COL3A1", "MYH11", "PECAM1", "TIMP3")
+  added_markers  <- !(defining_genes_185 %in% defining_genes_external)
+  defining_genes_final <- c(defining_genes_external, defining_genes_185[added_markers])
+  length(defining_genes_final)
+  
+  
+}else if(bsp_num == "bsp_293")
+{
+  library(readxl)
+  df_cell_type_annotation <- read_excel("references/Cluster annotations WG DZ 25.07.03.xlsx", sheet = "By clusters number")
+  selected_marker_genes <- df_cell_type_annotation$`Key genes`
+  
+  # Step 1: Split each row by comma and unlist into a vector
+  all_genes <- unlist(strsplit(selected_marker_genes, ","))
+  
+  # Step 2: Trim whitespace and extract unique entries, trimws() removes leading/trailing spaces.
+  all_genes_trimmed  <- unique(trimws(all_genes))
+  # Step 3: Extract gene symbols inside parentheses using regex
+  genes_in_parentheses <- unlist(regmatches(
+    all_genes_trimmed,
+    gregexpr("(?<=\\()[^)]+(?=\\))", all_genes_trimmed, perl = TRUE)))
+  
+  # Step 4: Clean names by removing parentheses
+  genes_not_in_parentheses <- gsub("\\s*\\([^)]*\\)", "", all_genes_trimmed)
+  
+  # Step 5: Combine and get unique gene names
+  defining_genes_final <- unique(c(genes_not_in_parentheses, genes_in_parentheses))
+  manual_adjust_flag <- !defining_genes_final%in% c("FOXP3", "CADM1", "CXCR4", "CD72", "SLA-DMA", "HLA-DRA")
+  defining_genes_final <- defining_genes_final[manual_adjust_flag]
+   
+}
+
+
+# n_cluster <- length(levels(sce_run_x_corrected_clust))
+n_cluster <- levels(sce_run_x_corrected_clust)
+
+selected_markers_flag <- (rowData(sce)$Symbol %in% defining_genes_final)
+# table(selected_markers_flag)
+# obtain the gene metadata information for selected genes， and save in data frame
+selected_markers <- as.data.frame(rowData(sce)[selected_markers_flag , ])
+
+
+print('maker genes not found in our data:')
+print(defining_genes_final[!(defining_genes_final %in% selected_markers$Symbol)])
+# length(unique(selected_markers$Symbol))
+# filter the gene list to make sure all genes are measured and can be found in our seq data 
+defining_genes_final <-  defining_genes_final[(defining_genes_final %in% selected_markers$Symbol)]
+
+
+sce_selected_markers <- sce
+rownames(sce_selected_markers) <- rowData(sce)$Symbol
+rowData(sce_selected_markers) <- rowData(sce_selected_markers)[, c("ID", "Symbol")]
+#subset sce_selected_markers to only store measurements of defining genes and calculate mean logcounts
+sce_selected_markers <- sce_selected_markers[rownames(sce_selected_markers) %in% defining_genes_final, ]
+# calculate the mean expression value for each gene within each cluster
+selected_markers_matrix_average_expression <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics='mean', use.assay.type='logcounts')))
+selected_markers_matrix_average_expression$gene_symbol <- rownames(selected_markers_matrix_average_expression)
+
+library(tidyr)
+# change the df from short format to long format to facilitate plotting 
+average_expression_df <- pivot_longer(data = selected_markers_matrix_average_expression,
+                                      cols = !gene_symbol,
+                                      names_to = "Cluster",  values_to = "AverageExpression" )
+head(average_expression_df)
+
+average_expression_df = merge(average_expression_df, df_cell_type_annotation[1:27, c("clean_cell_type", "Cluster")], all.x = TRUE)
+# calculate the proportion of cells expressed certain gene within certain cluster
+# and calculate such proportion for each gene in each cluster
+selected_markers_matrix_percent_expressed <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics="prop.detected", use.assay.type='logcounts')))
+selected_markers_matrix_percent_expressed$gene_symbol <- rownames(selected_markers_matrix_percent_expressed)
+percent_expressed_df <- pivot_longer(data = selected_markers_matrix_percent_expressed,
+                                     cols = !gene_symbol,
+                                     names_to = "Cluster",  values_to = "PercentExpressed" )
+
+# percent_expressed_df <- gather(selected_markers_matrix_percent_expressed, Cluster,  PercentExpressed, 
+#                                all_of(n_cluster) )
+
+# Merge 2 data frames store the average_expression and percent detected information by Gene and Cluster
+plot_data <- merge(average_expression_df, percent_expressed_df, by = c("gene_symbol", "Cluster"))
+
+# order the gene in y-axis, order cluster in x-axis
+# plot_data$Cluster <- factor(plot_data$Cluster, levels = sort(as.numeric(unique(plot_data$Cluster))))
+plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = rev(defining_genes_final))
+
+
+
+library(stringr)
+library(plyr)
+library(dplyr)
+
+var_width = 10
+plot_data$clean_cell_type = str_wrap(plot_data$clean_cell_type, width = var_width)
+
+
+# generate a vector store color of each cell type used for plot
+library(dplyr)
+
+celltype_map <- plot_data %>%
+  distinct(Cluster, clean_cell_type)
+
+n_cell_types <- length(unique(celltype_map$clean_cell_type))
+
+celltype_colors <- setNames(
+  colorRampPalette(RColorBrewer::brewer.pal(12, "Set3"))(n_cell_types),
+  unique(celltype_map$clean_cell_type))
+
+# Add cell type annotation bar under x-axis
+# Use geom_tile with y positioned just below genes (e.g., y = -1 or a new 'CellType' row)
+celltype_map$y <- -1  # Place the annotation below the lowest gene row
+
+################################################# 
+desired_cell_type_order <- read_excel("references/desired_cell_type_order.xlsx", col_names = FALSE)
+# Specify desired order as a character or integer vector
+desired_cell_type_order <- as.data.frame(desired_cell_type_order)[,1] 
+desired_cell_type_order = str_wrap(desired_cell_type_order, width = var_width)
+
+plot_data$clean_cell_type <- factor(plot_data$clean_cell_type, levels = desired_cell_type_order)
+celltype_map$clean_cell_type <- factor(celltype_map$clean_cell_type, levels = desired_cell_type_order)
+
+desired_gene_order <- read_excel("references/desired_gene_order_bsp293 WG 25.07.19.xlsx", col_names = FALSE)
+# Specify desired order as a character or integer vector
+desired_gene_order <- as.data.frame(desired_gene_order)[,1] 
+
+length(unique(plot_data$gene_symbol))
+plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = desired_gene_order)
+
+# desired_gene_order[! desired_gene_order %in% unique(plot_data$gene_symbol)]
+########################################################################### 
+# Draw the dot plot using ggplot2
+p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
+  geom_point(aes(size = PercentExpressed, color = AverageExpression)) +
+  scale_size_continuous(range = c(0.5, 6)) + # Adjust the size range as needed
+  scale_color_gradient(low = "white", high = "red") + # Set gradient colors for average expression
+  labs(
+    x = "Cluster",
+    y = "gene_symbol",
+    color = "Average Expression",
+    size = "Percent Expressed"
+  ) + 
+  facet_grid(. ~ clean_cell_type,  scales="free_x") +
+  theme_bw()  +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank()   # Remove minor grid lines
+  )
+
+p1 <- p + 
+  geom_tile(
+    data = celltype_map, 
+    aes(x = factor(Cluster), y = y, fill = clean_cell_type), 
+    height = 0.5
+  ) +
+  scale_fill_manual(values = celltype_colors, name = "Cell type") +
+  # Expand y axis so the new row is visible
+  scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) +
+  facet_grid(. ~ clean_cell_type,  scales="free_x") +
+  guides(fill = guide_legend(override.aes = list(size = 5)))+
+  theme(strip.text.x = element_text(size = 8))
+
+
+# scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) 
+# 0.5 extra units at the bottom (for your annotation bar below genes)
+# 1.5 extra units at the top (above your highest gene)
+print(p1)
+png(filename='Results/clustering_markers_clusters_heatmap.png', height=1500, width=1500, res = 130)
+print(p1)
+dev.off()
+
+
+# save.image("cluster_develop.RData")
+
+  
+}
+
+
+
+```
+
+# add annotated cell types for each cluster in sce
+
+```{r name cell types for each cluster in sce}
+sce_filt <- sce_corrected
+sce_all_filt <- sce
+
+unique(sce_filt$cluster)
+rm(sce, sce_corrected)
+if(bsp_num == "bsp_293")
+{
+
+
+# print(sce)
+
+
+## add in cluster names as sce_all_filt$named_cluster
+#Long-form annotated version including cell subtypes
+if(sampSet == "subset_innate_immune_cells")
+{
+  munual_annotation <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)  
+}else if(sampSet == "subset_adaptive immune cells")
+{
+  munual_annotation <- read.csv("munual_annotation_adaptive_immune_cells.csv", header = FALSE)
+}else
+{
+  munual_annotation <- read.csv("references/munual_annotation.csv", header = FALSE) 
+}
+
+
+colnames(munual_annotation) <- c("cluster", "name")
+
+# remove the content in parentheses as well as the parentheses
+munual_annotation$name <- sub(" \\(.*\\)", "", munual_annotation$name)
+print(munual_annotation)
+# add an column show all clusters belong to same cell types
+munual_annotation <- as_tibble(munual_annotation) 
+# print(munual_annotation)
+library(dplyr)
+
+
+df_grouped <- munual_annotation %>%
+  group_by(name) %>%
+  dplyr::summarise(cluster_contained = paste(cluster, collapse = ", ")) %>%
+  ungroup() 
+
+
+# print(df_grouped)
+df_grouped$celltype_cluster <- paste(df_grouped$name, df_grouped$cluster_contained)
+print(df_grouped)
+df_grouped <- as.data.frame(df_grouped)
+
+# unique(sce_filt$cluster)
+sce_all_filt$cluster <- as.character(sce_all_filt$cluster)
+if(bsp_num == "bsp_248" | bsp_num == "bsp_293")
+{
+  for (i in unique(sce_all_filt$cluster))
+  {
     
-    defining_genes_external <- c(
-      "CD2", "CD3E", "CD4", "CD8A", "CCR7", "GZMH", "NCR1", "NKG7", "SOX13", "CD69",
-      "CXCR3", "CXCR6", "KCNQ5", "LRRC43", "RUNX2", "ST6GALNAC3", "CD19", "CD40", "CXCR5",
-      "PAX5", "SLA-DQB1", "TBX21", "DUT", "IRF4", "JCHAIN", "PRDM1", "XBP1", "BATF3",
-      "CXCR4", "FLT3", "ID2", "IDO1", "IL4I1", "IRAK2", "LY75", "NAV1", "C2", "C3", "CD93",
-      "IRF8", "NRP1", "TNF", "APOE", "ARG1", "CCL2", "CCL8", "CCR2", "CD14", "CD163",
-      "CX3CR1", "FCN1", "IL1B", "IL4R", "LAMP1", "TNFRSF1B", "MSR1", "PPARG", "SIGLEC1",
-      "CD24", "CXCL8", "IL18", "S100A8", "FCER1A", "GATA2", "HDC", "KIT", "LTC4S", "MS4A2",
-      "ACTA2", "ACTG2", "CAV1", "CAVIN2", "CCDC80", "CCL11", "CD34", "CD9", "CNN1",
-      "COL3A1", "MYH11", "PECAM1", "TIMP3")
-    added_markers  <- !(defining_genes_185 %in% defining_genes_external)
-    defining_genes_final <- c(defining_genes_external, defining_genes_185[added_markers])
-    length(defining_genes_final)
-    
-    
-    n_cluster <-  length(levels(sce_run_x_corrected_clust))
-    selected_markers_flag <- (rowData(sce)$Symbol %in% defining_genes_final)
-    # table(selected_markers_flag)
-    selected_markers <- as.data.frame(rowData(sce)[selected_markers_flag , ])
-    
-    
-    print('maker genes not found in sce:')
-    print(defining_genes_final[!(defining_genes_final %in% selected_markers$Symbol)])
-    # length(unique(selected_markers$Symbol))
-    
-    defining_genes_final <-  defining_genes_final[(defining_genes_final %in% selected_markers$Symbol)]
-    
-    
-    sce_selected_markers <- sce
-    rownames(sce_selected_markers) <- rowData(sce)$Symbol
-    rowData(sce_selected_markers) <- rowData(sce_selected_markers)[, c("ID", "Symbol")]
-    #subset to defining genes and calculate mean logcounts
-    sce_selected_markers <- sce_selected_markers[rownames(sce_selected_markers) %in% defining_genes_final, ]
-    selected_markers_matrix_average_expression <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics='mean', use.assay.type='logcounts')))
-    selected_markers_matrix_average_expression$gene_symbol <- rownames(selected_markers_matrix_average_expression)
-    
-    library(tidyr)
-    average_expression_df <- gather(selected_markers_matrix_average_expression, Cluster,  AverageExpression, 
-                        1:n_cluster )
-    
-    
-    selected_markers_matrix_percent_expressed <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics="prop.detected", use.assay.type='logcounts')))
-    selected_markers_matrix_percent_expressed$gene_symbol <- rownames(selected_markers_matrix_percent_expressed)
-    
-    percent_expressed_df <- gather(selected_markers_matrix_percent_expressed, Cluster,  PercentExpressed, 
-                                    1:n_cluster )
-    
-    # Merge both data frames by Gene and Cluster
-    plot_data <- merge(average_expression_df, percent_expressed_df, by = c("gene_symbol", "Cluster"))
-    plot_data$Cluster <- factor(plot_data$Cluster, levels = sort(as.numeric(unique(plot_data$Cluster))))
-    
-    plot_data$gene_symbol <- factor(plot_data$gene_symbol, levels = rev(defining_genes_final))
-    
-    
-    png(filename='markers_clusters_heatmap.png', height=1500, width=1000)
-    # Draw the dot plot using ggplot2
-    ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
-      geom_point(aes(size = PercentExpressed, color = AverageExpression)) +
-      scale_size_continuous(range = c(0.5, 6)) + # Adjust the size range as needed
-      scale_color_gradient(low = "white", high = "red") + # Set gradient colors for average expression
-      labs(
-        x = "Cluster",
-        y = "gene_symbol",
-        color = "Average Expression",
-        size = "Percent Expressed"
-      ) +
-      theme_minimal() +
-      theme(
-        axis.text.x = element_text(angle = 45, hjust = 1),
-        panel.grid.major = element_blank(),  # Remove major grid lines
-        panel.grid.minor = element_blank()   # Remove minor grid lines
-      )
-    dev.off()
+    cell_type <- as.character(munual_annotation[ munual_annotation$cluster == i, "name"])
+    long_celltype <- as.character(df_grouped[df_grouped$name == cell_type, "celltype_cluster"])
+    print(paste(i, cell_type, long_celltype))
+    # print(typeof(long_celltype))
+    sce_all_filt$named_cluster[sce_all_filt$cluster==i] <- cell_type
+    sce_all_filt$long_named_cluster[sce_all_filt$cluster==i] <- long_celltype
+
+  }
+}
+table(sce_all_filt$long_named_cluster)
+# head(sce_all_filt$long_named_cluster)
+# sce_all_filt$cluster <- as.integer(sce_all_filt$cluster)
+unique(sce_all_filt$named_cluster)
+unique(sce_all_filt$long_named_cluster)
+# save.image('clustering_develop_code.RData')
+library(SingleCellExperiment)
+
+colData(sce_filt)[, c('named_cluster', 'long_named_cluster')] <- colData(sce_all_filt)[, c('named_cluster', 'long_named_cluster')]
+# saveRDS(sce_filt, file='sce_filt_temp.rds')
+# sce_filt <- readRDS("sce_filt_temp.rds")
+  
+}
+
+
+```
+
+
+
+And make some UMAPs for visulization.
+
+```{r plot UMAPs to show annotated cell types of clusters, fig.width= 12, fig.height=8}
+output_color_code_in_UMAP <- function(x = p1,
+                                      clusterID_or_celltype = "named_cluster")
+{
+  # Build the ggplot object
+  p1_build <- ggplot_build(p1)
+
+  # Extract color and label (named_cluster) from the data
+  df_colors <- p1_build$data[[1]][, c("colour", "group")]
+
+  # Pull named_cluster info from the input data used in plotUMAP
+  # Assuming `sce_filt` is a SingleCellExperiment object
+  if(clusterID_or_celltype == "named_cluster")
+  {
+    named_cluster_vec <- sce_filt$named_cluster
+  }else if(clusterID_or_celltype == "cluster")
+  {
+    named_cluster_vec <- sce_filt$cluster
+  }else if(clusterID_or_celltype == "long_named_cluster")
+  {
+    named_cluster_vec <- sce_filt$long_named_cluster
+  }
+
+
+  # Create a data frame with unique mapping between factor value and actual value
+  df_mapping <- data.frame(
+    named_cluster = named_cluster_vec,
+    group = as.numeric(factor(named_cluster_vec))
+  )
+
+  # Remove duplicates to get one row per cluster
+  df_mapping_unique <- unique(df_mapping)
+
+  # Merge with extracted color info
+  library(dplyr)
+  color_cluster_map <- df_colors %>%
+    distinct(group, colour) %>%
+    inner_join(df_mapping_unique, by = "group") %>%
+    select(named_cluster, colour)
+  # distinct(group, colour) Keeps only unique combinations of group and colour
+  # View result
+  # print(color_cluster_map)
+  # Define your custom color palette (names must match your 'cell_type' exactly)
+
+  # color_cluster_map <- base:::merge(color_cluster_map, unique(dat_annot[ , c("cluster_id", "cell_type")]) ,
+  #                    by.x = "named_cluster", by.y = "cluster_id")
+  #
+  # color_cluster_map$named_cluster <- paste(color_cluster_map$named_cluster,
+  #                                          color_cluster_map$cell_type,
+  #                                          sep = "_")
+  # dat_annot$named_cluster <- paste(dat_annot$cluster_id, dat_annot$cell_type,
+  #                                  sep = "_")
+
+  cell_type_colors <- setNames(
+    as.character(color_cluster_map[["colour"]]),  # values
+    as.character(color_cluster_map[["named_cluster"]])   # names
+  )
+  return(cell_type_colors)
+
+}
+if(bsp_num == "bsp_293")
+{
+selected_point_size = 0.2
+# plot automatic assigned color for each cell type and cluster in UMAP
+sce_filt
+p1 <- plotUMAP(sce_filt, colour_by="cluster", text_by = "cluster",  point_size = selected_point_size) +
+  guides(colour = guide_legend(override.aes = list(size=8, alpha = 1))) +
+  theme(text = element_text(size = 20)) + ggtitle(paste('UMAP', sampSet))
+print(p1)
+clusterid_colors <- output_color_code_in_UMAP (p1, "cluster")
+print(clusterid_colors)
+
+
+p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
+  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
+  ggtitle(paste('UMAP batch corrected', sampSet))
+print(p1)
+cell_type_colors <- output_color_code_in_UMAP (p1, "named_cluster")
+print(cell_type_colors)
+
+p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster", point_size = selected_point_size) +
+  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1))) +
+  ggtitle(paste('UMAP batch corrected', sampSet))
+
+print(p1)
+
+
+
+p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", point_size = selected_point_size) +
+  guides(colour = guide_legend(override.aes = list(size = 8, alpha = 1), title = 'Cell type')) +
+  ggtitle(paste('UMAP batch corrected', sampSet))
+print(p1)
   
 }
 
@@ -1206,17 +1232,24 @@ if(bsp_num == "bsp_248")
 
 ```
 
+```{r Converting SingleCellExperiment into AnnData objects to import into python}
 
+# library(zellkonverter)
+# 
+# writeH5AD(sce_all_filt, file = "scRNA_annotated_sce_bsp293.h5ad")
+# 
+# head(rowData(sce_all_filt))
+```
 
 # save workspace image
 ```{r save workspace image and create file for r shiny visulization}
 # save the R variables
 setwd(work_dir)
 
-# save.image(file = paste0(sampSet, "_", "k", clustK, "_with_subcluster.RData"))
+# save.image(file = paste0(sampSet, "_", "k", clustK, "_with_refined_cluster.RData"))
 
-# saveRDS(sce_corrected, file = paste0('sce_',sampSet,'_corrected_with_subcluster.rds'))
-# saveRDS(sce, file = paste0('sce_',sampSet,'_with_subcluster.rds'))
+saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected_with_refined_annotated_cluster.rds'))
+saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_refined_annotated_cluster.rds'))
 sessionInfo()
 
 ```

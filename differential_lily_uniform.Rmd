@@ -343,13 +343,16 @@ if(bsp_num == "bsp_248" )
   p1 <- plotUMAP(sce_tem, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
   guides(colour = guide_legend(override.aes = list(size = 15, alpha = 1))) +
   ggtitle(paste('UMAP final version, unwanted clusters removed', sampSet))
+  
   print(p1) 
   
   p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster") +
   guides(colour = guide_legend(override.aes = list(size = 7, alpha = 1))) +
   ggtitle(paste('UMAP final version, unwanted clusters removed,', sampSet)) +
   theme(legend.text = element_text(size = 10))
-  print(p1)    
+  
+  print(p1)   
+  
 }
 
 
