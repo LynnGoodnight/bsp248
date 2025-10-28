@@ -12,6 +12,7 @@ work_dir <- Sys.getenv("work_dir")
 bsp_num <- Sys.getenv("bsp_num")
 clustK <- Sys.getenv("clustK")
 sampSet <- Sys.getenv("sampSet")
+current_run <- sampSet
 
 
 knitr::opts_knit$set(root.dir = work_dir)
@@ -22,7 +23,6 @@ if (clustK == "") {
 }
 print(clustK)
 
-current_run <- sampSet
 print(paste('work_dir', work_dir, 'sampSet', sampSet, bsp_num))              
 if (sampSet == "") {
    sampSet <- "error, sampSet not provided"
@@ -49,6 +49,7 @@ sce_all <- readRDS(paste0('sce_',sampSet,'_with_refined_cluster.rds'))
 sce_all_corrected <- readRDS(paste0('sce_',sampSet,'_corrected_with_refined_cluster.rds'))
   
 unique(sce_all_corrected$cluster)
+unique(sce_all$cluster)
 # sce_all_corrected$cluster <- sce_all$cluster
 
 ```
@@ -131,10 +132,10 @@ Next we name the good quality clusters.
 ```{r name cell types for each cluster }
 sce_filt <- sce_all_corrected
 sce_all_filt <- sce_all
-unique(sce_filt$cluster)
+unique(sce_all$cluster)
 
 print(sce_all)
-rm(sce_all, sce_all_corrected)
+# rm(sce_all, sce_all_corrected)
 
 ## add in cluster names as sce_all_filt$named_cluster
 #Long-form annotated version including cell subtypes
@@ -164,13 +165,15 @@ colnames(munual_annotation) <- c("cluster", "name")
 # add an column show all clusters belong to same cell types
 library(dplyr)
 df_grouped <- munual_annotation %>%
-  group_by(name) %>%
-  summarise(cluster_contained = paste(cluster, collapse = ", ")) %>%
-  ungroup()
+  dplyr::group_by(name) %>%
+  dplyr::summarise(cluster_contained = paste(cluster, collapse = ", ")) %>%
+  dplyr::ungroup()
 df_grouped$celltype_cluster <- paste(df_grouped$name, df_grouped$cluster_contained)
 
-unique(sce_filt$cluster)
+unique(sce_all_filt$cluster)
 sce_all_filt$cluster <- as.character(sce_all_filt$cluster)
+
+
 if(bsp_num == "bsp_248")
 {
   for (i in unique(sce_all_filt$cluster))

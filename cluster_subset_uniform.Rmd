@@ -757,6 +757,7 @@ saveWorkbook(wb, file = paste0('Results/clustering_', sampSet, '_',
 
 
 # additional visulizations
+
 ```{r draw marker genes expression heatmap for selected genes across clusters, fig.width= 12, fig.height=8}
 # sce_main_group <- readRDS("sce_subset_non_immune_cells_with_named_refined_cluster.rds")
 # sampSet = "non_immune_cells"
@@ -1041,7 +1042,7 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
 
 
 
-```{r draw subset composition per sample stacked bar plot }
+```{r draw subset composition per sample stacked bar plot, fig.width=10 }
 if(bsp_num == "bsp_306")
 {
   population_divide <- readxl::read_excel("references/Population devision.xlsx")
@@ -1073,17 +1074,17 @@ for (selected_main_group in c("innate_immune_cells", "adaptive_immune_cells", "n
   print(paste(selected_main_group, selected_cluster))
   # head(sce_all$cluster)
   # extract cells belong to selected initial clusters
-  sce_main_group <- sce_all[ , (sce_all$cluster %in% selected_cluster) ]
-  subset_cell_number <- table(sce_main_group$Sample)
+  sce_main_group_composition <- sce_all[ , (sce_all$cluster %in% selected_cluster) ]
+  subset_cell_number <- table(sce_main_group_composition$Sample)
   if(is.null(df_subset_cell_number))
   {
-    df_subset_cell_number <- data.frame(table(sce_main_group$Sample))
+    df_subset_cell_number <- data.frame(table(sce_main_group_composition$Sample))
     
     colnames(df_subset_cell_number) <- c("sample_id", selected_main_group)
     
   }else
   {
-    cell_number_summary <- as.data.frame(table(sce_main_group$Sample)) 
+    cell_number_summary <- as.data.frame(table(sce_main_group_composition$Sample)) 
     colnames(cell_number_summary) <- c("sample_id", selected_main_group)
     df_subset_cell_number <- base::merge(df_subset_cell_number, cell_number_summary)
 
