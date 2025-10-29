@@ -39,6 +39,7 @@ sum_counts_up <- as.numeric(Sys.getenv("sum_counts_up"))
 run1 <- 1:run1_n
 run2 <- (run1_n+1 ):(run1_n+run2_n)
 run3 <- (run1_n+run2_n+1):(run1_n+run2_n+run3_n)
+
 run4 <- (run1_n+run2_n+run3_n+1):(run1_n+run2_n+run3_n+run4_n)
 sampNums <- (run1_n+run2_n+run3_n+run4_n)
 
