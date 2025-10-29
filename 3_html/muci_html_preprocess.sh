@@ -9,7 +9,7 @@
 ## Resource Request
 #SBATCH --job-name=html_preprocess
 ## %j is job number, %x is the job name above
-#SBATCH --output=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/logs/%x-%j-logs_preprocess.txt
+#SBATCH --output=/mnt/lustre/RDS-live/bioinformatics/analysis/scrna/proj/bsp_248/lily/logs/%x-%j-logs.txt
 ## 10 hours
 #SBATCH --time=10:00:00
 #SBATCH --ntasks=1
