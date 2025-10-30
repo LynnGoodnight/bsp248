@@ -137,7 +137,7 @@ multi_list_bar_plot <- function(sce, my_flag, seperate_run = seperate_run_value)
   p1 <- ggplot(data=df, aes(x=sample, y=droplet_number)) +
     geom_bar(stat="identity")+
     geom_text(aes(label=droplet_number), vjust=-0.3, size=3.5) +
-    geom_vline(xintercept = seperate_run, color = "red", linetype = "dashed", size = 1)+
+    geom_vline(xintercept = seperate_run, color = "red", linetype = "dashed", linewidth = 1)+
     ggtitle(paste0("droplet number summary ", my_flag))+
   theme(axis.text.x = element_text(angle = 90)) 
   # geom_vline(xintercept = 16.5, color = "blue", linetype = "dashed", size = 1)+
@@ -195,30 +195,20 @@ the Sequencing.Saturation values are not consistent between run 1 and 2.
 setwd(count_dir)
 
 dirs <- paste0('muci_', names(sce_list_raw), '_count' , '/outs/metrics_summary.csv')
-quality_metrics <- data.frame('Sequencing.Saturation' = 1:sampNums,
-                              "Estimated Number of Cells" = 1:sampNums,
-                              'Number of Reads' = 1:sampNums,
-                             'Mean.Reads.per.Cell' = 1:sampNums,
-                             'Median.Genes.per.Cell' = 1:sampNums,
-                             'Median.UMI.Counts.per.Cell' = 1:sampNums,
-                             'Valid Barcodes' = 1:sampNums,
-                             'Valid UMIs' = 1:sampNums,
-                             'Reads Mapped Confidently to Genome' = 1:sampNums,
-                             'Reads Mapped Confidently to Intergenic Regions' = 1:sampNums,
-                             'Reads Mapped Confidently to Intronic Regions' = 1:sampNums,
-                             'Reads Mapped Confidently to Exonic Regions' = 1:sampNums,
-                             'Fraction Reads in Cells' = 1:sampNums)
+quality_metrics <- NULL 
 cell_ranger_metrics <- vector('list', length=sampNums)
 
-rownames(quality_metrics) <- names(sce_list_raw)
+
 names(cell_ranger_metrics) <- names(sce_list_raw)
 
 for (i in 1:sampNums) 
 {
   cell_ranger_metrics[[i]] <- read.csv(dirs[i], header = TRUE)
-  quality_metrics[i, ] <- cell_ranger_metrics[[i]][c("Sequencing.Saturation", "Estimated.Number.of.Cells", "Number.of.Reads", 'Mean.Reads.per.Cell', 'Median.Genes.per.Cell', 'Median.UMI.Counts.per.Cell', 'Valid.Barcodes', 'Valid.UMIs', 'Reads.Mapped.Confidently.to.Genome',  'Reads.Mapped.Confidently.to.Intergenic.Regions', 'Reads.Mapped.Confidently.to.Intronic.Regions', 'Reads.Mapped.Confidently.to.Exonic.Regions', 'Fraction.Reads.in.Cells')]
+  # quality_metrics <- cell_ranger_metrics[quality_metrics <- [i]]
+  quality_metrics <- rbind(quality_metrics, cell_ranger_metrics[[i]])
+  
 }
-
+rownames(quality_metrics) <- names(sce_list_raw)
 
 sapply(quality_metrics, class)
 quality_metrics$Sequencing.Saturation <- as.numeric(gsub('%', '', quality_metrics$Sequencing.Saturation))/ 100
