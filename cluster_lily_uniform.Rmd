@@ -822,7 +822,7 @@ for(i in unique(names(marker.info.corrected)))
 
 
 
-  DE_genes <- cbind(ord$symbol,ord)
+  DE_genes <- cbind(ord$symbol, ord)
   DE_genes <- as.data.frame(ord)
   DE_genes <- cbind(rownames(DE_genes), ord$symbol, DE_genes)
   DE_genes_mid <- DE_genes[ ,c(7,1:6)]
