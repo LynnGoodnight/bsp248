@@ -845,19 +845,51 @@ for(i in 1:length(sce_list))
   # Estimate soup profile and contamination fraction
   # pdf(file = "SoupX_output.pdf")
 
+##################################################  
+# counts(sce_list[[i]]) <- tryCatch({
+#   tmp <- autoEstCont(sc, doPlot = FALSE)
+# 
+# 
+#   if (is.null(tmp$metaData$rho) || is.na(tmp$metaData$rho)) 
+#   {
+#     warning("fail to estimate rho contanination value")
+#     tmp <- setContaminationFraction(tmp, rho = 0.05)
+#   }else
+#   {
+#     out <- adjustCounts(sc2)
+#     counts(sce_list[[i]]) <- out    
+#   }
+#   
+# }, error = function(e) {
+#   stop("autoEstCont failed: ", conditionMessage(e))
+# })
+# 
+
+  
+  
+  ##################################################
   sc <- try(autoEstCont(sc, doPlot = FALSE), silent = FALSE)
   if (inherits(sc, "try-error"))
   {
     print(paste("Error, autoEstCont step fail", names(sce_list)[i]))
-  }else{
-  # Output data which removed the predicted ambient reads
-  out <- adjustCounts(sc)
-  counts(sce_list[[i]]) <- out
-  # produce a non-integer (although still sparse) matrix where the original counts have been corrected for background expression. 
-  }
-  # dev.off()
-  # print(paste('test sample', i))
+  }else
+  {
+    out <- try(adjustCounts(sc))
+    if(inherits(out, "try-error"))
+    {
+      print("Error, adjustCounts step fail")
+    }else
+    {
+       counts(sce_list[[i]]) <- out
+    }
+   
+  # produce a non-integer (although still sparse) matrix where the original counts have been corrected for background expression.    
 }
+  # dev.off()
+
+}
+##################################################
+
 
 print("counts assay after remove ambient RNA")
 # print(head(sce_list[["sample_01"]]@assays@data@listData[["counts"]]))

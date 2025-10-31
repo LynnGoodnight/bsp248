@@ -1138,7 +1138,7 @@ plot_volcano <- function(df_re, title)
 #     # scale_y_continuous(breaks = c(0, 0.05**-0.5, 0.01**-0.5, 0.001**-0.5, 0.0001**-0.5) )+
 
 #################################################   
-  # v1.14.7 highlight manually selected genes to display in volcano plots for 3 volcano plots
+  # v1.14.7 highlight manually selected genes to display in volcano plots for 3 volcano plots, but other plots should still use v1.14.6 version
   #   logp_to_power <- function(y) (10^(-y))^(-0.5)  # inverse for breaks
   # 
   #   selected_genes <- c("MX1", "RSAD2", "PARP9", "FOXP1", "FOXS1", "GATA2", "COL8A1", "SULF1", "ROBO4", "PLVAP", "COL4A", "KDR", "IL6", "CCL19", "CCL2")
@@ -1171,41 +1171,42 @@ plot_volcano <- function(df_re, title)
   #     # add one more layer to label selected points from the top_genes data frame  
     
     
-  ################################################# 
-  # # v1.14.5 with complex twist
-  # ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
-  #   geom_point( alpha = 0.3) +
-  #   geom_text_repel() +
-  #   ggtitle(title, paste("DE genes")) +
-  #   labs( x = "logFC", y = "-log10(p value)") +
-  #   geom_hline(yintercept=-log10(0.05), col="red") +
-  #   scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
-  #   theme(axis.title.x = element_text(size = 15),
-  #         axis.title.y = element_text(size = 15),
-  #         plot.margin = margin(5.5, 60, 5.5, 5.5),
-  #         axis.text=element_text(size=10)) +
-  #   coord_cartesian(clip = "off")  +
-  #   scale_y_continuous(trans = scales::modulus_trans(p = 5),  breaks = c(0, 1, 2, 3, 4) )
-  # 
-  
-      
-  #   ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
+################################################# 
+# # v1.14.5 with complex twist
+# ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
+#   geom_point( alpha = 0.3) +
+#   geom_text_repel() +
+#   ggtitle(title, paste("DE genes")) +
+#   labs( x = "logFC", y = "-log10(p value)") +
+#   geom_hline(yintercept=-log10(0.05), col="red") +
+#   scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
+#   theme(axis.title.x = element_text(size = 15),
+#         axis.title.y = element_text(size = 15),
+#         plot.margin = margin(5.5, 60, 5.5, 5.5),
+#         axis.text=element_text(size=10)) +
+#   coord_cartesian(clip = "off")  +
+#   scale_y_continuous(trans = scales::modulus_trans(p = 5),  breaks = c(0, 1, 2, 3, 4) )
+# 
 
-  #     geom_point( alpha = 0.3, position = "jitter") +
- # Customize axis labels here if needed
-                   # X-axis label font size
+    
+#   ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
+
+#     geom_point( alpha = 0.3, position = "jitter") +
+# Customize axis labels here if needed
+                 # X-axis label font size
 # extra right margin for labels
-    # 4) compress buttom region, expand upper 
-  # trim anything below 0
-  # xlim(-3, 3) + ylim(0, -log10(y_limit)) +     
-  # plot.title = element_text(size = 20),        # Title font size and style
-      # geom_vline(xintercept=c(-2, 2), col="green") +
-      # geom_vline(xintercept=c(-0.6, 0.6), col="red") +
+  # 4) compress buttom region, expand upper 
+# trim anything below 0
+# xlim(-3, 3) + ylim(0, -log10(y_limit)) +     
+# plot.title = element_text(size = 20),        # Title font size and style
+    # geom_vline(xintercept=c(-2, 2), col="green") +
+    # geom_vline(xintercept=c(-0.6, 0.6), col="red") +
 ## Warning: Removed 7866 rows containing missing values or values outside the scale range
 ## (`geom_text_repel()`).
 ## Warning: ggrepel: 191 unlabeled data points (too many overlaps). Consider
 ## increasing max.overlaps
-  # as there is insufficient space in the plot to display gene symbol of each dot, warning above appear. 
+# as there is insufficient space in the plot to display gene symbol of each dot, warning above appear. 
+  
 }  
 
 mod_data <- function(df_re, i, cell_type, flag) 
