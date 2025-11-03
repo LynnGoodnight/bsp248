@@ -162,6 +162,7 @@ if(sampSet == "subset_innate_immune_cells")
   munual_annotation <- read.csv("munual_annotation.csv", header = FALSE) 
 }
 
+save.image(file = paste0("differential_debug.RData"))
 
 colnames(munual_annotation) <- c("cluster", "name")
 # if(sampSet == "subset_adaptive_immune_cells")
