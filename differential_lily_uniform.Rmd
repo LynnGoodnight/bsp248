@@ -150,16 +150,16 @@ print(sce_all)
 #Long-form annotated version including cell subtypes
 if(sampSet == "subset_innate_immune_cells")
 {
-  munual_annotation <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)  
+  munual_annotation <- read.csv("references/munual_annotation_innate_immune_cells.csv", header = FALSE)  
 }else if(sampSet == "subset_adaptive_immune_cells")
 {
-  munual_annotation <- read.csv("munual_annotation_adaptive_immune_cells.csv", header = FALSE)
+  munual_annotation <- read.csv("references/munual_annotation_adaptive_immune_cells.csv", header = FALSE)
 }else if(sampSet == "subset_non_immune_cells")
 {
-  munual_annotation <- read.csv("munual_annotation_non_immune_cells.csv", header = FALSE)
+  munual_annotation <- read.csv("references/munual_annotation_non_immune_cells.csv", header = FALSE)
 }else
 {
-  munual_annotation <- read.csv("munual_annotation.csv", header = FALSE) 
+  munual_annotation <- read.csv("references/munual_annotation.csv", header = FALSE) 
 }
 
 save.image(file = paste0("differential_debug.RData"))
@@ -186,7 +186,7 @@ sce_all_filt$cluster <- as.character(sce_all_filt$cluster)
 
 if(bsp_num == "bsp_248")
 {
-  for (i in munual_annotation$cluster)
+  for (i in  unique(sce_all_filt$cluster))
   {
     
     cell_type <- munual_annotation[ munual_annotation$cluster == i, "name"]
@@ -1088,44 +1088,81 @@ plot_volcano <- function(df_re, title)
   set.seed(1)
   library(stringr)
 ################################################# 
-  # # v1.14.8 Fellow Tim suggestion use Dashed line red, bigger interval in volcano plots. Bigger text size for gene label and texts in axis. Only adjust for those used in main figures 
-  # 
-  # logp_to_power <- function(y) (10^(-y))^(-0.5)  # inverse for breaks
-  # 
-  # p1 <- ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
-  #   geom_hline(yintercept = 0.05**-0.5,
-  #            color = "red",
-  #            linetype = "dashed") +
-  #   geom_point( alpha = 0.3) +
-  #   geom_text_repel( size = 6, max.overlaps = 20) +
-  #   ggtitle(stringr::str_wrap(title, 50) , paste("DE genes", sampSet)) +
-  #   labs( x = "logFC", y = "-log10(adjusted p-value)") +
-  #   scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
-  #   theme(axis.title.x = element_text(size = 25),
-  #          plot.title=element_text(size=20), #change font size of plot title
-  #         axis.text=element_text(size=25), #change font size of axis text
-  #         axis.title.y = element_text(size = 25),
-  #         plot.margin = margin(5.5, 60, 5.5, 5.5)) +
-  #   coord_cartesian(clip = "off")  +
-  #   scale_y_continuous(
-  #   breaks = logp_to_power(c(1, 2, 3, 4, 5, 6)),   # positions in power scale
-  #   labels = c(1, 2, 3, 4, 5, 6)  )
-  #     # scale_y_continuous(breaks = c(0, 0.05**-0.5, 0.01**-0.5, 0.001**-0.5, 0.0001**-0.5) )+
-  # 
-  # if(grepl( "Capillary endothelial (activated) cluster 13", title, fixed = TRUE))
-  # {
-  #   p1 <- p1 + coord_cartesian(xlim = c(-10, 10), clip = "off")    
-  # }else if(grepl( "B cells cluster 10", title, fixed = TRUE))
-  # {
-  #   p1 <- p1 + coord_cartesian(xlim = c(-4, 4), clip = "off") 
-  # }else if(grepl( "plasma cells cluster 2", title, fixed = TRUE))
-  # {
-  #   p1 <- p1 + coord_cartesian(xlim = c(-5, 4), clip = "off") 
-  # }
-  # 
-  # print(p1)
-  # 
-  
+  # v1.14.8 Fellow Tim suggestion use Dashed line red, bigger interval in volcano plots. Bigger text size for gene label and texts in axis. Only adjust for those used in main figures
+
+  logp_to_power <- function(y) (10^(-y))^(-0.5)  # inverse for breaks
+
+  p1 <- ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
+    geom_hline(yintercept = 0.05**-0.5,
+             color = "red",
+             linetype = "dashed") +
+    geom_point( alpha = 0.3) +
+    geom_text_repel( size = 6, max.overlaps = 20) +
+    ggtitle(stringr::str_wrap(title, 50) , paste("DE genes", sampSet)) +
+    labs( x = "logFC", y = "-log10(adjusted p-value)") +
+    scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
+    theme(axis.title.x = element_text(size = 25),
+           plot.title=element_text(size=20), #change font size of plot title
+          axis.text=element_text(size=25), #change font size of axis text
+          axis.title.y = element_text(size = 25),
+          plot.margin = margin(5.5, 60, 5.5, 5.5)) +
+    coord_cartesian(clip = "off")  +
+    scale_y_continuous(
+    breaks = logp_to_power(c(1, 2, 3, 4, 5, 6)),   # positions in power scale
+    labels = c(1, 2, 3, 4, 5, 6)  )
+      # scale_y_continuous(breaks = c(0, 0.05**-0.5, 0.01**-0.5, 0.001**-0.5, 0.0001**-0.5) )+
+
+  if(grepl( "Capillary endothelial (activated) cluster 13", title, fixed = TRUE))
+  {
+    p1 <- p1 + coord_cartesian(xlim = c(-10, 10), clip = "off")
+  }else if(grepl( "B cells cluster 10", title, fixed = TRUE))
+  {
+    p1 <- p1 + coord_cartesian(xlim = c(-4, 4), clip = "off")
+  }else if(grepl( "plasma cells cluster 2", title, fixed = TRUE))
+  {
+    p1 <- p1 + coord_cartesian(xlim = c(-5, 4), clip = "off")
+  }else if(grepl( "Dendritic cell (cDC2-like) cluster 2", title, fixed = TRUE))
+  {
+
+    selected_genes <- c("CD74", "B2M", "IFI30", "CD40", "CCL22", "CCL17", "JAK2", "IKZF1", "MAP4K4")
+    top_genes <- df_re[(df_re$delabel %in% selected_genes) , ]    
+    p1 <- ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
+      geom_hline(yintercept = 0.05**-0.5,
+               color = "red",
+               linetype = "dashed") +
+      geom_point( alpha = 0.3) +
+          geom_point( alpha = 0.3) +
+  geom_text_repel(
+    data = top_genes,
+    aes(label = delabel),
+    box.padding = 0.3,
+    min.segment.length = 0,
+    max.overlaps = Inf,
+    force = 10,
+    size = 6  ) +
+      ggtitle(stringr::str_wrap(title, 50) , paste("DE genes", sampSet)) +
+      labs( x = "logFC", y = "-log10(adjusted p-value)") +
+      scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
+      theme(axis.title.x = element_text(size = 25),
+             plot.title=element_text(size=20), #change font size of plot title
+            axis.text=element_text(size=25), #change font size of axis text
+            axis.title.y = element_text(size = 25),
+            plot.margin = margin(5.5, 60, 5.5, 5.5)) +
+      coord_cartesian(clip = "off")  +
+      scale_y_continuous(
+      breaks = logp_to_power(c(1, 2, 3, 4, 5, 6)),   # positions in power scale
+      labels = c(1, 2, 3, 4, 5, 6)  ) +
+      geom_text_repel( size = 6, max.overlaps = 30) 
+        # scale_y_continuous(breaks = c(0, 0.05**-0.5, 0.01**-0.5, 0.001**-0.5, 0.0001**-0.5) )+
+
+  }else if(grepl( "Memory-like  T Cells cluster 2re", title, fixed = TRUE))
+  {
+    p1 <- p1 + coord_cartesian(ylim = c(0, 4), clip = "off")
+  }
+
+  print(p1)
+
+
 ################################################# 
 # v1.14.6 Fellow Tim suggestion use a simpler transformation to twist the y-axis 
 # 
@@ -1150,37 +1187,37 @@ plot_volcano <- function(df_re, title)
 
 #################################################   
   # v1.14.7 highlight manually selected genes to display in volcano plots for 3 volcano plots, but other plots should still use v1.14.6 version
-    logp_to_power <- function(y) (10^(-y))^(-0.5)  # inverse for breaks
-
-    # selected_genes <- c("MX1", "RSAD2", "PARP9", "FOXP1", "FOXS1", "GATA2", "COL8A1", "SULF1", "ROBO4", "PLVAP", "COL4A", "KDR", "IL6", "CCL19", "CCL2")
-    selected_genes <- c("MX1", "RSAD2", "PARP9", "FOXP1", "FOXS1", "GATA2", "COL8A1", "SULF1", "ROBO4", "PLVAP", "COL4A", "KDR", "IL6", "CCL2")
-    top_genes <- df_re[(df_re$delabel %in% selected_genes) , ]
-
-
-  ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
-    geom_hline(yintercept=0.05**-0.5, col="red") +
-    geom_point( alpha = 0.3) +
-  geom_text_repel(
-    data = top_genes,
-    aes(label = delabel),
-    box.padding = 0.3,
-    min.segment.length = 0,
-    max.overlaps = Inf,
-    force = 10,
-    size = 6  ) +
-    ggtitle(title, paste("DE genes", sampSet)) +
-    labs( x = "logFC", y = "-log10(adjusted p-value)") +
-    scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
-    theme(axis.title.x = element_text(size = 30),
-          axis.title.y = element_text(size = 30),
-          plot.margin = margin(5.5, 60, 5.5, 5.5),
-          axis.text=element_text(size=10)) +
-    coord_cartesian(clip = "off")  +
-    geom_text_repel(max.overlaps = 5) +
-    scale_y_continuous(
-    breaks = logp_to_power(c(1, 2, 3, 4, 5, 6)),   # positions in power scale
-    labels = c(1, 2, 3, 4, 5, 6)  )
-      # add one more layer to label selected points from the top_genes data frame
+  #   logp_to_power <- function(y) (10^(-y))^(-0.5)  # inverse for breaks
+  # 
+  #   # selected_genes <- c("MX1", "RSAD2", "PARP9", "FOXP1", "FOXS1", "GATA2", "COL8A1", "SULF1", "ROBO4", "PLVAP", "COL4A", "KDR", "IL6", "CCL19", "CCL2")
+  #   selected_genes <- c("MX1", "RSAD2", "PARP9", "FOXP1", "FOXS1", "GATA2", "COL8A1", "SULF1", "ROBO4", "PLVAP", "COL4A", "KDR", "IL6", "CCL2")
+  #   top_genes <- df_re[(df_re$delabel %in% selected_genes) , ]
+  # 
+  # 
+  # ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
+  #   geom_hline(yintercept=0.05**-0.5, col="red") +
+  #   geom_point( alpha = 0.3) +
+  # geom_text_repel(
+  #   data = top_genes,
+  #   aes(label = delabel),
+  #   box.padding = 0.3,
+  #   min.segment.length = 0,
+  #   max.overlaps = Inf,
+  #   force = 10,
+  #   size = 6  ) +
+  #   ggtitle(title, paste("DE genes", sampSet)) +
+  #   labs( x = "logFC", y = "-log10(adjusted p-value)") +
+  #   scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
+  #   theme(axis.title.x = element_text(size = 30),
+  #         axis.title.y = element_text(size = 30),
+  #         plot.margin = margin(5.5, 60, 5.5, 5.5),
+  #         axis.text=element_text(size=10)) +
+  #   coord_cartesian(clip = "off")  +
+  #   geom_text_repel(max.overlaps = 5) +
+  #   scale_y_continuous(
+  #   breaks = logp_to_power(c(1, 2, 3, 4, 5, 6)),   # positions in power scale
+  #   labels = c(1, 2, 3, 4, 5, 6)  )
+  #     # add one more layer to label selected points from the top_genes data frame
 
 
 ################################################# 
