@@ -159,7 +159,8 @@ if(sampSet == "subset_innate_immune_cells")
   munual_annotation <- read.csv("references/munual_annotation_non_immune_cells.csv", header = FALSE)
 }else
 {
-  munual_annotation <- read.csv("references/munual_annotation.csv", header = FALSE) 
+  munual_annotation <- read.csv("references/munual_annotation.csv", header = FALSE)
+  
 }
 
 save.image(file = paste0("differential_debug.RData"))
