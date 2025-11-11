@@ -182,7 +182,9 @@ df_grouped <- munual_annotation %>%
 df_grouped$celltype_cluster <- paste(df_grouped$name, df_grouped$cluster_contained)
 
 unique(sce_all_filt$cluster)
+unique(sce_filt$cluster)
 sce_all_filt$cluster <- as.character(sce_all_filt$cluster)
+sce_filt$cluster <- as.character(sce_filt$cluster)
 
 
 if(bsp_num == "bsp_248")
@@ -197,6 +199,10 @@ if(bsp_num == "bsp_248")
     # print(typeof(long_celltype))
     sce_all_filt$named_cluster[sce_all_filt$cluster==i] <- cell_type
     sce_all_filt$long_named_cluster[sce_all_filt$cluster==i] <- long_celltype
+    
+    sce_filt$named_cluster[sce_filt$cluster==i] <- cell_type
+    sce_filt$long_named_cluster[sce_filt$cluster==i] <- long_celltype    
+    
   }
 }
 table(sce_all_filt$long_named_cluster)
@@ -237,8 +243,8 @@ sce_all_filt
 # BAL_colour_list[sapply(BAL_colour_list, is.null)] <- '#B15928' #brown
 # sce_all_filt$colour  <- BAL_colour_list
 
-colData(sce_filt)[,c('named_cluster', 'long_named_cluster', 'verbose_cluster', 'EXP_celltype')] <- colData(sce_all_filt)[, c('named_cluster', 'long_named_cluster', 'verbose_cluster', 'EXP_celltype')]
-
+# head(colData(sce_all_filt)[, c('named_cluster', 'long_named_cluster', 'verbose_cluster', 'EXP_celltype')]
+# )
 ```
 
 And make some UMAPs for visulization.
@@ -279,9 +285,9 @@ output_color_code_in_UMAP <- function(x = p1,
   # Merge with extracted color info
 
   color_cluster_map <- df_colors %>%
-    distinct(group, colour) %>%
-    inner_join(df_mapping_unique, by = "group") %>%
-    select(named_cluster, colour)
+    dplyr::distinct(group, colour) %>%
+    dplyr::inner_join(df_mapping_unique, by = "group") %>%
+    dplyr::select(named_cluster, colour)
   # distinct(group, colour) Keeps only unique combinations of group and colour
   # View result
   # print(color_cluster_map)
@@ -314,11 +320,16 @@ print(p1)
 clusterid_colors <- output_color_code_in_UMAP (p1, "cluster")
 print(clusterid_colors)  
 
+set.seed(1)
 p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
   guides(colour = guide_legend(override.aes = list(size = 15, alpha = 1))) +
   ggtitle(paste('UMAP', sampSet))
 
 print(p1)
+
+
+
+
 cell_type_colors <- output_color_code_in_UMAP (p1, "named_cluster")
 print(cell_type_colors)
 
