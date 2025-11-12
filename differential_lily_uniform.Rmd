@@ -314,16 +314,16 @@ selected_point_size = 0.2
 # plot automatic assigned color for each cell type and cluster in UMAP
 sce_filt
 p1 <- plotUMAP(sce_filt, colour_by="cluster", text_by = "cluster",  point_size = selected_point_size) + 
-  guides(colour = guide_legend(override.aes = list(size=15, alpha = 1))) + 
-  theme(text = element_text(size = 20)) + ggtitle(paste('UMAP', sampSet))
+  guides(colour = guide_legend(override.aes = list(size=10, alpha = 1))) + 
+  theme(legend.text = element_text(size = 15))+ ggtitle(paste('UMAP', sampSet))
 print(p1)
 clusterid_colors <- output_color_code_in_UMAP (p1, "cluster")
 print(clusterid_colors)  
 
 set.seed(1)
 p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
-  guides(colour = guide_legend(override.aes = list(size = 15, alpha = 1))) +
-  ggtitle(paste('UMAP', sampSet))
+  guides(colour = guide_legend(override.aes = list(size = 10, alpha = 1))) +
+  theme(legend.text = element_text(size = 15)) + ggtitle(paste('UMAP', sampSet))
 
 print(p1)
 
@@ -336,7 +336,8 @@ print(cell_type_colors)
 
 p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster", point_size = selected_point_size) +
   guides(colour = guide_legend(override.aes = list(size = 15, alpha = 1))) +
-  ggtitle(paste('UMAP', sampSet))
+   theme(legend.text = element_text(size = 15)) + 
+  ggtitle(paste('UMAP', sampSet)) 
 
 print(p1)
 
@@ -365,15 +366,16 @@ if(bsp_num == "bsp_248" )
 
 
   p1 <- plotUMAP(sce_tem, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
-  guides(colour = guide_legend(override.aes = list(size = 15, alpha = 1))) +
+  guides(colour = guide_legend(override.aes = list(size = 12, alpha = 1))) +  
+    theme(legend.text = element_text(size = 15)) + 
   ggtitle(paste('UMAP final version, unwanted clusters removed', sampSet))
   
   print(p1) 
   
-  p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster") +
-  guides(colour = guide_legend(override.aes = list(size = 7, alpha = 1))) +
+  p1 <- plotUMAP(sce_tem, colour_by = "long_named_cluster", text_by = "cluster") +
+  guides(colour = guide_legend(override.aes = list(size = 12, alpha = 1))) +
   ggtitle(paste('UMAP final version, unwanted clusters removed,', sampSet)) +
-  theme(legend.text = element_text(size = 10))
+  theme(legend.text = element_text(size = 15))
   
   print(p1)   
   
