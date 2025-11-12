@@ -359,9 +359,6 @@ if(bsp_num == "bsp_248" )
   }else if(sampSet == "subset_non_immune_cells")
   {
     sce_tem  <- sce_filt[, sce_filt$cluster != "22"]
-  }else
-  {
-    sce_tem  <- sce_filt
   }else if(sampSet == "subset_innate_immune_cells")
   {
     sce_tem  <- sce_filt
@@ -371,6 +368,9 @@ if(bsp_num == "bsp_248" )
   ggtitle(paste('UMAP final version, unwanted clusters removed,', sampSet)) 
   
   print(p1)     
+  }else
+  {
+    sce_tem  <- sce_filt
   }
 
 
