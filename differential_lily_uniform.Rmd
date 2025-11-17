@@ -1670,11 +1670,11 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
                               fill = variable)) +
     geom_bar(stat = 'identity', position = 'identity') +
     labs(x = 'annotated cluster',  # Custom x-axis title
-         y = 'Number of DE Genes',  # Custom y-axis title
-         title = paste(prefix, 'edgeR summary of DE genes per cluster'),  # Custom plot title
+         y = 'Number of DE Genes (absolute value)',  # Custom y-axis title
+         title = paste(sampSet, prefix, 'edgeR summary of DE genes per cluster'),  # Custom plot title
          fill = 'change') +  # Custom legend title
     scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
-    theme_minimal() +
+    theme_minimal() + scale_y_continuous(labels = abs) + 
     geom_text(aes(label = value,
                   vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
               color = "black",
