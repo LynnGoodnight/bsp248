@@ -1116,10 +1116,9 @@ plot_volcano <- function(df_re, title)
   logp_to_power <- function(y) (10^(-y))^(-0.5)  # inverse for breaks
   
   # Adjust breaks to include 0 for y-axis label
-  tick_labels <- c(0, 1, 2, 3, 4, 5, 6)           # Add 0 for the y-axis label
+  tick_labels <- c( 1, 2, 3, 4, 5, 6)           # Add 0 for the y-axis label
   tick_plot    <- logp_to_power(tick_labels)       # Compute raw positions
-  tick_plot[1] <- 0                                # Set position for 0 (since logp_to_power(0) is undefined)
- 
+
   p1 <- ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
     geom_hline(yintercept = 0.05**-0.5,
                color = "red",
@@ -1203,9 +1202,8 @@ plot_volcano <- function(df_re, title)
            y_plot = pw_trans(y_raw, y0))
   
   # ticks: compute on the raw scale, then transform to plotting scale
-  tick_labels <- c(0, 1, 2, 3, 4, 5, 6)          # include 0 for y-axis label
+  tick_labels <- c(1, 2, 3, 4, 5, 6)          # include 0 for y-axis label
   tick_raw    <- logp_to_power(tick_labels)      # compute raw positions
-  tick_raw[1] <- 0                               # because logp_to_power(0) is undefined, manually set
   tick_plot   <- pw_trans(tick_raw, y0)          # transform for display
   
   
@@ -1224,7 +1222,6 @@ plot_volcano <- function(df_re, title)
           plot.title   = element_text(size = 20),
           axis.text    = element_text(size = 25),
           plot.margin  = margin(5.5, 60, 5.5, 5.5)) +
-    coord_cartesian(clip = "off", ylim = c(0, NA)) +
     scale_y_continuous(breaks = tick_plot, labels = tick_labels)
 
 
@@ -1642,19 +1639,17 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
   p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
                               fill = variable)) +
     geom_bar(stat = 'identity', position = 'identity') +
-    labs(x = 'named_cluster', y = 'Number of Genes') +
+    labs(x = 'named_cluster', y = 'Number of DE Genes (absolute value)') +
     ggtitle(label = sampSet,
           subtitle = paste(prefix, 'edgeR summary of DE genes per cluster') ) +
     scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
-    theme_minimal() +
+    theme_minimal() + scale_y_continuous(labels = abs) +
     geom_text(aes(label = value,
                   vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
-              color = "black",
-              size = 3) +
+              color = "black", size = 3) +
     theme(axis.text.x = element_text(angle = 90)) +
     facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-    theme(
-      strip.background = element_rect(color = "black", fill = "white", linewidth = 1))  # Add black rectangle border
+    theme(strip.background = element_rect(color = "black", fill = "white", linewidth = 1))  # Add black rectangle border
 
   print(p1)
 
