@@ -1,5 +1,5 @@
 ---
-title: "Differential adundance & expression edgeR Analyses"
+title: "Differential adundance & expression edgeR analyses"
 author: "lily yang"
 date: "`r Sys.Date()`"
 output: html_document
@@ -92,6 +92,12 @@ library(batchelor)
 library(gridExtra)
 library(ggplot2)
 library(ggrepel)
+library(dplyr)
+library(Polychrome)
+library(scales)
+library(stringr)
+
+
 
 ```
 
@@ -109,11 +115,18 @@ Based on manual annotation from the clustered data using the generated marker ge
 # plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$hgnc_symbol == 'CD4'], x='cluster', exprs_values='logcounts')
 plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD4'], x='cluster')
 
-# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$Symbol == 'CD8B'], x='cluster', exprs_values='logcounts')
-plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD8B'], x='cluster')
 
-# plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$Symbol == 'CD163'], x='cluster', exprs_values='logcounts')
-plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD163'], x='cluster')
+if(bsp_num != "bsp_247")
+{
+  # plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$Symbol == 'CD8B'], x='cluster', exprs_values='logcounts')
+  plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD8B'], x='cluster') 
+  
+  # plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$Symbol == 'CD163'], x='cluster', exprs_values='logcounts')
+  plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD163'], x='cluster')  
+}
+
+
+
 
 # plotExpression(sce_all_corrected, features=rownames(sce_all)[rowData(sce_all)$Symbol == 'CD14'], x='cluster', exprs_values='logcounts')
 plotExpression(sce_all_corrected, features=rownames(sce_all_corrected)[rowData(sce_all_corrected)$Symbol == 'CD14'], x='cluster')
@@ -139,10 +152,12 @@ sce_all_filt is important for count-based differential analyses and seeing expre
 Next we name the good quality clusters. 
 
 ```{r name cell types for each cluster }
+
+# save.image(file = paste0('differential_debug_', sampSet,  '.RData'))
+
 sce_filt <- sce_all_corrected
 sce_all_filt <- sce_all
 unique(sce_all$cluster)
-
 print(sce_all)
 # rm(sce_all, sce_all_corrected)
 
@@ -163,7 +178,7 @@ if(sampSet == "subset_innate_immune_cells")
   
 }
 
-save.image(file = paste0("differential_debug.RData"))
+
 
 colnames(munual_annotation) <- c("cluster", "name")
 # if(sampSet == "subset_adaptive_immune_cells")
@@ -174,37 +189,47 @@ colnames(munual_annotation) <- c("cluster", "name")
 # }
 
 # add an column show all clusters belong to same cell types
-library(dplyr)
+
 df_grouped <- munual_annotation %>%
   dplyr::group_by(name) %>%
   dplyr::summarise(cluster_contained = paste(cluster, collapse = ", ")) %>%
   dplyr::ungroup()
 df_grouped$celltype_cluster <- paste(df_grouped$name, df_grouped$cluster_contained)
 
-unique(sce_all_filt$cluster)
-unique(sce_filt$cluster)
-sce_all_filt$cluster <- as.character(sce_all_filt$cluster)
+# unique(sce_all_filt$cluster)
+# unique(sce_filt$cluster)
+# head(colData(sce_all_filt))
+# head(colData(sce_filt))
 sce_filt$cluster <- as.character(sce_filt$cluster)
+sce_all_filt$cluster <- sce_filt$cluster
 
 
-if(bsp_num == "bsp_248")
+
+for (i in unique(sce_all_filt$cluster))
 {
-  for (i in  unique(sce_all_filt$cluster))
-  {
-    
-    cell_type <- munual_annotation[ munual_annotation$cluster == i, "name"]
-    
-    long_celltype <- as.character(df_grouped[ df_grouped$name == cell_type, "celltype_cluster"])         
-    print(paste(i, cell_type, long_celltype))
-    # print(typeof(long_celltype))
-    sce_all_filt$named_cluster[sce_all_filt$cluster==i] <- cell_type
-    sce_all_filt$long_named_cluster[sce_all_filt$cluster==i] <- long_celltype
-    
-    sce_filt$named_cluster[sce_filt$cluster==i] <- cell_type
-    sce_filt$long_named_cluster[sce_filt$cluster==i] <- long_celltype    
-    
-  }
+  
+  cell_type <- munual_annotation[ munual_annotation$cluster == i, "name"]
+
+  long_celltype <- as.character(df_grouped[ df_grouped$name == cell_type, "celltype_cluster"])  
+  
+  
+  print(paste(i, cell_type, long_celltype))
+  
+  
+  # print(typeof(long_celltype))
+  sce_all_filt$named_cluster[sce_all_filt$cluster==i] <- cell_type
+  sce_all_filt$long_named_cluster[sce_all_filt$cluster==i] <- long_celltype
+
+  
+  sce_filt$named_cluster[sce_filt$cluster==i] <- cell_type
+  sce_filt$long_named_cluster[sce_filt$cluster==i] <- long_celltype  
+
+  
 }
+
+# if(bsp_num == "bsp_248")
+# {
+# }
 table(sce_all_filt$long_named_cluster)
 # head(sce_all_filt$long_named_cluster)
 # sce_all_filt$cluster <- as.integer(sce_all_filt$cluster)
@@ -217,28 +242,31 @@ unique(sce_all_filt$long_named_cluster)
 
 ```{r manually assign color to the good quality clusters}
 # Create label and assign colour for each cluster for convenient annotation later
-
+if(bsp_num == "bsp_248" | bsp_num == "bsp_306" )
+{
 # label every cell with its tissue type and the cluster it belong to
 sce_all_filt$verbose_cluster <- paste0('lung, ', sce_all_filt$named_cluster, ', ', sce_all_filt$cluster)
 # label every cell with its tissue type 
 sce_all_filt$EXP_celltype <- paste0('lung, ', sce_all_filt$named_cluster)
 
-sce_all_filt
+sce_all_filt  
+}
 
+# 
 # BAL_colour_list <- vector("list", length(sce_all_filt$EXP_celltype))
 # BAL_colour_list[grep('Macrophages', sce_all_filt$EXP_celltype)] <- '#E31A1C' #red
 # BAL_colour_list[grep('Monocytes', sce_all_filt$EXP_celltype)] <- '#C9C32F' #pink
-# BAL_colour_list[grep('conventional', sce_all_filt$EXP_celltype)] <- '#FB9A99' 
-# BAL_colour_list[grep('pDCs', sce_all_filt$EXP_celltype)] <- '#FDDBC7' 
+# BAL_colour_list[grep('conventional', sce_all_filt$EXP_celltype)] <- '#FB9A99'
+# BAL_colour_list[grep('pDCs', sce_all_filt$EXP_celltype)] <- '#FDDBC7'
 # BAL_colour_list[grep('cDCs', sce_all_filt$EXP_celltype)] <- '#6A3D9A' #purple
 # BAL_colour_list[grep('Plasma Cells', sce_all_filt$EXP_celltype)] <- '#1F78B4' #dark blue
 # BAL_colour_list[grep('B Cells', sce_all_filt$EXP_celltype)] <- '#A6CEE3' #pale blue
 # BAL_colour_list[grep('Tregs', sce_all_filt$EXP_celltype)] <- '#CAB2D6' #light purple
 # BAL_colour_list[grep('CD4', sce_all_filt$EXP_celltype)] <- '#B2DF8A' #light green
-# BAL_colour_list[grep('Mitotic CD4 T Cells', sce_all_filt$EXP_celltype)] <- '#FFFF00' 
+# BAL_colour_list[grep('Mitotic CD4 T Cells', sce_all_filt$EXP_celltype)] <- '#FFFF00'
 # BAL_colour_list[grep('CD8', sce_all_filt$EXP_celltype)] <- '#33A02C' # green
 # BAL_colour_list[grep('Mitotic CD8 T Cells', sce_all_filt$EXP_celltype)] <- '#FF7F00' #orange
-# BAL_colour_list[grep('NK', sce_all_filt$EXP_celltype)] <- '#FDBF6F' 
+# BAL_colour_list[grep('NK', sce_all_filt$EXP_celltype)] <- '#FDBF6F'
 # # unknown clusters are colored with brown
 # BAL_colour_list[sapply(BAL_colour_list, is.null)] <- '#B15928' #brown
 # sce_all_filt$colour  <- BAL_colour_list
@@ -249,7 +277,7 @@ sce_all_filt
 
 And make some UMAPs for visulization.
 
-```{r plot UMAPs to show annotated cell types of clusters, fig.width= 15, fig.height=8}
+```{r plot UMAPs to show annotated cell types of clusters, fig.width= 16, fig.height=11 }
 output_color_code_in_UMAP <- function(x = p1,
                                       clusterID_or_celltype = "named_cluster") 
 {
@@ -313,6 +341,10 @@ output_color_code_in_UMAP <- function(x = p1,
 selected_point_size = 0.2
 # plot automatic assigned color for each cell type and cluster in UMAP
 sce_filt
+
+
+
+
 p1 <- plotUMAP(sce_filt, colour_by="cluster", text_by = "cluster",  point_size = selected_point_size) + 
   guides(colour = guide_legend(override.aes = list(size=10, alpha = 1))) + 
   theme(legend.text = element_text(size = 15)) + ggtitle(paste('UMAP', sampSet))
@@ -327,67 +359,153 @@ p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "cluster", point
 
 print(p1)
 
-
-
+unique(sce_filt$named_cluster)
+  
 
 cell_type_colors <- output_color_code_in_UMAP (p1, "named_cluster")
 print(cell_type_colors)
 
+if(bsp_num == "bsp_247" )
+{
+  # as bsp_247 has too many long_named_cluster, manually assign more distinguishable color 
+  
 
-p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster", point_size = selected_point_size) +
-  guides(colour = guide_legend(override.aes = list(size = 10, alpha = 1))) +
-   theme(legend.text = element_text(size = 15)) + 
-  ggtitle(paste('UMAP', sampSet)) 
+  n <- length(unique(colData(sce_filt)$long_named_cluster))
+  cols <- scales::hue_pal()(n)
+  names(cols) <- unique(colData(sce_filt)$long_named_cluster)
+  
+  # extract cluster number
+  cluster_num <- as.numeric(stringr::str_extract(
+    sce_filt$long_named_cluster,
+    "\\d+$"     
+  ))
+  
 
-print(p1)
+  new_levels <- unique(sce_filt$long_named_cluster[order(cluster_num)])
+  
+  # reset factor order
+  sce_filt$long_named_cluster <- factor(
+    sce_filt$long_named_cluster,
+    levels = new_levels
+  )
+    
+  
+  p1 <- scater::plotUMAP(sce_filt,
+                 colour_by = "long_named_cluster",
+                 text_by   = "cluster",
+                 point_size = selected_point_size) +
+    scale_colour_manual(values = cols) +
+    guides(colour = guide_legend(ncol = 1, override.aes = list(size = 10, alpha = 1))) +
+    ggtitle(paste("UMAP", sampSet)) +
+    theme(text=element_text(size=20),
+      legend.text = element_text(size = 30)) 
+
+  print(p1)
+  
+  png(filename = paste0('Results/clustering_UMAP_text_by_cluster_', sampSet,  '.png') ,
+      height=1000, width=1800)
+  print(p1)
+  dev.off()
+
+      
+  p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "named_cluster", 
+                 point_size = selected_point_size) + scale_colour_manual(values = cols) +
+    ggtitle(paste('UMAP', sampSet)) +
+    guides(colour = guide_legend(ncol = 1, override.aes = list(size = 10, alpha = 1), title = 'Cell type')) +
+    theme(text=element_text(size=20),
+      legend.text = element_text(size = 30)) 
+    
+    
+  print(p1)    
+  
+  png(filename = paste0('Results/clustering_UMAP_text_by_named_cluster_', sampSet,  '.png') ,
+      height=1000, width=1800)
+  print(p1)
+  dev.off()
+    
+  
+  dat <- as.data.frame(table(sce_all_filt$named_cluster, sce_all_filt$Sample, sce_all_filt$tissue,
+                             sce_all_filt$condition))
+  colnames(dat) <- c('named_cluster', 'sample', 'tissue', 'condition', 'n_cells')
+  head(dat)
+  
+  # draw stack bar plots to display sample composition for each cluster
+  p1 <- ggplot(dat, aes(fill=sample, y=n_cells, x=named_cluster)) +
+    geom_bar(position='stack', stat='identity') +
+    facet_wrap(~ condition  + tissue) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          text=element_text(size=20))
+  print(p1)  
 
 
+  
+  
+}else
+{
+  p1 <- plotUMAP(sce_filt, colour_by = "long_named_cluster", text_by = "cluster", point_size = selected_point_size) +
+    guides(colour = guide_legend(override.aes = list(size = 10, alpha = 1))) +
+     theme(legend.text = element_text(size = 15)) + 
+    ggtitle(paste('UMAP', sampSet)) 
+  
+  print(p1)
+  
+  p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", 
+                 point_size = selected_point_size) + 
+    guides(colour = guide_legend(override.aes = list(size = 10, alpha = 1), title = 'Cell type')) + 
+    ggtitle(paste('UMAP', sampSet)) 
+  print(p1)  
+  
+}
 
-p1 <- plotUMAP(sce_filt, colour_by = "named_cluster", text_by = "named_cluster", 
-               point_size = selected_point_size) + 
-  guides(colour = guide_legend(override.aes = list(size = 10, alpha = 1), title = 'Cell type')) + 
-  ggtitle(paste('UMAP', sampSet)) 
-print(p1)  
+
 
 # draw additional UMAP with cluster 11, 12 not been displayed for subset_adaptive_immune_cells requested by collaborators
-if(bsp_num == "bsp_248" )
+
+
+if(bsp_num == "bsp_248" | bsp_num == "bsp_306" )
 {
-  if(sampSet == "subset_adaptive_immune_cells")
+  if(bsp_num == "bsp_248" & sampSet == "subset_adaptive_immune_cells")
   {
     sce_tem  <- sce_filt[, sce_filt$cluster != "11"]  
     sce_tem  <- sce_tem[, sce_tem$cluster != "12"]    
-  }else if(sampSet == "subset_non_immune_cells")
+  }else if(bsp_num == "bsp_248" & sampSet == "subset_non_immune_cells")
   {
-    sce_tem  <- sce_filt[, sce_filt$cluster != "22"]
-  }else if(sampSet == "subset_innate_immune_cells")
-  {
-    sce_tem  <- sce_filt
-    
-  p1 <- plotUMAP(sce_tem, colour_by = "long_named_cluster", text_by = "cluster", point_size = selected_point_size) +
-  guides(colour = guide_legend(override.aes = list(size = 10, alpha = 1))) +
-  ggtitle(paste('UMAP final version, unwanted clusters removed,', sampSet)) 
-  
-  print(p1)     
+    sce_tem <- sce_filt[, sce_filt$cluster != "22"]
   }else
   {
-    sce_tem  <- sce_filt
+    named_cluster_vector <- unique(sce_filt$named_cluster) 
+    celltype_to_remove <- named_cluster_vector[base::grepl("remove", named_cluster_vector )] 
+    sce_tem  <- sce_filt[ , !sce_filt$named_cluster %in% celltype_to_remove ]  
+    # unique(sce_tem$named_cluster) 
+    # unique(sce_filt$named_cluster) 
   }
-
-
   # p1 <- plotUMAP(sce_tem, colour_by = "named_cluster", text_by = "cluster", point_size = selected_point_size) +
   # guides(colour = guide_legend(override.aes = list(size = 10, alpha = 1))) +  
   # ggtitle(paste('UMAP final version, unwanted clusters removed', sampSet)) + 
   #  theme(legend.text = element_text(size = 15)) 
   # 
   # print(p1) 
-  
-  p1 <- plotUMAP(sce_tem, colour_by = "long_named_cluster", text_by = "cluster", point_size = selected_point_size) +
+
+  p1 <- scater::plotUMAP(sce_tem, colour_by = "long_named_cluster", text_by = "cluster",
+                 point_size = selected_point_size) +
   guides(colour = guide_legend(override.aes = list(size = 10, alpha = 1))) +
   ggtitle(paste('UMAP final version, unwanted clusters removed,', sampSet)) +
-  theme(legend.text = element_text(size = 15))
-  
+  theme(text=element_text(size=20),
+        legend.text = element_text(size = 30)) 
+
   print(p1)   
-  
+  # ggplot2::ggsave(
+  #   filename = paste0('Results/clustering_UMAP_final_', sampSet,  '.png'),
+  #   plot     = p1,
+  #   width    = 1000/300,  
+  #   height   = 1800/300,
+  #   units    = "in"
+  # )
+  png(filename = paste0('Results/clustering_UMAP_final_', sampSet,  '.png') ,
+      height=1000, width=1800)
+  print(p1)
+  dev.off()
+
 }
 
 
@@ -511,7 +629,7 @@ add a bubbleplot of defining genes
 
 
 
-```{r exclude suspicious clusters and bad quality samples}
+```{r exclude suspicious clusters and bad quality samples, save annotated rds for r-shiny}
 
 # when run this script on bsp248 data before subset cells, we remove sample_20 here
 if(bsp_num == "bsp_248" & !grepl("subset", sampSet))
@@ -519,13 +637,37 @@ if(bsp_num == "bsp_248" & !grepl("subset", sampSet))
   sce_all_filt  <- sce_all_filt[, sce_all_filt$Sample != "sample_20"]
   sce_filt  <- sce_filt[, sce_filt$Sample != "sample_20"]  
 }
+if(bsp_num == "bsp_306" & grepl("subset", sampSet))
+{
+  if(grepl("innate_immune_cells", sampSet))
+  {
+  sce_filt <- sce_filt[,!sce_filt$cluster %in% c('21', '22')]
+  
+  sce_all_filt <- sce_all_filt[,!sce_all_filt$cluster %in% c('21', '22')]
+  }
+  if(grepl("non_immune_cells", sampSet))
+  {
+  sce_filt <- sce_filt[ , sce_filt$cluster != '13']
+  
+  sce_all_filt <- sce_all_filt[ , sce_all_filt$cluster != '13']
+  }
+  
+   
+}
+
+if(bsp_num == "bsp_247" )
+{
+  sce_all_filt  <- sce_all_filt[, !(sce_all_filt$Sample %in% c("sample_01", "sample_08", "sample_09", "sample_10")) ]
+  sce_filt  <- sce_filt[, !(sce_filt$Sample %in% c("sample_01", "sample_08", "sample_09", "sample_10"))]
+
+}
 
 
 # # Update shiny app with filtered data for easier visualization and identification. For easier visualization in app, pre-convert counts metrics to log scale. 
-saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected', '_with_named_refined_cluster.rds'))
+saveRDS(sce_filt, file = paste0('sce_',sampSet,'_corrected_with_named_refined_cluster.rds'))
 saveRDS(sce_all_filt, file = paste0('sce_',sampSet,'_with_named_refined_cluster.rds'))
 
-# save.image(file = paste0('differential_annotated.RData'))
+
 ```
 
 
@@ -536,39 +678,70 @@ For running DA analysis, we looking for differential abundance/ cell type propor
 
 ```{r divide cells based on sorted population}
 
+annot <- read.csv('references/sample_information.csv')
+head(annot)
+if(bsp_num == "bsp_248")
+{
+  samps <- paste("sample", formatC(1:24, width=2, flag="0"), sep="_")
+  annot$sample_id <- samps
+  rownames(annot) <- annot$sample_id  
+
+}
+
+if(bsp_num == "bsp_306" | bsp_num == "bsp_247")
+{
+  annot$sample_id <- paste("sample", formatC(annot$Sample_ID_in_analysis, width=2, flag="0"), sep="_")
+  rownames(annot) <- annot$sample_id   
+}
 
 
 # load annotation table as meta information need to use later
-if(bsp_num == "bsp_248")
+if(bsp_num == "bsp_248" | bsp_num == "bsp_306")
 {
-  annot <- read.csv('references/sample_information.csv')
-  head(annot)
-  samps <- paste("sample", formatC(1:24, width=2, flag="0"), sep="_")
-  annot$sample_id <- samps
-  rownames(annot) <- annot$sample_id
-  head(sce_all_filt$cull_date)
+
+  # head(colData(sce_all_filt))
+  # unique(colData(sce_all_filt)[, c("cull_date", "Sample")])
   
   # DPI_1 <- sce_all_filt[,sce_all_filt$cull_date == 1]
   # DPI_12 <- sce_all_filt[,sce_all_filt$cull_date == 12]
-  
-  
-  DPI_1 <- sce_all_filt[, (sce_all_filt$cull_date == 1) | (sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control")]
-  DPI_12 <- sce_all_filt[, (sce_all_filt$cull_date == 12) | (sce_all_filt$cull_date == 1 & sce_all_filt$condition == "control")]    
+
+
+  DPI_1 <- sce_all_filt[, (sce_all_filt$cull_date == 1) | (sce_all_filt$cull_date %in% c(12, 5) & sce_all_filt$condition == "control")]
+  DPI_12 <- sce_all_filt[, (sce_all_filt$cull_date == 12) | (sce_all_filt$cull_date %in% c(12, 5) & sce_all_filt$condition == "control") ]
   # table(sce_all_filt$cull_date == 1)
   # table(sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control")
   # table((sce_all_filt$cull_date == 1) | (sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control"))
   # colData(sce_all_filt)
-  
-  
+
+
   subsets <- list(DPI_1 = DPI_1, DPI_12 = DPI_12)
+  
+  print(table(sce_all_filt$cluster))
+  print(table(sce_all_filt$Sample))
+  print(table(sce_all_filt$condition))
+  head(colData(sce_all_filt))
+  head(annot)
+  # table(annot$condition)  
+  
 }
 
-print(table(sce_all_filt$cluster))
-print(table(sce_all_filt$Sample))
-print(table(sce_all_filt$condition))
-head(colData(sce_all_filt))
-head(annot)
-# table(annot$condition)
+if(bsp_num == "bsp_247")
+{
+  sce_filt_DA <- sce_filt[ , !sce_filt$cluster %in% c('2', '16', '22')]
+  
+  sce_all_filt_DA <- sce_all_filt[ , !sce_all_filt$cluster %in% c('2', '16', '22')]
+
+  spleen <- sce_all_filt_DA[, (sce_all_filt_DA$tissue == "spleen") ]
+  all_tissue <- sce_all_filt_DA
+  
+  tissue_within_RB1B <- sce_all_filt_DA[, (sce_all_filt_DA$condition == "RB1B-GFP") ]
+
+  head(colData(sce_all_filt)$tissue)
+  unique(colData(sce_all_filt)$tissue)
+  subsets <- list("spleen" = spleen, "all_tissue" = all_tissue,
+                  "tissue_within_RB1B" = tissue_within_RB1B)
+}
+
 
 ```
 
@@ -588,55 +761,875 @@ rownames(df_cluster_number_name) <- df_cluster_number_name$cluster
 conduct_DA <- function(subsets, selected_comparison = 3)
 {
   DA <- NULL
-  
-  for (i in 1:length(subsets) ) 
+
+  for (i in 1:length(subsets) )
   {
-    # subsets is list with 2 elements contain the data of DPI1, DPI12 each 
+    # subsets is list with 2 elements contain the data of DPI1, DPI12 each
     DPI <- names(subsets[i])
+    if((selected_comparison == 3 & bsp_num == "bsp_306" & DPI == "DPI_1") |
+       (selected_comparison == 2 & bsp_num == "bsp_306" & DPI == "DPI_1") )
+    {
+      print("comparison including avH1N1 DPI1 are unavailable as no good avH1N1 samples on DPI1")
+      DA[[DPI]] <- NA
+      next
+    }
+
+
     x <- subsets[[i]]
-    
+
     abundances <- table(x$cluster, x$Sample)
     abundances <- unclass(abundances)
     # typeof(abundances)
     # write.csv(abundances, file = 'abundances_check.csv')
     # head(abundances)
     # head(colnames(abundances))
+
+    # extract rows of samples used there, s1-8
+
+    if(bsp_num == "bsp_247")
+    {
+      meta_data <- subset(colData(x), select=c("condition", "run", "tissue", "animal_id", "Sample"))[match(colnames(abundances), x$Sample),]  
+      meta_data$condition[meta_data$condition == "RB1B-GFP"] <- "RB1B_GFP"
+      meta_data$tissue[meta_data$tissue == "ovary"] <- "reproductive"
+      meta_data$tissue[meta_data$tissue == "testes"] <- "reproductive"
+    }
     
-    # extract rows of samples used there, s1-8 
-    meta_data <- subset(colData(x), select=c("condition", "run", "cull_date", "animal_id"))[match(colnames(abundances), x$Sample),] 
+    if(bsp_num == "bsp_306")
+    {
+      meta_data <- subset(colData(x), select=c("condition", "run", "cull_date", "animal_id", "Sample"))[match(colnames(abundances), x$Sample),]  
+      meta_data$condition[meta_data$condition == "FLU-d"] <- "FLUd"
+    }
+    if(bsp_num == "bsp_248")
+    {
+      meta_data <- subset(colData(x), select=c("condition", "run", "cull_date", "animal_id"))[match(colnames(abundances), x$Sample),]  
+    }
+     
+    y.ab <- DGEList(abundances, samples= meta_data)
+
+    # filter some clusters which only exist in a few samples
+    if(bsp_num == "bsp_247" & DPI == "tissue_within_RB1B")
+    {
+      keep <- filterByExpr(y.ab, group=y.ab$samples$tissue,
+                           min.count = 10, min.total.count = 60, min.prop = 0)        
+    }else
+    {
+      keep <- filterByExpr(y.ab, group=y.ab$samples$condition,
+                           min.count = 10, min.total.count = 60, min.prop = 0)      
+    }
+
+    # default min.count = 10, min.total.count = 15, large.n = 10, min.prop = 0.7
+    # min.count: numeric. Minimum count required for at least some samples.
+    # min.total.count: numeric. Minimum total count required across all samples.
+    # large.n: integer. Number of samples per group that is considered to be “large”.
+    # min.prop: numeric. In large sample situations, the minimum proportion of samples in a group that a cluster needs to be expressed in. See Details below for the exact formula.
+    # here counts represent cell number
+
+    print(paste('FALSE show clusters need to be filtered as they only exist in a few samples', DPI))
+    print(keep)
+
+    # filters out some clusters 
+    y.ab <- y.ab[keep,]
+
+    
+    if(bsp_num == "bsp_248")
+    {
+      y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('control', 'H1N1', 'PRCV'))
+      y.ab$samples$run <- factor(y.ab$samples$run, levels=c('1', '2', '3'))
+    }else if((bsp_num == "bsp_306") & DPI == "DPI_1")
+    {
+      y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('control', 'FLUd'))
+      y.ab$samples$run <- factor(y.ab$samples$run, levels=c('1_3', '1_3_4', '2_4'))     
+    }else if((bsp_num == "bsp_306") & DPI == "DPI_12")
+    {
+      y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('control', 'avH1N1', 'FLUd'))
+      y.ab$samples$run <- factor(y.ab$samples$run, levels=c('1_3', '1_3_4', '2_4'))     
+      
+    }else if(bsp_num == "bsp_247" & DPI != "tissue_within_RB1B")
+    {
+      y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('CONTROL', 'RB1B_GFP'))
+      y.ab$samples$run <- factor(y.ab$samples$run, levels=c('1', '2'))
+    }else if(bsp_num == "bsp_247" & DPI == "tissue_within_RB1B")
+    {
+      y.ab$samples$tissue <- factor(y.ab$samples$tissue, levels=c('spleen', 'reproductive',  'kidney'))
+      y.ab$samples$run <- factor(y.ab$samples$run, levels=c('1', '2'))
+    }
+
+
+
+
+    if(bsp_num == "bsp_247" & DPI == "tissue_within_RB1B")
+    {
+      design <- model.matrix(~ 0 + tissue + run, data = y.ab$samples)
+      print(design)        
+    }else
+    {
+      design <- model.matrix(~ 0 + condition + run, data = y.ab$samples)
+      print(design)      
+    }
+
+    if(bsp_num == "bsp_248")
+    {
+    contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1,
+                               control_PRCV =  conditioncontrol-conditionPRCV,
+                               H1N1_PRCV = conditionH1N1-conditionPRCV, levels = design)      
+    }else if((bsp_num == "bsp_306" & DPI == "DPI_12"))
+    {
+    contrasts <- makeContrasts(control_FLUd =  conditioncontrol-conditionFLUd,
+                               control_avH1N1 = conditioncontrol-conditionavH1N1,
+                               avH1N1_FLUd = conditionavH1N1-conditionFLUd, levels = design)       
+    }else if((bsp_num == "bsp_306") & DPI == "DPI_1")
+    {
+    contrasts <- makeContrasts(control_FLUd =  conditioncontrol-conditionFLUd, levels = design)
+                                         
+    }else if(bsp_num == "bsp_247" & DPI != "tissue_within_RB1B")
+    {
+    contrasts <- makeContrasts(control_RB1B_GFP =  conditionCONTROL-conditionRB1B_GFP, levels = design)
+    }else if(bsp_num == "bsp_247" & DPI == "tissue_within_RB1B")
+    {
+    contrasts <- makeContrasts(spleen_Kidney =  tissuespleen-tissuekidney,
+                               spleen_reproductive = tissuespleen-tissuereproductive,
+                               Kidney_reproductive = tissuekidney-tissuereproductive, levels = design)
+    }
+
+    print(contrasts)
+
+    # nrow(abundances) represent the number of clusters been take account in downstream test.
+    if(nrow(abundances) > 2)
+    {
+      y.ab <- estimateDisp(y.ab, design, trend="none")
+      # Setting trend="none" disables the fitting of a trend to the dispersion estimates. This means each gene's dispersion is estimated independently of its mean expression level. This can be useful if you believe the dispersion does not depend on the abundance, but it might lead to less stable estimates, especially for lowly expressed genes.
+      # Setting robust=TRUE enables robust estimation methods, which help mitigate the influence of outliers on the model fitting. This is useful if your data contain outliers or if you want to ensure that the results are not unduly affected by a few extreme values.
+
+      summary(y.ab$common.dispersion)
+      # plotBCV(y.ab, cex=1)
+      fit.ab <- glmQLFit(y.ab, design, robust=TRUE, abundance.trend=FALSE)
+      # Setting abundance.trend=FALSE disables the consideration of a trend in gene abundance during model fitting. This assumes that the quasi-likelihood dispersion does not depend on the average abundance of the genes. , this might be suitable if you believe there is no relationship between dispersion and mean expression.
+
+    }else
+    {
+      y.ab <- estimateDisp(y.ab, design, trend="none")
+      summary(y.ab$common.dispersion)
+      fit.ab <- glmQLFit(y.ab, design, abundance.trend=FALSE)
+      # print(fit.ab)
+    }
+    summary(fit.ab$var.prior)
+    # summary(fit.ab$df.prior)
+    # plotQLDisp(fit.ab, cex=1)
+    res <- glmQLFTest(fit.ab, contrast=contrasts[, selected_comparison])
+
+    restab <- res$table
+
+    # print(head(restab$PValue))
+    restab$FDR <- p.adjust(restab$PValue, method='fdr')
+    restab$comparison <- colnames(contrasts)[selected_comparison]
+    # print(head(restab, 10))
+
+    print(paste("cluster proportion has significantly changed (p.adjust) across condition: ", DPI, selected_comparison))
+    print(restab[ (restab$FDR < 0.05), ])
+
+    # print(paste('significant P values ', DPI))
+    # print(restab[ (restab$PValue < 0.05), ])
+
+    DA[[DPI]] <- restab
+
+  }
+  return(DA)
+}
+
+
+# output DA results to excel files
+output_DA_excel <- function(DA, file_name_tag = '')
+{
+
+  library(openxlsx)
+
+  for(i in names(DA))
+  {
+    wb <- createWorkbook()
+    # print(i)
+    DA_list_per_element <- DA[[i]]
+    # colnames(DA_list_per_element)
+    DA_list_per_element$cluster <-  paste0('cluster_', rownames(DA_list_per_element))
+    # unique(DA_list_per_element$comparison)
+    # Add a worksheet to the workbook with the created name
+    addWorksheet(wb, sheetName = i)
+    # Write the data frame to the worksheet
+    writeData(wb, sheet = i, DA_list_per_element, rowNames = TRUE)
+    # Save the workbook to a file
+    saveWorkbook(wb, file = paste0('Results/DA_edgeR_', sampSet, file_name_tag, i, ".xlsx"), overwrite = TRUE)
+  }
+
+  # run_2 table contain the results of run 1+2
+}
+# save.image(file = paste0('differential_annotated_debug_', sampSet,  '.RData'))
+if(bsp_num == "bsp_247" )
+{
+  DA_ctl_RB1B <- conduct_DA(subsets[-3], selected_comparison = 1)
+  output_DA_excel(DA_ctl_RB1B, file_name_tag='_ctl_RB1B_')
+
+  DA_RB1B_spleen_Kidney <- conduct_DA(subsets["tissue_within_RB1B"], selected_comparison = 1)
+  output_DA_excel(DA_RB1B_spleen_Kidney, file_name_tag='_RB1B_spleen_Kidney_') 
+  DA_RB1B_spleen_reproductive <- conduct_DA(subsets["tissue_within_RB1B"], selected_comparison = 2)
+  output_DA_excel(DA_RB1B_spleen_reproductive, file_name_tag='_RB1B_spleen_reproductive_') 
+  DA_RB1B_Kidney_reproductive <- conduct_DA(subsets["tissue_within_RB1B"], selected_comparison = 3)
+  output_DA_excel(DA_RB1B_Kidney_reproductive, file_name_tag='_RB1B_Kidney_reproductive_')   
+  
+  
+}
+
+if(bsp_num == "bsp_248" | bsp_num == "bsp_306")
+{
+  DA_t1_t2 <- conduct_DA(subsets, selected_comparison = 3)
+  output_DA_excel(DA_t1_t2, file_name_tag='_t1_t2_')
+  
+  # head(DA[["DPI_1"]])
+  # typeof(DA)
+  # names(DA)
+  DA_ctl_t1 <- conduct_DA(subsets, selected_comparison = 1)
+  output_DA_excel(DA_ctl_t1, file_name_tag='_ctl_t1_')
+  # for bsp306 _ctl_t1_ means control FluD
+  
+  DA_ctl_t2 <- conduct_DA(subsets, selected_comparison = 2)
+  output_DA_excel(DA_ctl_t2, file_name_tag='_ctl_t2_')
+  
+}
+
+```
+
+
+
+
+
+```{r draw dot plots to direct visulize and compare cluster proportion between condition, fig.width= 8, fig.height= 6}
+# draw dot plots to direct visualize and compare cluster proportion between condition
+direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
+{
+  abundances <- table(x$cluster, x$Sample)
+  abundances <- unclass(abundances)
+
+  df_proportion <- prop.table(as.matrix(abundances), margin = 2)
+  df_proportion <-as.data.frame(t(df_proportion))
+  n_cluster <- unique(sce_all_filt$cluster)
+  df_proportion$sample_id <- rownames(df_proportion)
+
+  library(ggpubr)
+  library(ggrepel)
+
+  selected_anno <- annot[colnames(abundances), ]
+
+  df_condition <- selected_anno[ , c("condition", "sample_id")]
+  df_pro_condition <- merge(df_condition, df_proportion)
+
+  for (selected_cluster in n_cluster)
+  {
+    # print(selected_cluster)
+    df_pro_one <- df_pro_condition[ , c("sample_id", "condition", as.character(selected_cluster))]
+    colnames(df_pro_one)[3] <- "proportion"
+    compare_means(proportion ~ condition,  data = df_pro_one,
+                  method = "t.test")
+    if(bsp_num == "bsp_248")
+    {
+    df_pro_one$condition = factor(df_pro_one$condition, levels=c('control', 'H1N1', 'PRCV'))
+    my_comparisons <- list( c("PRCV", "H1N1"), c("PRCV", "control"), c("control", "H1N1") )    
+    }
+    if(bsp_num == "bsp_306")
+    {
+    df_pro_one$condition = factor(df_pro_one$condition, levels=c('control', 'avH1N1', 'FLUd'))
+    my_comparisons <- list( c("avH1N1", "FLUd"), c("avH1N1", "control"), c("control", "FLUd") )    
+      
+    }
+      
+      
+    df_pro_one$S_id = gsub("sample_", "S", df_pro_one$sample_id )
+    library(ggrepel)
+
+    cell_type <- df_cluster_number_name[ selected_cluster, "named_cluster" ]
+    library(ggpubr)
+    # View(df_pro_one)
+    # colnames(df_pro_one)
+    p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
+                    fill = "sample_id", color = "sample_id",
+                     size = 3) +
+      ggtitle(paste("proportion of cluster", selected_cluster,
+                    cell_type, "across condition", selected_DPI))  +
+      guides(color = guide_legend(override.aes = list(size = 10))) +
+      facet_grid(. ~ condition,  scales="free_x" )
+
+    # +
+    #   stat_compare_means(comparisons = my_comparisons,
+    #                      method = "t.test")
+        # geom_text(aes(label = S_id) , hjust = 1, nudge_x = 0.05,
+        #        size = 2) +
+
+    print(p)
+
+
+    # p <- ggdotplot(
+    #   df_pro_one,
+    #   x = "condition",
+    #   y = "proportion",
+    #   color = "sample_id",  # Keeps the color by sample_id
+    #   fill = "sample_id",   # Fills the dots with sample_id color
+    #   size = 5              # Increases dot size
+    # ) +
+    #   ggtitle(paste("proportion of cluster", selected_cluster, cell_type, "across condition", selected_DPI)) +
+    #
+    #   # Add statistical comparisons
+    #   stat_compare_means(comparisons = my_comparisons, method = "t.test")
+    #
+    # print(p)
+
+    # p <-  ggboxplot(df_pro_one, x = "condition", y = "proportion",
+    #           color = "condition")  + ggtitle( paste("proportion of cluster", selected_cluster, "across condition")) +
+    #   geom_jitter(aes(color = condition), width = 0.2, size = 3, alpha = 0.7) +
+    #   stat_compare_means(comparisons = my_comparisons,
+    #                      method = "t.test")
+    #   print(p)
+
+
+
+
+
+  }
+
+
+
+
+}
+if(bsp_num == "bsp_248" | bsp_num == "bsp_306")
+{
+  direct_t_test(DPI_1, selected_DPI = "DPI_1")
+  direct_t_test(DPI_12, selected_DPI = "DPI_12")  
+}
+
+```
+
+
+```{r draw composition bar plot to visulize and compare cluster proportion between condition, fig.width= 10, fig.height= 8}
+
+visulize_abundance <- function(sce_all_filt, annot)
+{
+
+  dat <- as.data.frame(table(sce_all_filt$cluster, sce_all_filt$Sample))
+  colnames(dat) <- c('cluster_id', 'sample_id', 'n_cells')
+  library(dplyr)
+  # Calculate proportion per sample
+  dat <- dat %>%
+    dplyr::group_by(sample_id) %>%                         # Group by sample
+    dplyr::mutate(proportion = n_cells / sum(n_cells)) %>% # Compute proportion
+    dplyr::ungroup()                                       # Remove grouping
+  sum(dat[dat$sample_id == "sample_01", "proportion"])
+
+
+  dat$S_id <- gsub("sample_", "S", dat$sample_id )
+  if(bsp_num == "bsp_247")
+  {
+    dat_annot <- merge(dat, annot[ , c("tissue", "condition", "sample_id", "DPI")], by = "sample_id")    
+    
+  }else
+  {
+    dat_annot <- merge(dat, annot[ , c("DPI", "condition", "sample_id")], by = "sample_id")    
+  }
+
+  dat_2 = data.frame(cluster_id = colData(sce_all_filt)$cluster,
+                     long_named_cluster = colData(sce_all_filt)$long_named_cluster,
+                     cell_type = colData(sce_all_filt)$named_cluster)
+  dat_2 = unique(dat_2)
+
+  # add cell type column in dat_annot
+  dat_annot <- merge(dat_annot, dat_2, by = "cluster_id", all.x = TRUE)
+  dat_annot$cluster_type <-  paste(dat_annot$cluster_id, dat_annot$cell_type, sep = "_")
+  dat_annot$DPI <- paste0("DPI_", dat_annot$DPI)
+  colnames(dat_annot)[8] <- "type_cluster"
+  head(dat_annot)
+  if(bsp_num == "bsp_247")
+  {
+    n <- length(unique(dat_annot$cell_type))
+    cols <- hue_pal()(n)
+    names(cols) <- unique(unique(dat_annot$cell_type))
+    
+    p <- ggplot(data=dat_annot, aes(x=S_id, y=proportion, fill=cell_type)) +
+      geom_bar(stat="identity") +
+      facet_wrap(tissue ~ condition,  scales="free_x", nrow = 1)+
+      scale_fill_manual(values = cols) +
+      ggtitle("cell_type_composition_barplot") +
+      guides(fill = guide_legend(ncol = 1)) +
+      theme(
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 14))
+
+    
+  }else
+  {
+    p <- ggplot(data=dat_annot, aes(x=S_id, y=proportion, fill=cell_type)) +
+      geom_bar(stat="identity") +
+      facet_wrap(DPI ~ condition,  scales="free_x")+
+      scale_fill_manual(values = cell_type_colors) +
+      ggtitle("cell_type_composition_barplot")    
+  }
+  
+  print(p)
+
+  png(filename = paste0('Results/DA_edgeR_', sampSet, '_cell_type_composition_barplot.png') , height=1800, width=3600, res = 300)
+  print(p)
+  dev.off()
+
+  svg(filename = paste0('Results/DA_edgeR_', sampSet, '_cell_type_composition_barplot.svg'), width = 7, height = 5)
+  print(p)
+  dev.off()
+
+  # head(dat_annot)
+  dat_annot$cluster_id <- as.factor(dat_annot$cluster_id)
+  # names(clusterid_colors) <- as.integer(names(clusterid_colors))
+  if(bsp_num == "bsp_247")
+  {
+    p <- ggplot(data = dat_annot, aes(x = S_id, y = proportion, fill = cluster_id)) +
+      geom_bar(stat = "identity") +
+      facet_wrap(tissue ~ condition, scales = "free_x") +
+      scale_fill_manual(values = clusterid_colors) +
+      ggtitle("clusterid_composition_barplot")    
+  }else
+  {
+    p <- ggplot(data = dat_annot, aes(x = S_id, y = proportion, fill = cluster_id)) +
+      geom_bar(stat = "identity") +
+      facet_wrap(DPI ~ condition, scales = "free_x") +
+      scale_fill_manual(values = clusterid_colors) +
+      ggtitle("clusterid_composition_barplot")    
+  }
+
+
+  print(p)
+
+  png(filename = paste0('Results/DA_edgeR_', sampSet, '_composition_barplot_cluster.png') , height=3000, width=2600, res = 300)
+  print(p)
+  dev.off()
+
+
+  for (selected_cluster in levels(dat_annot$cluster_id)  )
+  {
+    cluster_dat_annot <- dat_annot[dat_annot$cluster_id == selected_cluster , ]
+    selected_cluster <- unique(cluster_dat_annot$cluster_type )
+    cluster_dat_annot$S_id <- factor(cluster_dat_annot$S_id, levels= cluster_dat_annot$S_id[order(cluster_dat_annot$condition)])
+
+    if(bsp_num == "bsp_247")
+    {
+      # draw facet bar plots to display sample composition for each cluster
+      p <- ggplot(cluster_dat_annot, aes(x=S_id, y=n_cells, fill=condition))+
+        geom_bar(stat='identity') +
+        facet_wrap(~ tissue,  scales="free_x")+
+        ggtitle("cell number of selected cluster", paste("cluster", selected_cluster)) +
+        geom_text(aes(label=n_cells))+
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))      
+    }else
+    {
+      # draw facet bar plots to display sample composition for each cluster
+      p <- ggplot(cluster_dat_annot, aes(x=S_id, y=n_cells, fill=condition))+
+        geom_bar(stat='identity') +
+        facet_wrap(~ DPI,  scales="free_x")+
+        ggtitle("cell number of selected cluster", paste("cluster", selected_cluster)) +
+        geom_text(aes(label=n_cells))+
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))      
+    }
+
+    print(p)
+
+    if(bsp_num == "bsp_247")
+    {
+      p <- ggplot(cluster_dat_annot, aes(x=S_id, y=proportion, fill=condition))+
+        geom_bar(stat='identity') +
+        facet_wrap(~ tissue,  scales="free_x") +
+        ggtitle("proportion of selected cluster", paste("cluster", selected_cluster)) +
+        geom_text(aes(label=round(proportion, digits = 3) ))+
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))      
+    }else
+    {
+       p <- ggplot(cluster_dat_annot, aes(x=S_id, y=proportion, fill=condition))+
+        geom_bar(stat='identity') +
+        facet_wrap(~ DPI,  scales="free_x") +
+        ggtitle("proportion of selected cluster", paste("cluster", selected_cluster)) +
+        geom_text(aes(label=round(proportion, digits = 3) ))+
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))     
+    }
+
+    print(p)
+  }
+
+  if(bsp_num != "bsp_247")
+  {
+    for (selected_DPI in unique(dat_annot$DPI) )
+    {
+      DPI_dat_annot <- dat_annot[(dat_annot$DPI == selected_DPI | dat_annot$condition == "control"), ]
+      
+  
+  
+  #################################################
+      # code below is used to generate DPI_ordered_S_id, which order sample id in x-axis
+      # need to choose a cluster that every sample has cells in this cluster, we first find a cluster meet this requirement
+      df_cluster_freq_in_sample <-
+        dat_annot %>%
+        group_by(cluster_id) %>%
+        summarise(n = n())
+  
+      qualified_clusters  <- df_cluster_freq_in_sample$cluster_id[df_cluster_freq_in_sample$n == length(unique(dat_annot$sample_id) )]
+      if(length(qualified_clusters) > 0)
+      {
+      print(paste('select cluster', qualified_clusters[1], 'that every sample has cells in this cluster'))
+  
+      }else
+      {
+        print("warning: none cluster meet requirement that every sample has cells in this cluster")
+      }
+   #################################################
+  
+      # order the S_id to make S_id of same condition stay together in plot below
+      cluster_dat_annot <- dat_annot[dat_annot$cluster_id == qualified_clusters[1] , ]
+      cluster_dat_annot$S_id <- factor(cluster_dat_annot$S_id, levels= cluster_dat_annot$S_id[order(cluster_dat_annot$condition)])
+      DPI_ordered_S_id <-  levels(cluster_dat_annot$S_id)[(levels(cluster_dat_annot$S_id) %in% unique(DPI_dat_annot$S_id))]
+   #################################################
+         head(DPI_dat_annot)
+      p <- ggplot(DPI_dat_annot, aes(x=S_id, y=proportion, fill=condition))+
+        geom_bar(stat='identity') +
+        facet_wrap(~ cluster_type) +
+        scale_x_discrete(limits=DPI_ordered_S_id) +
+        ggtitle("proportion of each cluster", selected_DPI) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+      print(p)
+  
+      png(filename = paste0('Results/DA_edgeR_', sampSet, '_proportion_barplot_allcluster',selected_DPI, '.png') , height=5000, width=5000, res = 500)
+      print(p)
+      dev.off()
+  
+  
+      p <- ggplot(DPI_dat_annot, aes(x=S_id, y=n_cells, fill=condition))+
+        geom_bar(stat='identity') +
+        facet_wrap(~ cluster_type) +
+        scale_x_discrete(limits=DPI_ordered_S_id) +
+        ggtitle("n_cells of each cluster", selected_DPI) +
+        theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+      print(p)
+  
+      png(filename = paste0('Results/DA_edgeR_', sampSet, '_ncells_barplot_allcluster',selected_DPI, '.png') , height=5000, width=5000, res = 500)
+      print(p)
+      dev.off()
+  
+    }
+    
+  }
+
+
+}
+visulize_abundance(sce_all_filt, annot)
+
+
+```
+
+Let's plot box plots of proportions between 2 conditions to have a look.
+
+```{r draw proportion value box plots to visulize cell proportion between conditions}
+
+
+# in bsp185, we only run code below to plot those clusters whose composition changed significantly in certain main populations
+
+boxplot_cluster_proportion <- function(selected_dataset, selected_cluster = '2',
+                                       flag = 'total', composition = FALSE)
+{
+  if(composition)
+  {
+    # plot the stacked bar chart to show the percentage of each cluster in a sample among sorted CD4 population
+    # calculate proportion of each cluster within each sample among sorted CD4 population
+    # calculate proportion of cluster 4a within sample 9 among sorted CD4 population
+    
+    props <- prop.table(table(selected_dataset$cluster, selected_dataset$Sample), margin=2)
+    
+    props <- data.frame(t(props))
+    colnames(props) <- c('sample', 'cluster', 'prop')
+    props <- merge(props, annot[, c("Condition", "sample")], by= "sample")
+    
+    props$sample <- as.factor(props$sample)
+    # props$sample <- factor(props$sample, levels=c("sample_09", "sample_14", "sample_15",
+    #                                               "sample_16", "sample_10", "sample_11",
+    #                                               "sample_12", "sample_13"))
+    as.character(props$cluster)
+    props <- merge(props, df_cluster_number_name, by= "cluster")
+    
+    
+    
+    # props$named_cluster[grep('non-conventional T cells', props$cell_type)] <- 'NCT'
+    props$named_cluster <- paste(props$cluster, props$named_cluster, sep = ", ")
+    
+    p <- ggplot(props, aes(fill=named_cluster, y=prop, x=sample)) +
+      geom_bar(position='stack', stat='identity') +
+      facet_grid(~Condition, scales = "free_x", space = "free_x")+
+      theme_classic() +  # Apply classic theme with white background
+      theme(axis.text.x = element_text(angle = 90)) +
+      scale_fill_brewer(palette = "Pastel1")   # better color palette
+    print(p)
+    # The scales = "free_x" and space = "free_x" options ensure that the x-axis is shared but allows different sample groupings for each condition.
+    
+    ## and print it
+    print(paste0('Results/DA_', sampSet, '_proportion_each_cluster_', flag, '.png'))
+    png(filename=paste0('Results/DA_', sampSet, '_proportion_each_cluster_', flag, '.png'))
+    print(p)
+    dev.off()
+    # ggplot(props, aes(fill=cluster, y=prop, x=sample)) +
+    #   geom_bar(position='stack', stat='identity') +
+    #   labs(x=NULL, y='proportion') +
+    #   theme_classic() +
+    #   theme(axis.text.x = element_text(angle = 45, hjust=1), text=element_text(size=21))
+  }
+  
+  
+  
+  # head(colData(selected_dataset))
+  
+  ## calculate the proportion of cluster 2 in selected_dataset cells in each sample,
+  # eg: cells of cluster 2 composed 14% of cells in sample 1 in sorted CD4 population
+  props <- prop.table(table(selected_dataset$cluster, selected_dataset$Sample), margin=2)[selected_cluster, ]
+  
+  # print(props)
+  if(bsp_num == "bsp_248")
+  {
+    proptab <- annot[ ,c('sample_analysis_id', 'condition')]    
+  }
+  if(bsp_num == "bsp_306")
+  {
+    proptab <- annot[ ,c('Sample_ID_in_analysis', 'condition')]        
+  }
+  if(bsp_num == "bsp_247")
+  {
+    proptab <- annot[ ,c('Sample_ID_in_analysis', 'condition', 'tissue')]        
+  }
+  
+  proptab$proportions <- props[rownames(proptab)]
+  proptab <-  proptab[!is.na(proptab$proportions) , ]
+  
+  # proptab$Condition <- factor(proptab$Condition)
+  
+  if(bsp_num == "bsp_248")
+  {
+    proptab$condition <- factor(proptab$condition, levels = c('control', 'PRCV', 'H1N1'))  
+    group_colors <- c('PRCV' = 'red', 'H1N1' = 'blue', 'control' = 'black')
+  }
+  if(bsp_num == "bsp_306")
+  {
+    proptab$condition <- factor(proptab$condition, levels = c('control', 'avH1N1', 'FLUd'))  
+    group_colors <- c('avH1N1' = 'blue', 'FLUd' = 'red', 'control' = 'black')
+  }
+  if(bsp_num == "bsp_247" & !grepl("tissue_within_RB1B", flag))
+  {
+    proptab$condition <- factor(proptab$condition, levels = c('CONTROL', 'RB1B-GFP'))  
+    group_colors <- c('RB1B-GFP' = 'blue', 'CONTROL' = 'red')
+  }
+  
+  if(bsp_num == "bsp_247" & grepl("tissue_within_RB1B", flag))
+  {
+    
+    proptab$tissue[proptab$tissue == "ovary"] <- "reproductive"
+    proptab$tissue[proptab$tissue == "testes"] <- "reproductive"
+    
+    proptab$tissue <- factor(proptab$tissue, levels = c('spleen', 'kidney', 'reproductive'))  
+    group_colors <- c('spleen' = 'blue', 'kidney' = 'red', 'reproductive' = 'green')
+    
+  }
+      
+  cell_type = df_cluster_number_name[df_cluster_number_name$cluster == selected_cluster, 'named_cluster']
+
+if(bsp_num == "bsp_247" & grepl("tissue_within_RB1B", flag))
+{
+  p <- ggplot(data=proptab, aes(x=tissue, y=proportions)) +
+    geom_boxplot(outlier.shape = NA) +
+    geom_point(aes(col=tissue), position='jitter', size = 5) +
+    ggtitle(paste(sampSet, flag , '\n', 'proportion of cluster', selected_cluster, cell_type)) +
+    scale_color_manual(values = group_colors) 
+
+}else
+{
+  p <- ggplot(data=proptab, aes(x=condition, y=proportions)) +
+    geom_boxplot( outlier.shape = NA ) +
+    geom_point(aes(col=condition), position='jitter', size = 5) +
+    ggtitle(paste(sampSet, flag , '\n', 'proportion of cluster', selected_cluster, cell_type)) +
+    scale_color_manual(values = group_colors)  +
+    theme(legend.text = element_text(size = 15),
+          plot.title=element_text(size=20), #change font size of plot title
+          axis.text.x = element_text(size = 15),  # Increase x-axis text size
+            axis.text.y = element_text(size = 15),  # Increase y-axis text size
+            axis.title.x = element_text(size = 15, face = "bold"),  # Increase x-axis label size
+            axis.title.y = element_text(size = 15, face = "bold"))  # Increase y-axis label size
+
+  
+}
+
+  print(p)
+  
+  png(filename=paste0('Results/DA_', sampSet, '_cluster', selected_cluster, '_prop_', flag, '.png'),
+      height=500, width=700)
+  print(p)
+  dev.off()
+  
+}
+
+if(bsp_num == "bsp_248")
+{
+  myList  <- list("H1N1_PRCV" = DA_t1_t2, "control_H1N1" = DA_ctl_t1, "control_PRCV"= DA_ctl_t2)
+  
+}else if(bsp_num == "bsp_306")
+{
+  myList  <- list("avH1N1_FLUd" = DA_t1_t2, "control_FLUd" = DA_ctl_t1, "control_avH1N1"= DA_ctl_t2)
+
+}else if(bsp_num == "bsp_247")
+{
+
+  myList  <- list("ctl_RB1B" = DA_ctl_RB1B,
+                  "RB1B_spleen_Kidney" = DA_RB1B_spleen_Kidney,
+                  "RB1B_spleen_reproductive"= DA_RB1B_spleen_reproductive,
+                  "RB1B_Kidney_reproductive" = DA_RB1B_Kidney_reproductive)
+}
+
+
+
+  
+# identify which clusters' proportion changed significantly and draw box plots for those clusters
+# save.image(file = paste0('differential_annotated_debug_', sampSet,  '.RData'))
+if(bsp_num == "bsp_248" | bsp_num == "bsp_306" | bsp_num == "bsp_247")
+{
+  for (name in names(myList))
+  {
+    print(name)
+    for(element_name in names(myList[[name]]))
+    {
+      print(element_name)
+      sig_cluster_df <- myList[[name]][[element_name]]
+      if( is.na(myList[[name]][element_name]) )
+      {
+        print(paste("edgeR DA results unavailable for", name, element_name))
+        next
+      }
+      sig_cluster_df <- sig_cluster_df[sig_cluster_df$FDR < 0.05, ]
+      # print(sig_cluster_df)
+      if(nrow(sig_cluster_df) > 0)
+      {
+        print(sig_cluster_df)
+        sig_clusters <- rownames(sig_cluster_df)
+        for(cluster1 in sig_clusters)
+        {
+          boxplot_cluster_proportion(selected_dataset = subsets[[element_name]], selected_cluster = cluster1,
+                                     flag = paste("boxplot",name, element_name,  sep = "_"))
+        }
+      }
+    }
+  }
+  
+}
+
+
+
+if(bsp_num == "bsp_185")
+{
+  if(sampSet == 'run_1' )
+  {
+  boxplot_cluster_proportion(selected_dataset = subsets$DPI_12, selected_cluster = '2re', flag = 'DPI_12 DA')
+    # boxplot_cluster_proportion(selected_dataset = CD8s, selected_cluster = '2', flag = 'CD8')
+    # boxplot_cluster_proportion(selected_dataset = all, selected_cluster = '8c', flag = 'total')
+    # boxplot_cluster_proportion(selected_dataset = CD8s, selected_cluster = '8c', flag = 'CD8')
+    #
+    # ## calculate the proportion of cluster 17 in cells sorted as CD4s in each sample
+    # ## proportion within those cells sorted as CD4s
+    # boxplot_cluster_proportion(selected_dataset = all, selected_cluster = '17', flag = 'total')
+    # boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '17', flag = 'CD4')
+  
+  }
+  if(sampSet == 'run_2' )
+  {
+    boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '4a', flag = 'CD4', composition = TRUE, annot=annot)
+    boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '4b', flag = 'CD4', annot=annot)
+    boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '8', flag = 'CD4', annot=annot)
+  
+    boxplot_cluster_proportion(selected_dataset = MMDs, selected_cluster = '20', flag = 'MMDs', composition = TRUE, annot=annot)
+  
+    # boxplot_cluster_proportion(selected_dataset = Bs, selected_cluster = '17', flag = 'Bs')
+  }
+    
+}
+
+```
+
+
+
+```{r conduct DA analysis across 2 DPI within same virus condition for each cluster and output formal DA results}
+# conduct_DA conduct DA for DPI1, DPI12 for selected comparison
+conduct_DA_across_DPI <- function(subsets, selected_comparison = 1)
+{
+  DA <- NULL
+  
+  for (i in 1:length(subsets) )
+  {
+    # subsets is list with 2 elements contain the data of FluD, avH1N1 each
+    condition_name <- names(subsets[i])
+    condition_subset <- subsets[[i]]    
+    if( is.na(subsets[i] ) )
+    {
+      print(paste("comparison across DPI are unavailable for virus", condition_name))
+      
+      DA[[condition_name]] <- NA
+      next
+    }
+
+    
+    abundances <- table(condition_subset$cluster, condition_subset$Sample)
+    abundances <- unclass(abundances)
+    # typeof(abundances)
+    # write.csv(abundances, file = 'abundances_check.csv')
+    # head(abundances)
+    # head(colnames(abundances))
+    
+    # extract rows of samples used there, s1-8
+    
+    if(bsp_num == "bsp_306")
+    {
+      meta_data <- subset(colData(condition_subset), select=c("condition", "run", "cull_date", "animal_id", "Sample"))[match(colnames(abundances), condition_subset$Sample),]  
+      meta_data$condition[meta_data$condition == "FLU-d"] <- "FLUd"
+    }
+
     
     y.ab <- DGEList(abundances, samples= meta_data)
     
-    # filter some clusters which only exist in a few samples 
-    keep <- filterByExpr(y.ab, group=y.ab$samples$condition, 
+    # filter some clusters which only exist in a few samples
+    keep <- filterByExpr(y.ab, group=y.ab$samples$cull_date,
                          min.count = 10, min.total.count = 60)
     # default min.count = 10, min.total.count = 15, large.n = 10, min.prop = 0.7
     # min.count: numeric. Minimum count required for at least some samples.
     # min.total.count: numeric. Minimum total count required across all samples.
     # large.n: integer. Number of samples per group that is considered to be “large”.
     # min.prop: numeric. In large sample situations, the minimum proportion of samples in a group that a gene needs to be expressed in. See Details below for the exact formula.
-    # here counts represent cell number 
-
-    print(paste('FALSE show clusters need to be filtered as they only exist in a few samples', DPI))
-    print(keep)    
-    keep 
+    # here counts represent cell number
+    
+    print(paste('FALSE show clusters need to be filtered as they only exist in a few samples ', condition_name))
+    print(keep)
+    
     # filters out some clusters 
     y.ab <- y.ab[keep,]
     
+    if((bsp_num == "bsp_306") )
+    {
+      y.ab$samples$cull_date <- as.character(y.ab$samples$cull_date)
+      y.ab$samples$cull_date <- factor(y.ab$samples$cull_date, levels=c('1', '12'))
+      y.ab$samples$run <- factor(y.ab$samples$run, levels=c('1_3', '2_4'))     
+    }
     
-    y.ab$samples$condition <- factor(y.ab$samples$condition, levels=c('control', 'H1N1', 'PRCV'))
-    y.ab$samples$run <- factor(y.ab$samples$run, levels=c('1', '2', '3'))
-    
-    
-    design <- model.matrix(~ 0 + condition + run, data = y.ab$samples)
+
+    design <- model.matrix(~ 0 + cull_date + run, data = y.ab$samples)
     print(design)
-    contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1, 
-                               control_PRCV =  conditioncontrol-conditionPRCV, 
-                               H1N1_PRCV = conditionH1N1-conditionPRCV, levels = design)
+    
+    if((bsp_num == "bsp_306") )
+    {
+      contrasts <- makeContrasts(DPI1_DPI12_FLUd =  cull_date1-cull_date12, levels = design)
+      
+    }
+    
     
     print(contrasts)
     
-    # nrow(abundances) represent the number of clusters been take account.
+    # nrow(abundances) represent the number of clusters get statistical test. as we filter those clusters don't have enough counts in most samples
     if(nrow(abundances) > 2)
     {
       y.ab <- estimateDisp(y.ab, design, trend="none")
@@ -664,390 +1657,118 @@ conduct_DA <- function(subsets, selected_comparison = 3)
     
     # print(head(restab$PValue))
     restab$FDR <- p.adjust(restab$PValue, method='fdr')
-    restab$comparison <- colnames(contrasts)[selected_comparison]  
+    restab$comparison <- colnames(contrasts)[selected_comparison]
     # print(head(restab, 10))
     
-    print(paste("cluster proportion has significantly changed (p.adjust) across condition: ", DPI))
+    print(paste("cluster proportion has significantly changed (p.adjust) across condition: ", condition_name))
     print(restab[ (restab$FDR < 0.05), ])
     
     # print(paste('significant P values ', DPI))
-    # print(restab[ (restab$PValue < 0.05), ])    
+    # print(restab[ (restab$PValue < 0.05), ])
     
-    DA[[DPI]] <- restab
+    DA[[condition_name]] <- restab
     
   }
-  return(DA)  
+  return(DA)
 }
 
-# output DA results to excel files
-output_DA_excel <- function(DA, file_name_tag = '')
-{
-  
-  library(openxlsx)
-  
-  for(i in names(DA))
-  {
-    wb <- createWorkbook() 
-    # print(i)
-    DA_list_per_element <- DA[[i]]
-    # colnames(DA_list_per_element)
-    DA_list_per_element$cluster <-  paste0('cluster_', rownames(DA_list_per_element))
-    # unique(DA_list_per_element$comparison)
-    # Add a worksheet to the workbook with the created name
-    addWorksheet(wb, sheetName = i)
-    # Write the data frame to the worksheet
-    writeData(wb, sheet = i, DA_list_per_element, rowNames = TRUE)
-    # Save the workbook to a file
-    saveWorkbook(wb, file = paste0('Results/DA_edgeR_', sampSet, file_name_tag, i, ".xlsx"), overwrite = TRUE)     
-  }
-  
-  # run_2 table contain the results of run 1+2
-}
-
-DA_t1_t2 <- conduct_DA(subsets, selected_comparison = 3)
-output_DA_excel(DA_t1_t2, file_name_tag='_t1_t2_')
-
-# head(DA[["DPI_1"]])
-# typeof(DA)
-# names(DA)
-DA_ctl_t1 <- conduct_DA(subsets, selected_comparison = 1)
-output_DA_excel(DA_ctl_t1, file_name_tag='_ctl_t1_')
-
-DA_ctl_t2 <- conduct_DA(subsets, selected_comparison = 2)
-output_DA_excel(DA_ctl_t2, file_name_tag='_ctl_t2_')
-
-```
-
-```{r draw dot plots to direct visulize and compare cluster proportion between condition, fig.width= 8, fig.height= 6}
-# draw dot plots to direct visualize and compare cluster proportion between condition
-direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
-{
-  abundances <- table(x$cluster, x$Sample)
-  abundances <- unclass(abundances)
-  
-  df_proportion <- prop.table(as.matrix(abundances), margin = 2)
-  df_proportion <-as.data.frame(t(df_proportion)) 
-  n_cluster <- unique(sce_all_filt$cluster)
-  df_proportion$sample_id <- rownames(df_proportion)
-  
-  library(ggpubr)
-  library(ggrepel)
-
-  selected_anno <- annot[colnames(abundances), ]
-  
-  df_condition <- selected_anno[ , c("condition", "sample_id")]  
-  df_pro_condition <- merge(df_condition, df_proportion)
-  
-  for (selected_cluster in n_cluster) 
-  {
-    # print(selected_cluster)
-    df_pro_one <- df_pro_condition[ , c("sample_id", "condition", as.character(selected_cluster))]
-    colnames(df_pro_one)[3] <- "proportion"
-    compare_means(proportion ~ condition,  data = df_pro_one, 
-                  method = "t.test")
-    df_pro_one$condition = factor(df_pro_one$condition, levels=c('control', 'H1N1', 'PRCV'))
-    df_pro_one$S_id = gsub("sample_", "S", df_pro_one$sample_id )     
-    library(ggrepel)
-    my_comparisons <- list( c("PRCV", "H1N1"), c("PRCV", "control"), c("control", "H1N1") )
-    cell_type <- df_cluster_number_name[ selected_cluster, "named_cluster" ]
-    library(ggpubr)    
-    # View(df_pro_one)
-    # colnames(df_pro_one)
-    p <-  ggdotplot(df_pro_one, x = "condition", y = "proportion",
-                    fill = "sample_id", color = "sample_id", 
-                     size = 3) +
-      ggtitle(paste("proportion of cluster", selected_cluster, 
-                    cell_type, "across condition", selected_DPI))  +
-      guides(color = guide_legend(override.aes = list(size = 10))) +
-      facet_grid(. ~ condition,  scales="free_x" )
-    
-    # +
-    #   stat_compare_means(comparisons = my_comparisons,
-    #                      method = "t.test") 
-        # geom_text(aes(label = S_id) , hjust = 1, nudge_x = 0.05,
-        #        size = 2) +
-    
-    print(p)
-
-    
-    # p <- ggdotplot(
-    #   df_pro_one, 
-    #   x = "condition", 
-    #   y = "proportion",
-    #   color = "sample_id",  # Keeps the color by sample_id
-    #   fill = "sample_id",   # Fills the dots with sample_id color
-    #   size = 5              # Increases dot size
-    # ) +
-    #   ggtitle(paste("proportion of cluster", selected_cluster, cell_type, "across condition", selected_DPI)) +
-    #   
-    #   # Add statistical comparisons
-    #   stat_compare_means(comparisons = my_comparisons, method = "t.test") 
-    # 
-    # print(p)
-    
-    # p <-  ggboxplot(df_pro_one, x = "condition", y = "proportion",
-    #           color = "condition")  + ggtitle( paste("proportion of cluster", selected_cluster, "across condition")) +
-    #   geom_jitter(aes(color = condition), width = 0.2, size = 3, alpha = 0.7) +
-    #   stat_compare_means(comparisons = my_comparisons,
-    #                      method = "t.test") 
-    #   print(p)
-    
-    
-    
-    
-    
-  }
-  
-  
-  
-  
-}
-
-direct_t_test(DPI_1, selected_DPI = "DPI_1")
-direct_t_test(DPI_12, selected_DPI = "DPI_12")
-```
-
-
-```{r draw composition bar plot to visulize and compare cluster proportion between condition, fig.width= 10, fig.height= 8}
-
-visulize_abundance <- function(sce_all_filt, annot)
-{
-
-  dat <- as.data.frame(table(sce_all_filt$cluster, sce_all_filt$Sample))
-  colnames(dat) <- c('cluster_id', 'sample_id', 'n_cells')
-  library(dplyr)
-  # Calculate proportion per sample
-  dat <- dat %>%
-    group_by(sample_id) %>%                         # Group by sample
-    mutate(proportion = n_cells / sum(n_cells)) %>% # Compute proportion
-    ungroup()                                       # Remove grouping
-  sum(dat[dat$sample_id == "sample_01", "proportion"])
-
-  
-  dat$S_id <- gsub("sample_", "S", dat$sample_id ) 
-  dat_annot <- merge(dat, annot[ , c("DPI", "condition", "sample_id")], by = "sample_id")
-  dat_2 = data.frame(cluster_id = colData(sce_all_filt)$cluster,
-                     long_named_cluster = colData(sce_all_filt)$long_named_cluster,
-                     cell_type = colData(sce_all_filt)$named_cluster)
-  dat_2 = unique(dat_2)  
-  
-  # add cell type column in dat_annot
-  dat_annot <- merge(dat_annot, dat_2, by = "cluster_id", all.x = TRUE)
-  dat_annot$cluster_type <-  paste(dat_annot$cluster_id, dat_annot$cell_type, sep = "_")
-  dat_annot$DPI <- paste0("DPI_", dat_annot$DPI)
-  colnames(dat_annot)[8] <- "type_cluster"
-  head(dat_annot)
-  p <- ggplot(data=dat_annot, aes(x=S_id, y=proportion, fill=cell_type)) +
-    geom_bar(stat="identity") + 
-    facet_wrap(DPI ~ condition,  scales="free_x")+
-    scale_fill_manual(values = cell_type_colors) +
-    ggtitle("cell_type_composition_barplot")
-  print(p)
-  
-  png(filename = paste0('Results/DA_edgeR_', sampSet, '_composition_barplot_cell_type.png') , height=2600, width=1800, res = 300)
-  print(p)
-  dev.off()  
-  
-  
-  # head(dat_annot)
-  dat_annot$cluster_id <- as.factor(dat_annot$cluster_id)
-  # names(clusterid_colors) <- as.integer(names(clusterid_colors))
-  p <- ggplot(data = dat_annot, aes(x = S_id, y = proportion, fill = cluster_id)) +
-    geom_bar(stat = "identity") + 
-    facet_wrap(DPI ~ condition, scales = "free_x") +
-    scale_fill_manual(values = clusterid_colors) +
-    ggtitle("clusterid_composition_barplot")
-  
-  print(p)
-  
-  png(filename = paste0('Results/DA_edgeR_', sampSet, '_composition_barplot_cluster.png') , height=3000, width=2600, res = 300)
-  print(p)
-  dev.off() 
-  
-  
-  for (selected_cluster in levels(dat_annot$cluster_id)  ) 
-  {
-    cluster_dat_annot <- dat_annot[dat_annot$cluster_id == selected_cluster , ]
-    selected_cluster <- unique(cluster_dat_annot$cluster_type ) 
-    cluster_dat_annot$S_id <- factor(cluster_dat_annot$S_id, levels= cluster_dat_annot$S_id[order(cluster_dat_annot$condition)])
-    
-    # draw facet bar plots to display sample composition for each cluster
-    p <- ggplot(cluster_dat_annot, aes(x=S_id, y=n_cells, fill=condition))+
-      geom_bar(stat='identity') +
-      facet_wrap(~ DPI,  scales="free_x")+
-      ggtitle("cell number of selected cluster", paste("cluster", selected_cluster)) +
-      geom_text(aes(label=n_cells))+
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-    print(p)
-    
-    p <- ggplot(cluster_dat_annot, aes(x=S_id, y=proportion, fill=condition))+
-      geom_bar(stat='identity') +
-      facet_wrap(~DPI,  scales="free_x") +
-      ggtitle("proportion of selected cluster", paste("cluster", selected_cluster)) +
-      geom_text(aes(label=round(proportion, digits = 3) ))+
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-    print(p)
-  }
-  
-  for (selected_DPI in unique(dat_annot$DPI) ) 
-  {
-    DPI_dat_annot <- dat_annot[dat_annot$DPI == selected_DPI , ]
-
-    
-#################################################    
-    # code below is used to generate DPI_ordered_S_id, which order sample id in x-axis
-    # need to choose a cluster that every sample has cells in this cluster, we first find a cluster meet this requirement 
-    df_cluster_freq_in_sample <- 
-      dat_annot %>%
-      group_by(cluster_id) %>%
-      summarise(n = n())
-    
-    qualified_clusters  <- df_cluster_freq_in_sample$cluster_id[df_cluster_freq_in_sample$n == length(unique(dat_annot$sample_id) )]
-    if(length(qualified_clusters) > 0)
-    {
-    print(paste('select cluster', qualified_clusters[1], 'that every sample has cells in this cluster'))
-      
-    }else
-    {
-      print("warning: none cluster meet requirement that every sample has cells in this cluster")
-    }
- #################################################   
-
-    # order the S_id to make S_id of same condition stay together in plot below
-    cluster_dat_annot <- dat_annot[dat_annot$cluster_id == qualified_clusters[1] , ]
-    cluster_dat_annot$S_id <- factor(cluster_dat_annot$S_id, levels= cluster_dat_annot$S_id[order(cluster_dat_annot$condition)])
-    DPI_ordered_S_id <-  levels(cluster_dat_annot$S_id)[(levels(cluster_dat_annot$S_id) %in% unique(DPI_dat_annot$S_id))]
- #################################################       
-       head(DPI_dat_annot) 
-    p <- ggplot(DPI_dat_annot, aes(x=S_id, y=proportion, fill=condition))+
-      geom_bar(stat='identity') +
-      facet_wrap(~ cluster_type) + 
-      scale_x_discrete(limits=DPI_ordered_S_id) +
-      ggtitle("proportion of each cluster", selected_DPI) +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  
-    print(p)
-    
-    png(filename = paste0('Results/DA_edgeR_', sampSet, '_proportion_barplot_allcluster',selected_DPI, '.png') , height=5000, width=5000, res = 500)
-    print(p)
-    dev.off() 
-    
-    
-    p <- ggplot(DPI_dat_annot, aes(x=S_id, y=n_cells, fill=condition))+
-      geom_bar(stat='identity') +
-      facet_wrap(~ cluster_type) + 
-      scale_x_discrete(limits=DPI_ordered_S_id) +
-      ggtitle("n_cells of each cluster", selected_DPI) +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  
-    print(p)
-    
-    png(filename = paste0('Results/DA_edgeR_', sampSet, '_ncells_barplot_allcluster',selected_DPI, '.png') , height=5000, width=5000, res = 500)
-    print(p)
-    dev.off()
-    
-  }
-  
-  
-}
-# save.image('differential_lily_develop.RData')
-visulize_abundance(sce_all_filt, annot)
-
-
-```
-
-Let's plot box plots of proportions between 2 conditions to have a look.
-
-```{r plot proportion box plots to visulize cell proportion between conditions}
-
-
-# in bsp185, we only run code below to plot those clusters whose composition changed significantly in certain main populations
-
-boxplot_cluster_proportion <- function(selected_dataset, selected_cluster = '2',
+boxplot_cluster_proportion_across_DPI <- function(selected_dataset, selected_cluster = '2',
                                        flag = 'total', composition = FALSE)
 {
-  if(composition)
-  {
-    # plot the stacked bar chart to show the percentage of each cluster in a sample among sorted CD4 population 
-    # calculate proportion of each cluster within each sample among sorted CD4 population
-    # calculate proportion of cluster 4a within sample 9 among sorted CD4 population
-    
-    props <- prop.table(table(selected_dataset$cluster, selected_dataset$Sample), margin=2)
-    
-    props <- data.frame(t(props))
-    colnames(props) <- c('sample', 'cluster', 'prop')
-    props <- merge(props, annot[, c("Condition", "sample")], by= "sample")
-
-    props$sample <- as.factor(props$sample)        
-    # props$sample <- factor(props$sample, levels=c("sample_09", "sample_14", "sample_15", 
-    #                                               "sample_16", "sample_10", "sample_11", 
-    #                                               "sample_12", "sample_13"))
-    as.character(props$cluster)
-    props <- merge(props, df_cluster_number_name, by= "cluster")
-    
-
-    
-    # props$named_cluster[grep('non-conventional T cells', props$cell_type)] <- 'NCT'
-    props$named_cluster <- paste(props$cluster, props$named_cluster, sep = ", ")
-    
-    p <- ggplot(props, aes(fill=named_cluster, y=prop, x=sample)) +
-      geom_bar(position='stack', stat='identity') +
-      facet_grid(~Condition, scales = "free_x", space = "free_x")+
-      theme_classic() +  # Apply classic theme with white background
-      theme(axis.text.x = element_text(angle = 90)) + 
-      scale_fill_brewer(palette = "Pastel1")   # better color palette      
-    print(p)
-    # The scales = "free_x" and space = "free_x" options ensure that the x-axis is shared but allows different sample groupings for each condition.
-    
-    ## and print it
-    print(paste0('Results/', sampSet, '_proportion_each_cluster_', flag, '.png'))
-    png(filename=paste0('Results/', sampSet, '_proportion_each_cluster_', flag, '.png'))
-    print(p)
-    dev.off()  
-    # ggplot(props, aes(fill=cluster, y=prop, x=sample)) +
-    #   geom_bar(position='stack', stat='identity') +
-    #   labs(x=NULL, y='proportion') +
-    #   theme_classic() +
-    #   theme(axis.text.x = element_text(angle = 45, hjust=1), text=element_text(size=21))
-  }
   
+  # head(colData(selected_dataset))
   
-  
-  
-  
-  ## calculate the proportion of cluster 2 in selected_dataset cells in each sample, 
+  ## calculate the proportion of cluster 2 in selected_dataset cells in each sample,
   # eg: cells of cluster 2 composed 14% of cells in sample 1 in sorted CD4 population
-  props <- prop.table(table(selected_dataset$cluster, selected_dataset$Sample), margin=2)[selected_cluster,]
-
+  props <- prop.table(table(selected_dataset$cluster, selected_dataset$Sample), margin=2)[selected_cluster, ]
+  
   # print(props)
-  proptab <- annot[ ,c('sample_analysis_id', 'condition')]
+  if(bsp_num == "bsp_248")
+  {
+    proptab <- annot[ ,c('sample_analysis_id', 'cull_date')]    
+  }
+  if(bsp_num == "bsp_306")
+  {
+    proptab <- annot[ ,c('Sample_ID_in_analysis', 'cull_date')]        
+  }
+
   proptab$proportions <- props[rownames(proptab)]
   proptab <-  proptab[!is.na(proptab$proportions) , ]
-
-  # proptab$Condition <- factor(proptab$Condition)
-  proptab$condition <- factor(proptab$condition, levels = c('control', 'PRCV', 'H1N1'))
-  cell_type = df_cluster_number_name[df_cluster_number_name$cluster == selected_cluster, 'named_cluster']
-  group_colors <- c('PRCV' = 'red', 'H1N1' = 'blue', 'control' = 'black')
   
-  p <- ggplot(data=proptab, aes(x=condition, y=proportions)) +
+  # proptab$Condition <- factor(proptab$Condition)
+  
+
+  if(bsp_num == "bsp_306")
+  {
+    proptab$cull_date <- as.character(proptab$cull_date)
+    proptab$cull_date <- factor(proptab$cull_date, levels = c("1", "12"))  
+    group_colors <- c('1' = 'red', '12' = 'blue')
+  }
+  
+
+  cell_type = df_cluster_number_name[df_cluster_number_name$cluster == selected_cluster, 'named_cluster']
+
+  
+  p <- ggplot(data=proptab, aes(x=cull_date, y=proportions)) +
     geom_boxplot(outlier.shape = NA) +
-    geom_point(aes(col=condition), position='jitter', size = 5) + 
+    geom_point(aes(col=cull_date), position='jitter', size = 5) +
     ggtitle(paste(sampSet, flag , '\n', 'proportion of cluster', selected_cluster, cell_type)) +
     scale_color_manual(values = group_colors)
   print(p)
   
-  png(filename=paste0('Results/', sampSet, '_DA_cluster', selected_cluster, '_prop_', flag, '.png'), height=900, width=1080)  
+  png(filename=paste0('Results/', sampSet, '_DA_cluster', selected_cluster, '_prop_', flag, '.png'), height=900, width=1080)
   print(p)
   dev.off()
   
 }
 
-myList  <- list("H1N1_PRCV" = DA_t1_t2, "control_H1N1" = DA_ctl_t1, "control_PRCV"= DA_ctl_t2)
-for (name in names(myList)) 
+
+# load annotation table as meta information need to use later
+if( bsp_num == "bsp_306")
 {
-  print(name)
-  for(element_name in names(myList[[name]]))
+  annot <- read.csv('references/sample_information.csv')
+  head(annot)
+  annot$sample_id <- paste("sample", formatC(annot$Sample_ID_in_analysis, width=2, flag="0"), sep="_")
+  rownames(annot) <- annot$sample_id  
+  
+  # head(colData(sce_all_filt))
+  # unique(colData(sce_all_filt)[, c("cull_date", "Sample", "condition")])
+
+  
+  
+  FluD <- sce_all_filt[ , (sce_all_filt$condition == "FLU-d") ]
+  avH1N1 <- sce_all_filt[, (sce_all_filt$condition == "avH1N1")]
+  # table(sce_all_filt$cull_date == 1)
+  # table(sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control")
+  # table((sce_all_filt$cull_date == 1) | (sce_all_filt$cull_date == 12 & sce_all_filt$condition == "control"))
+  # colData(sce_all_filt)
+  
+  # as bsp306 doesn't have avH1N1 DPI1
+  subsets <- list(FluD_compare_DPI = FluD, avH1N1_compare_DPI = NA)
+  
+  head(annot)
+  # table(annot$condition)
+  
+  # df_cluster_number_name  <- as.data.frame(unique(colData(sce_all_filt)[,c('named_cluster', 'cluster')]))
+  # rownames(df_cluster_number_name) <- df_cluster_number_name$cluster
+  # head(df_cluster_number_name)
+  
+  
+  
+  
+  # save.image(file = paste0('differential_annotated_debug_', sampSet,  '.RData'))
+  DA_DPI1_DPI12_FLUd <- conduct_DA_across_DPI(subsets, selected_comparison = 1)
+  output_DA_excel(DA_DPI1_DPI12_FLUd, file_name_tag='_DPI1_DPI12_FLUd_')
+  
+  for (name in names(DA_DPI1_DPI12_FLUd))
   {
-    print(element_name)
-    sig_cluster_df <- myList[[name]][[element_name]]
+    print(name)
+    if( is.na(DA_DPI1_DPI12_FLUd[name]) )
+    {
+      print(paste("edgeR DA results unavailable for", name))
+      next
+    }  
+    sig_cluster_df <- DA_DPI1_DPI12_FLUd[[name]]
     sig_cluster_df <- sig_cluster_df[sig_cluster_df$FDR < 0.05, ]
     if(nrow(sig_cluster_df) > 0)
     {
@@ -1055,68 +1776,44 @@ for (name in names(myList))
       sig_clusters <- rownames(sig_cluster_df)
       for(cluster1 in sig_clusters)
       {
-        boxplot_cluster_proportion(selected_dataset = subsets[[element_name]], selected_cluster = cluster1, 
-                                   flag = paste(name, element_name, "DA"))
+        boxplot_cluster_proportion_across_DPI(selected_dataset = subsets[[name]], selected_cluster = cluster1,
+                                   flag = paste(name, "DA", sep = "_"))
       }
-    }
+    }  
   }
   
   
-
 }
 
 
-# # if(sampSet == 'run_1' )
-# # {
-  # boxplot_cluster_proportion(selected_dataset = subsets$DPI_12, selected_cluster = '2re', flag = 'DPI_12 DA')
-#   # boxplot_cluster_proportion(selected_dataset = CD8s, selected_cluster = '2', flag = 'CD8')
-#   # boxplot_cluster_proportion(selected_dataset = all, selected_cluster = '8c', flag = 'total')
-#   # boxplot_cluster_proportion(selected_dataset = CD8s, selected_cluster = '8c', flag = 'CD8')
-#   # 
-#   # ## calculate the proportion of cluster 17 in cells sorted as CD4s in each sample
-#   # ## proportion within those cells sorted as CD4s
-#   # boxplot_cluster_proportion(selected_dataset = all, selected_cluster = '17', flag = 'total')
-#   # boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '17', flag = 'CD4')
-#   
-# }
-# if(sampSet == 'run_2' )
-# {
-#   boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '4a', flag = 'CD4', composition = TRUE, annot=annot)  
-#   boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '4b', flag = 'CD4', annot=annot) 
-#   boxplot_cluster_proportion(selected_dataset = CD4s, selected_cluster = '8', flag = 'CD4', annot=annot) 
-#   
-#   boxplot_cluster_proportion(selected_dataset = MMDs, selected_cluster = '20', flag = 'MMDs', composition = TRUE, annot=annot)  
-#   
-#   # boxplot_cluster_proportion(selected_dataset = Bs, selected_cluster = '17', flag = 'Bs')  
-# }
-
 ```
+
 
 # Differential expression analysis
 
-Now we move on to differential expression analyses. 
-all samples are from female pigs, we only compare samples in same sequencing run at this stage. compare two conditions 135 (s5-8) vs ISU (s1-4)
+Now we move on to differential expression analyses.
+all samples are from female pigs, we only compare samples in same sequencing run at this stage. 
 
 
-Now we test for differential expression. This analysis will be run as a pseudo-bulk analysis, pooling counts from all of the cells within each cluster for each sample before treating like bulk RNAseq data. 
+Now we test for differential expression. This analysis will be run as a pseudo-bulk analysis, pooling counts from all of the cells within each cluster for each sample before treating like bulk RNAseq data.
 
-Differential expression will then be analysed for each cluster. For this first pass, 
+Differential expression will then be analysed for each cluster. For this first pass,
 
 ```{r create functions and variables needed later for DE analysis}
 
-plot_volcano <- function(df_re, title) 
+plot_volcano <- function(df_re, title)
 {
   # here we use p values rather than p adjusted value to try
   # df_re$p_adjust <- df_re$PValue
   set.seed(1)
   library(stringr)
-################################################# 
+#################################################
   # v1.14.8 Fellow Tim suggestion use Dashed line red, bigger interval in volcano plots. Bigger text size for gene label and texts in axis. Only adjust for those used in main figures
 
   logp_to_power <- function(y) (10^(-y))^(-0.5)  # inverse for breaks
-  
-  # Adjust breaks to include 0 for y-axis label
-  tick_labels <- c( 1, 2, 3, 4, 5, 6)           # Add 0 for the y-axis label
+
+  # Adjust breaks for y-axis label
+  tick_labels <- c( 1, 2, 3, 4, 5, 6)           
   tick_plot    <- logp_to_power(tick_labels)       # Compute raw positions
 
   p1 <- ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
@@ -1151,26 +1848,26 @@ plot_volcano <- function(df_re, title)
     }else if(grepl( "Memory-like  T Cells cluster 2re", title, fixed = TRUE))
     {
     y0 <- 0.05**-0.5        # red line position
-    
+
     # --- piecewise transform: compress below, expand above ---
     compress <- 0.15        # <1 compresses the region below y0
     expand   <- 3.0         # >1 expands the region above y0
-    
+
     pw_trans <- function(y, y0, s_low = compress, s_high = expand) {
       ifelse(y <= y0, s_low * y, s_low*y0 + s_high*(y - y0))
     }
-    
+
     # compute y for plotting
     df_plot <- df_re %>%
       dplyr ::mutate(y_raw  = p_adjust**-0.5,
              y_plot = pw_trans(y_raw, y0))
-    
+
     # ticks: compute on the raw scale, then transform to plotting scale
     tick_labels <- c(1, 2, 3, 4, 5, 6)          # include 0 for y-axis label
     tick_raw    <- logp_to_power(tick_labels)      # compute raw positions
     tick_plot   <- pw_trans(tick_raw, y0)          # transform for display
-    
-    
+
+
     p1 <- ggplot(df_plot, aes(x = logFC, y = y_plot,
                               col = diffexpressed, label = delabel)) +
       geom_hline(yintercept = pw_trans(y0, y0),          # dashed threshold line
@@ -1187,10 +1884,10 @@ plot_volcano <- function(df_re, title)
             axis.text    = element_text(size = 25),
             plot.margin  = margin(5.5, 60, 5.5, 5.5)) +
       scale_y_continuous(breaks = tick_plot, labels = tick_labels)
-  
-  
+
+
     }
-  
+
     # print(title)
     # print(grepl( "B cell cluster 10", title, fixed = TRUE))
     if(grepl( "Dendritic cell (cDC2-like) cluster 2", title, fixed = TRUE) |  grepl( "B cell cluster 10", title, fixed = TRUE)  )
@@ -1198,13 +1895,13 @@ plot_volcano <- function(df_re, title)
       if(grepl( "Dendritic cell (cDC2-like) cluster 2", title, fixed = TRUE))
       {
       selected_genes <- c("CD74", "B2M", "IFI30", "CD40", "CCL22", "CCL17", "JAK2", "IKZF1", "MAP4K4")
-        
+
       }else if(grepl( "B cell cluster 10", title, fixed = TRUE))
       {
       selected_genes <- c("HERC5", "IRF9", "PARP11", "IFI44", "UNC93B1", "OAS2")
-        
+
       }
-      top_genes <- df_re[(df_re$delabel %in% selected_genes) , ]   
+      top_genes <- df_re[(df_re$delabel %in% selected_genes) , ]
       # print(top_genes)
       # print("test")
       p1 <- ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
@@ -1231,28 +1928,28 @@ plot_volcano <- function(df_re, title)
         coord_cartesian(clip = "off")  +
         scale_y_continuous(
         breaks = logp_to_power(c(1, 2, 3, 4, 5, 6)),   # positions in power scale
-        labels = c(1, 2, 3, 4, 5, 6)  ) +   
+        labels = c(1, 2, 3, 4, 5, 6)  ) +
         geom_text_repel( size = 6, max.overlaps = 2)
           # scale_y_continuous(breaks = c(0, 0.05**-0.5, 0.01**-0.5, 0.001**-0.5, 0.0001**-0.5) )+
-    
+
       if(grepl( "B cell cluster 10", title, fixed = TRUE))
       {
-        p1 <- p1 + coord_cartesian(xlim = c(-4, 4), clip = "off")    
+        p1 <- p1 + coord_cartesian(xlim = c(-4, 4), clip = "off")
       }
-      
-    
-    }  
-    
+
+
+    }
+
   }
-    
+
   print(p1)
 
 
-################################################# 
-# v1.14.6 Fellow Tim suggestion use a simpler transformation to twist the y-axis 
-# 
+#################################################
+# v1.14.6 Fellow Tim suggestion use a simpler transformation to twist the y-axis
+#
 # logp_to_power <- function(y) (10^(-y))^(-0.5)  # inverse for breaks
-# 
+#
 # ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
 #   geom_hline(yintercept=0.05**-0.5, col="red") +
 #   geom_point( alpha = 0.3) +
@@ -1270,15 +1967,15 @@ plot_volcano <- function(df_re, title)
 #   labels = c(1, 2, 3, 4, 5, 6)  )
 #     # scale_y_continuous(breaks = c(0, 0.05**-0.5, 0.01**-0.5, 0.001**-0.5, 0.0001**-0.5) )+
 
-#################################################   
+#################################################
   # v1.14.7 highlight manually selected genes to display in volcano plots for 3 volcano plots, but other plots should still use v1.14.6 version
   #   logp_to_power <- function(y) (10^(-y))^(-0.5)  # inverse for breaks
-  # 
+  #
   #   # selected_genes <- c("MX1", "RSAD2", "PARP9", "FOXP1", "FOXS1", "GATA2", "COL8A1", "SULF1", "ROBO4", "PLVAP", "COL4A", "KDR", "IL6", "CCL19", "CCL2")
   #   selected_genes <- c("MX1", "RSAD2", "PARP9", "FOXP1", "FOXS1", "GATA2", "COL8A1", "SULF1", "ROBO4", "PLVAP", "COL4A", "KDR", "IL6", "CCL2")
   #   top_genes <- df_re[(df_re$delabel %in% selected_genes) , ]
-  # 
-  # 
+  #
+  #
   # ggplot(data=df_re, aes(x = logFC, y = p_adjust**-0.5 , col=diffexpressed, label=delabel)) +
   #   geom_hline(yintercept=0.05**-0.5, col="red") +
   #   geom_point( alpha = 0.3) +
@@ -1305,7 +2002,7 @@ plot_volcano <- function(df_re, title)
   #     # add one more layer to label selected points from the top_genes data frame
 
 
-################################################# 
+#################################################
 # # v1.14.5 with complex twist
 # ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
 #   geom_point( alpha = 0.3) +
@@ -1320,18 +2017,18 @@ plot_volcano <- function(df_re, title)
 #         axis.text=element_text(size=10)) +
 #   coord_cartesian(clip = "off")  +
 #   scale_y_continuous(trans = scales::modulus_trans(p = 5),  breaks = c(0, 1, 2, 3, 4) )
-# 
+#
 
-    
+
 #   ggplot(data=df_re, aes(x = logFC, y = -log10(p_adjust), col=diffexpressed, label=delabel)) +
 
 #     geom_point( alpha = 0.3, position = "jitter") +
 # Customize axis labels here if needed
                  # X-axis label font size
 # extra right margin for labels
-  # 4) compress buttom region, expand upper 
+  # 4) compress buttom region, expand upper
 # trim anything below 0
-# xlim(-3, 3) + ylim(0, -log10(y_limit)) +     
+# xlim(-3, 3) + ylim(0, -log10(y_limit)) +
 # plot.title = element_text(size = 20),        # Title font size and style
     # geom_vline(xintercept=c(-2, 2), col="green") +
     # geom_vline(xintercept=c(-0.6, 0.6), col="red") +
@@ -1339,11 +2036,11 @@ plot_volcano <- function(df_re, title)
 ## (`geom_text_repel()`).
 ## Warning: ggrepel: 191 unlabeled data points (too many overlaps). Consider
 ## increasing max.overlaps
-# as there is insufficient space in the plot to display gene symbol of each dot, warning above appear. 
-  
-}  
+# as there is insufficient space in the plot to display gene symbol of each dot, warning above appear.
 
-mod_data <- function(df_re, i, cell_type, flag) 
+}
+
+mod_data <- function(df_re, i, cell_type, flag)
 {
   y_limit <- 1.0e-20
   # add a column of NAs
@@ -1352,57 +2049,57 @@ mod_data <- function(df_re, i, cell_type, flag)
   df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust < 0.05] <- "UP"
   # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
   df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust < 0.05] <- "DOWN"
-  
-  
+
+
   # df_re$diffexpressed[df_re$logFC > 0.6 & df_re$PValue < 0.05] <- "UP"
   # df_re$diffexpressed[df_re$logFC < -0.6 & df_re$PValue < 0.05] <- "DOWN"
   table(df_re$diffexpressed)
-  
-  write.table(df_re, 
+
+  write.table(df_re,
               file=paste0('Results/DE_edgeR_', sampSet, flag, '_cluster_', i, '.csv'),
-              sep=',', quote=FALSE, row.names = FALSE)  
-  
+              sep=',', quote=FALSE, row.names = FALSE)
+
   df_re_clean <- df_re[ df_re$diffexpressed != "NO", ]
   df_re$delabel <- NA
-  df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]  
-  df_re$delabel[startsWith(df_re$delabel, "ENSSSCG")] <- NA 
-  
-  
+  df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]
+  df_re$delabel[startsWith(df_re$delabel, "ENSSSCG")] <- NA
+
+
   if(nrow(df_re_clean) > 0)
   {
     # dir.create('Results')
-    write.table(df_re_clean, 
+    write.table(df_re_clean,
                 file=paste0('Results/DE_edgeR_', sampSet, flag, '_clean_cluster_', i, '.csv'),
-                sep=',', quote=FALSE, row.names = FALSE)     
+                sep=',', quote=FALSE, row.names = FALSE)
   }
- 
-  
-  
+
+
+
   if(sum(df_re$diffexpressed != "NO") == 0)
   {
-    
+
     # print(paste('no qualified DE genes observed in this cluster', i, ', no volcano plot'))
     return(df_re)
   }else
   {
-    
+
     # print(paste('qualified DE genes observed in this cluster', i, ', show volcano plot'))
 
     # for row/gene who up/down, its delabel column will store the gene symbol again
     # for row/gene who is not DE, its delabel column is NA
     # Set p-value floor
-    # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit 
-    
+    # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit
+
     p1 <- plot_volcano(df_re, title=paste(cell_type, "cluster", i, "comparison", flag))
     print(paste(cell_type, "cluster", i, "comparison", flag))
     # print(p1)
-    
+
     png(filename = paste0('Results/DE_edgeR_', sampSet, flag, '_volcano_cluster', i, '.png') , height=1600, width=1600, res = 220)
-    # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space 
+    # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space
     print(p1)
-    dev.off()    
+    dev.off()
   }
-  
+
   return(df_re)
 }
 
@@ -1414,40 +2111,40 @@ output_DE_to_files <- function(de.results.any, flag= 't1_t2_DPI1_')
   cls <- as.character(cls)
   # print(cls)
   # check which cluster fail to have DE results and remove these clusters in de.results.any
-  
+
   if(length(which(cls == 'character')) > 0)
   {
     pos_fail_DE <- which(cls == 'character')
     print('delete DE results of clusters below as it has invalid DE results')
     print(de.results.any[pos_fail_DE])
     de.results.any <- de.results.any[-pos_fail_DE]
-    
+
   }
   n_cluster <- length(de.results.any)
   summary_df <- data.frame('DOWN' = rep(0, n_cluster),'NO' = rep(0, n_cluster),
                            'UP' = rep(0, n_cluster))
   rownames(summary_df) = names(de.results.any)
-  
+
   library(openxlsx)
   # Create a new workbook
   wb <- createWorkbook()
-  
+
   for(i in names(de.results.any))
   {
     # print(i)
     output_df <- de.results.any[[i]]
-    
-    
-    
+
+
+
     output_df$p_adjust <- p.adjust(output_df$PValue, method='fdr')
-    
+
     output_df$symbol <- rowData(sce_all_filt)[rownames(output_df), 'Symbol']
-    output_df$ensemble_id <- rownames(output_df)  
-    
+    output_df$ensemble_id <- rownames(output_df)
+
     output_df <- output_df[order(output_df$p_adjust),]
-    # head(output_df$p_adjust,50)    
+    # head(output_df$p_adjust,50)
     de.results.any[[i]] <- output_df
-    # change format GHSR, TNFSF10 into GHSR;TNFSF10 for those duplicates in our DE (edgeR) csv files. 
+    # change format GHSR, TNFSF10 into GHSR;TNFSF10 for those duplicates in our DE (edgeR) csv files.
     ###################################
     my_vector <- output_df$symbol
     # Function to replace ', ' with ';' for those Ensembl gene ID who has duplicates symbols
@@ -1456,44 +2153,44 @@ output_DE_to_files <- function(de.results.any, flag= 't1_t2_DPI1_')
     }
     # Identify elements that match the pattern ', '
     matching_indices <- grep(", ", my_vector)
-    
+
     # Apply the function to identified elements and print each changed element
     for (index in matching_indices) {
       original_element <- my_vector[index]
       changed_element <- replace_comma(original_element)
       # print(paste(original_element, 'after modify', changed_element))
-      
-    }   
+
+    }
     changed_vector <- sapply(my_vector, replace_comma)
     length(changed_vector)
     dim(output_df)
     output_df$symbol <- changed_vector
     #############################################
-    # write.table(output_df, 
-    #             file=paste0('Results/', sampSet, '_', flag,'_DE_cluster_', i, '.csv'), 
+    # write.table(output_df,
+    #             file=paste0('Results/', sampSet, '_', flag,'_DE_cluster_', i, '.csv'),
     #             sep=',', quote=FALSE, row.names = FALSE)
-    
-    
+
+
     sheet_name <- paste("cluster", i)
     # Add a worksheet to the workbook with the created name
     addWorksheet(wb, sheetName = sheet_name)
     # Write the data frame to the worksheet
     writeData(wb, sheet = sheet_name, output_df)
-    
+
     cell_type = df_cluster_number_name[df_cluster_number_name$cluster == i, 'named_cluster']
     # if(flag == 'm2')
     # {
     # only run mod_data function for method 2, it will output final DE files per cluster that would be used for downstream enrichment analysis
-    output_df <- mod_data(output_df, i, cell_type, flag)      
+    output_df <- mod_data(output_df, i, cell_type, flag)
     # }
-    
-    
-    
+
+
+
     if(length(table(output_df$diffexpressed)) == 1)
     {
-      
+
       # print(paste('no significant DE in cluster', i))
-      # print(table(output_df$diffexpressed))      
+      # print(table(output_df$diffexpressed))
     }else
     {
       vector1 <- table(output_df$diffexpressed)
@@ -1501,120 +2198,25 @@ output_DE_to_files <- function(de.results.any, flag= 't1_t2_DPI1_')
       summary_df[i,'UP'] <- vector1['UP']
       # print(paste('remain gene number is', nrow(output_df), 'exist significant DE in cluster', i))
       # print(table(output_df$diffexpressed))
-      
+
     }
-    
+
     # add column diffexpressed to denote a DE is up or down expressed
   }
-  
+
   # Save the workbook to a file
   file_name = paste0('Results/DE_edgeR_', sampSet, flag, "_all_cluster.xlsx")
   saveWorkbook(wb, file = file_name, overwrite = TRUE)
   print(paste('output excel file store the DE results in', file_name ))
-  
+
   for(i in names(de.results.any))
   {
     # print(paste('TRUE means DE genes whose FDR below 0.05 in cluster', i))
     # print(table(de.results.any[[i]]$p_adjust < 0.05))
-    
+
   }
   rownames(summary_df) = paste0('cluster_', names(de.results.any))
   return(summary_df)
-}  
-
-# function to conduct core edgeR DE analysis
-pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
-                                selected_comparison = 3, DPI = 1)
-{
-  sc <- sce[,sce$cluster==clust]
-  
-  colData(sc) <- colData(sc)[ , c("Sample", "condition", "run", "cull_date", "animal_id", "cluster",
-                                  "named_cluster", "ncells" )]
-  # head(colData(sc))
-  # colnames(colData(sc))
-  rownames(colData(sc)) <- colData(sc)$Sample   
-  
-  # retrieve 8 samples in cluster 1
-  y <- DGEList(counts=counts(sc), samples=colData(sc))
-  
-
-  if(length(which(table(y$samples$condition) < 3)) > 0)
-  {
-    # if repelicates under any condition less than 3, we don't obtain enough repelicates for valid statistic test
-    print(paste('check condition replicates in DE edgeR in cluster', clust, 'DPI', DPI))
-    print(table(y$samples$condition))    
-    print("one or more condition contain less than 3 replicates after fitering sample whose cell number < 10")
-    # return()
-  }
-  
-  keep <- filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
-                       min.total.count=filtexprstotal)
-  # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
-  # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
-  # filter genes that has total counts below 40 across all samples
-  
-  y <- y[keep,]
-  
-  remain_genes <- rownames(y)
-  
-  print(paste("after fitering low-expressed genes, genes retained in cluster", clust, "is", 
-              length(remain_genes)) )
-  # those retained genes will be statistically tested to see whether differentially expressed 
-  
-  y <- calcNormFactors(y)
-  # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter 
-  y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
-  y$samples$run <- factor(y$samples$run, levels=c('1', '2', '3'))
-  
-  
-  # par(mfrow=c(2,3))
-
-  # if(length(which(table(y$samples$condition) < 3)) > 0)
-  # {
-  #   print(' fail to plot MDS, one or more condition has less than 3 replicates')
-  # }else
-  # {
-  # limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
-  #                 col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
-  #                 main = paste('cluster:', clust, 'in DPI', DPI))    
-  # }
-
-
-  design <- model.matrix(~ 0 + condition + run, y$samples)
-  # print(design)
-  # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor 
-  contrasts <- makeContrasts(control_H1N1 = conditionH1N1-conditioncontrol, 
-                             control_PRCV =  conditionPRCV-conditioncontrol, 
-                             H1N1_PRCV = conditionPRCV-conditionH1N1, levels = design)
-  
-  
-  # print(contrasts)
-  
-  tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
-  if(is(tc, 'error') | is(tc, 'warning'))
-  {
-
-    print(paste("estimateDisp error or warning in cluster", clust) )
-    return(paste(tc))
-  }else
-  {
-    y <- estimateDisp(y, design)
-    # The NB dispersion is estimated using the estimateDisp function and visualized with plotBCV.
-    # plotBCV(y, main=clust)
-    fit <- glmQLFit(y, design, robust=TRUE)
-    # estimate quasi-likelihood (QL) dispersions, visualized with plotQLDisp.
-    # plotQLDisp(fit)
-    res <- glmQLFTest(fit, contrast=contrasts[, selected_comparison])
-    
-    # We then perform quasi-likelihood F-test for contrast 2 conditions.
-    # topTags(res)
-    restab <- res$table
-    restab$comparison <- colnames(contrasts)[selected_comparison]  
-    # print(head(restab))        
-    return(restab)
-    
-  }
-
 }
 
 # plot up and down DE genes number per cluster bar plot
@@ -1665,7 +2267,7 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
     geom_text(aes(label = value,
                   vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
               color = "black", size = 3) +
-    theme(axis.text.x = element_text(angle = 90)) +
+    theme(axis.text.x = element_text(angle = 90), text=element_text(size=20) ) +
     facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
     theme(strip.background = element_rect(color = "black", fill = "white", linewidth = 1))  # Add black rectangle border
 
@@ -1692,7 +2294,8 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
          title = paste(sampSet, prefix, 'edgeR summary of DE genes per cluster'),  # Custom plot title
          fill = 'change') +  # Custom legend title
     scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
-    theme_minimal() + scale_y_continuous(labels = abs) + 
+    scale_y_continuous(expand = expansion(mult = c(0.02, 0.5))) + 
+    theme_minimal() + scale_y_continuous(labels = abs) +
     geom_text(aes(label = value,
                   vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
               color = "black",
@@ -1713,6 +2316,429 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
 
 }
 
+# function to conduct core edgeR DE analysis
+pseudoBulkDGEmod_m2 <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
+                                selected_comparison = 3, DPI = 1)
+{
+  
+  sc <- sce[, sce$cluster==clust]
+
+  if(bsp_num == "bsp_247")
+  {
+    colData(sc) <- colData(sc)[ , c("Sample", "condition", "run", "tissue", "animal_id", "cluster",
+                                    "named_cluster", "ncells" )]    
+  }else
+  {
+    colData(sc) <- colData(sc)[ , c("Sample", "condition", "run", "cull_date", "animal_id", "cluster",
+                                    "named_cluster", "ncells" )]    
+  }
+
+  # head(colData(sc))
+  # colnames(colData(sc))
+  rownames(colData(sc)) <- colData(sc)$Sample
+
+  # retrieve 8 samples in cluster 1
+  if(bsp_num == "bsp_306")
+  {
+    colData(sc)$condition[colData(sc)$condition == "FLU-d"] <- "FLUd"    
+  }
+  if(bsp_num == "bsp_247")
+  {
+    colData(sc)$condition[colData(sc)$condition == "RB1B-GFP"] <- "RB1B_GFP"
+  }
+  
+
+  
+  y <- DGEList(counts=counts(sc), samples=colData(sc))
+
+  if(bsp_num == "bsp_247" & DPI == "RB1B_all_tissue")
+  {
+
+    y$samples$tissue[y$samples$tissue == "ovary"] <- "reproductive"
+    y$samples$tissue[y$samples$tissue == "testes"] <- "reproductive"
+    if(length(which(table(y$samples$tissue) < 3)) > 0)
+    {
+      # if repelicates under any tissue less than 3, we don't obtain enough replicates for valid statistic test
+      print(paste('check tissue replicates in DE edgeR in cluster', clust, DPI))
+      print(table(y$samples$tissue))
+      print("one or more tissue contain less than 3 replicates after fitering sample whose cell number < 10")
+    }
+  }else
+  {
+    if(length(which(table(y$samples$condition) < 3)) > 0)
+    {
+      # if repelicates under any condition less than 3, we don't obtain enough repelicates for valid statistic test
+      print(paste('check condition replicates in DE edgeR in cluster', clust, 'DPI', DPI))
+      print(table(y$samples$condition))
+      print("one or more condition contain less than 3 replicates after fitering sample whose cell number < 10")
+      # return()
+    }
+  }
+
+  if(bsp_num == "bsp_247" & DPI == "RB1B_all_tissue")
+  {
+    keep <- edgeR::filterByExpr(y, group=sc$tissue, min.count=filtexprsmin,
+                         min.total.count=filtexprstotal)    
+  }else
+  {
+    keep <- edgeR::filterByExpr(y, group=sc$condition, min.count=filtexprsmin,
+                         min.total.count=filtexprstotal)
+    # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
+    # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
+    # filter genes that has total counts below 40 across all samples    
+  }
+
+
+  y <- y[keep,]
+
+  remain_genes <- rownames(y)
+
+  print(paste("after fitering low-expressed genes, genes retained in cluster", clust, "is",
+              length(remain_genes)) )
+  # those retained genes will be statistically tested to see whether differentially expressed
+
+  y <- calcNormFactors(y)
+  # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter
+  if(bsp_num == "bsp_248")
+  {
+    y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
+    y$samples$run <- factor(y$samples$run, levels=c('1', '2', '3'))
+
+  }else if((bsp_num == "bsp_306") & DPI == 1)
+  {
+    y$samples$condition <- factor(y$samples$condition, levels=c('control', 'FLUd'))
+    y$samples$run <- factor(y$samples$run, levels=c('1_3', '1_3_4', '2_4'))
+  }else if((bsp_num == "bsp_306") & DPI == 12)
+  {
+    y$samples$condition <- factor(y$samples$condition, levels=c('control', 'avH1N1', 'FLUd'))
+    y$samples$run <- factor(y$samples$run, levels=c('1_3', '1_3_4', '2_4'))
+
+  }else if(bsp_num == "bsp_247")
+  {
+    y$samples$condition <- factor(y$samples$condition, levels = c('CONTROL', 'RB1B_GFP'))
+    y$samples$run <- factor(y$samples$run, levels=c('1', '2'))
+    y$samples$tissue <- factor(y$samples$tissue, levels = c("spleen", "kidney", "reproductive"))
+
+  }
+
+
+  # par(mfrow=c(2,3))
+
+  # if(length(which(table(y$samples$condition) < 3)) > 0)
+  # {
+  #   print(' fail to plot MDS, one or more condition has less than 3 replicates')
+  # }else
+  # {
+  # limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
+  #                 col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
+  #                 main = paste('cluster:', clust, 'in DPI', DPI))
+  # }
+
+  if(bsp_num == "bsp_247" & DPI == "RB1B_all_tissue")
+  {
+    design <- model.matrix(~ 0 + tissue + run, y$samples)    
+  }else
+  {
+    design <- model.matrix(~ 0 + condition + run, y$samples)    
+  }
+
+  # print(design)
+  # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor
+
+
+  if(bsp_num == "bsp_248")
+  {
+  contrasts <- makeContrasts(control_H1N1 = conditioncontrol-conditionH1N1,
+                             control_PRCV =  conditioncontrol-conditionPRCV,
+                             H1N1_PRCV = conditionH1N1-conditionPRCV, levels = design)
+  }else if((bsp_num == "bsp_306" & DPI == 12))
+  {
+  contrasts <- makeContrasts(control_avH1N1 = conditioncontrol-conditionavH1N1,
+                             control_FLUd =  conditioncontrol-conditionFLUd,
+                             avH1N1_FLUd = conditionavH1N1-conditionFLUd, levels = design)
+  }else if((bsp_num == "bsp_306") & DPI == 1)
+  {
+  contrasts <- makeContrasts(control_FLUd =  conditioncontrol-conditionFLUd, levels = design)
+
+  }else if((bsp_num == "bsp_247") & DPI != "RB1B_all_tissue")
+  {
+  contrasts <- makeContrasts(control_RB1B_GFP =  conditionCONTROL-conditionRB1B_GFP, levels = design)
+
+  }else if(bsp_num == "bsp_247" & DPI == "RB1B_all_tissue")
+  {
+  contrasts <- makeContrasts(spleen_Kidney =  tissuespleen-tissuekidney,
+                             spleen_reproductive = tissuespleen-tissuereproductive,
+                             Kidney_reproductive = tissuekidney-tissuereproductive, levels = design)
+  }
+
+
+  # print(contrasts)
+
+  tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
+  if(is(tc, 'error') | is(tc, 'warning'))
+  {
+
+    print(paste("estimateDisp error or warning in cluster", clust) )
+    return(paste(tc))
+  }else
+  {
+    y <- estimateDisp(y, design)
+    # The NB dispersion is estimated using the estimateDisp function and visualized with plotBCV.
+    # plotBCV(y, main=clust)
+    fit <- glmQLFit(y, design, robust=TRUE)
+    # estimate quasi-likelihood (QL) dispersions, visualized with plotQLDisp.
+    # plotQLDisp(fit)
+    res <- glmQLFTest(fit, contrast=contrasts[, selected_comparison])
+
+    # We then perform quasi-likelihood F-test for contrast 2 conditions.
+    # topTags(res)
+    restab <- res$table
+    restab$comparison <- colnames(contrasts)[selected_comparison]
+    # print(head(restab))
+    return(restab)
+
+  }
+
+}
+
+
+DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, comparison_prefix = "t1_t2")
+{
+  # at this stage, sce_all_filt contain 30077 genes, 37511 cells, 8 samples, 21 clusters
+
+
+  length(unique(sce_all_filt$cluster))
+  table(sce_all_filt$cluster)
+  # head(colData(sce_all_filt))
+
+  # merge 4 control samples as one group
+  sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$cull_date == selected_DPI)
+                                            | (sce_all_filt$cull_date != selected_DPI & sce_all_filt$condition == "control")]
+
+  # not merge 4 control samples as one group
+  # sce_all_filt_DPI_selected <- sce_all_filt[ , sce_all_filt$cull_date == selected_DPI]
+
+
+  # pooling/sum counts from all cells within each cluster for each sample
+  # Differential expression will then be analysed based on each sample-cluster pair
+  summed <- aggregateAcrossCells(sce_all_filt_DPI_selected,
+                                 id=colData(sce_all_filt_DPI_selected)[ ,c("cluster", "Sample")])
+
+
+  # inside summed@assays@data@listData[["counts"]], the resulting columns should be 21*8=168 (168 sample-cluster pairs) rather than 167, is there a mistake? no, it's because a few samples have 0 cell in certain clusters.
+  # table(summed$cluster, summed$Sample)
+  # View(summed@assays@data@listData[["counts"]])
+  head(colData(summed))
+# summed
+# class: SingleCellExperiment
+# dim: 30479 206
+  
+
+  summed.filt <- summed[,summed$ncells >= 10]
+  # remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
+# summed.filt
+# class: SingleCellExperiment
+# dim: 30479 171
+
+
+
+  # write.csv(table(summed.filt$cluster, summed.filt$Sample), file = "summed.filt_check.csv")
+  # dim(summed.filt)
+  # head(summed.filt@colData)
+
+  #######################################################################
+  # plot MDS for all valid samples-cluster pair
+  sc <- summed.filt
+
+  colData(sc) <- colData(sc)[ , c("Sample", "condition", "run", "cull_date", "animal_id", "cluster",
+                                  "named_cluster", "ncells" )]
+  # head(colData(sc))
+  # colnames(colData(sc))
+  rownames(colData(sc)) <- paste(colData(sc)$Sample, colData(sc)$cluster, sep = "_cluster")
+
+  # retrieve 8 samples in cluster 1
+  y <- DGEList(counts=counts(sc), samples=colData(sc))
+
+  keep <- filterByExpr(y, group=sc$condition, min.count=20,
+                       min.total.count=40)
+  # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
+  # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
+  # filter genes that has total counts below 40 across all samples
+
+  y <- y[keep,]
+
+  remain_genes <- rownames(y)
+
+  print(paste("after fitering low-expressed genes, genes retained in all cluster is",
+              length(remain_genes)) )
+  # those retained genes will be statistically tested to see whether differentially expressed
+
+  y <- calcNormFactors(y)
+  # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter
+  if(bsp_num == "bsp_248")
+  {
+    y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
+    
+  }else if(bsp_num == "bsp_306")
+  {
+    y$samples$condition <- factor(y$samples$condition, levels = c('control', 'FLU-d', 'avH1N1'))
+    
+  }
+
+
+
+  cluster <- as.factor(y$samples$cluster)
+
+  limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$cluster ,
+                  col = c(1:length(unique(cluster)))[cluster],
+                  main = paste("DPI", selected_DPI, "MDS"))
+  # print(p)
+
+  #######################################################################
+
+
+  clusts <- as.character(levels(factor(summed.filt$cluster)))
+  de.results.any <- vector('list', length(clusts))
+
+  names(de.results.any) <- clusts
+
+  # iterate i to conduct DE for each cluster, all genes
+  for(i in clusts)
+  {
+    de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt,
+                                               selected_comparison = Select_comparison,
+                                               DPI = selected_DPI)
+  }
+  length(de.results.any)
+
+
+
+  summary_df <- output_DE_to_files(de.results.any, flag = paste0(comparison_prefix, '_DPI', selected_DPI))
+  melted_df <- DRAW_up_down_summary_barplot(summary_df, prefix = paste0(comparison_prefix, '_DPI', selected_DPI))
+  return(summary_df)
+}
+
+
+
+DE_analysis_tissue <- function(sce_all_filt, selected_tissue, Select_comparison = 1, comparison_prefix = "spleen")
+{
+  # at this stage, sce_all_filt contain 30077 genes, 37511 cells, 8 samples, 21 clusters
+
+  length(unique(sce_all_filt$cluster))
+  table(sce_all_filt$cluster)
+  # head(colData(sce_all_filt))
+
+  # merge 4 control samples as one group
+  if(selected_tissue == "all_tissue")
+  {
+    sce_all_filt_DPI_selected = sce_all_filt
+  }else if(selected_tissue == "RB1B_all_tissue")
+  {
+    sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$condition == 'RB1B-GFP')]
+  }else
+  {
+    sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$tissue == selected_tissue)]
+  }
+
+
+
+
+  # pooling/sum counts from all cells within each cluster for each sample
+  # Differential expression will then be analysed based on each sample-cluster pair
+  summed <- aggregateAcrossCells(sce_all_filt_DPI_selected,
+                                 id=colData(sce_all_filt_DPI_selected)[ ,c("cluster", "Sample")])
+
+
+  # inside summed@assays@data@listData[["counts"]], the resulting columns should be 21*8=168 (168 sample-cluster pairs) rather than 167, is there a mistake? no, it's because a few samples have 0 cell in certain clusters.
+  # table(summed$cluster, summed$Sample)
+  # View(summed@assays@data@listData[["counts"]])
+  head(colData(summed))
+# summed
+# class: SingleCellExperiment
+# dim: 30479 206
+
+
+  summed.filt <- summed[,summed$ncells >= 10]
+  # remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
+# summed.filt
+# class: SingleCellExperiment
+# dim: 30479 171
+
+
+
+  # write.csv(table(summed.filt$cluster, summed.filt$Sample), file = "summed.filt_check.csv")
+  # dim(summed.filt)
+  # head(summed.filt@colData)
+
+  #######################################################################
+  # plot MDS for all valid samples-cluster pair
+  sc <- summed.filt
+
+  colData(sc) <- colData(sc)[ , c("Sample", "condition", "run", "tissue", "animal_id", "cluster",
+                                  "named_cluster", "ncells" )]
+  # head(colData(sc))
+  # colnames(colData(sc))
+  rownames(colData(sc)) <- paste(colData(sc)$Sample, colData(sc)$cluster, sep = "_cluster")
+
+  # retrieve 8 samples in cluster 1
+  y <- DGEList(counts=counts(sc), samples=colData(sc))
+
+  keep <- filterByExpr(y, group=sc$condition, min.count=20,
+                       min.total.count=40)
+  # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
+  # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
+  # filter genes that has total counts below 40 across all samples
+
+  y <- y[keep,]
+
+  remain_genes <- rownames(y)
+
+  print(paste("after fitering low-expressed genes, genes retained in all cluster is",
+              length(remain_genes)) )
+  # those retained genes will be statistically tested to see whether differentially expressed
+
+  y <- calcNormFactors(y)
+  # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter
+  if(bsp_num == "bsp_247")
+  {
+    y$samples$condition <- factor(y$samples$condition, levels = c('CONTROL', 'RB1B_GFP'))
+
+  }
+
+
+  cluster <- as.factor(y$samples$cluster)
+
+  limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$cluster ,
+                  col = c(1:length(unique(cluster)))[cluster],
+                  main = paste( selected_tissue, "MDS"))
+  # print(p)
+
+  #######################################################################
+
+
+  clusts <- as.character(levels(factor(summed.filt$cluster)))
+  de.results.any <- vector('list', length(clusts))
+
+  names(de.results.any) <- clusts
+
+
+  # iterate i to conduct DE for each cluster, all genes
+  for(i in clusts)
+  {
+    de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt,
+                                               selected_comparison = Select_comparison,
+                                               DPI = selected_tissue)
+  }
+  length(de.results.any)
+
+
+
+  summary_df <- output_DE_to_files(de.results.any, flag = comparison_prefix )
+  melted_df <- DRAW_up_down_summary_barplot(summary_df, prefix = comparison_prefix )
+  return(summary_df)
+
+}
+
 
 ```
 
@@ -1721,37 +2747,88 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
 
 ```{r apply method 2 conduct DE analysis between 2 virus condition for each cluster and output formal DE results,  fig.width= 12, fig.height=8}
 
-DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, comparison_prefix = "t1_t2")
+if(bsp_num == "bsp_247")
+{
+  summary_df_spleen_ctl_RB1B_GFP <- DE_analysis_tissue(sce_all_filt, selected_tissue = "spleen", Select_comparison = 1, comparison_prefix = "_spleen_ctl_RB1B")  
+  
+  summary_df_all_tissue_ctl_RB1B_GFP <- DE_analysis_tissue(sce_all_filt, selected_tissue = "all_tissue", Select_comparison = 1, comparison_prefix = "_all_tissue_ctl_RB1B")    
+
+  summary_df_RB1B_spleen_Kidney <- DE_analysis_tissue(sce_all_filt, selected_tissue = "RB1B_all_tissue", Select_comparison = 1, comparison_prefix = "_RB1B_spleen_Kidney")   
+
+  summary_df_RB1B_spleen_reproductive <- DE_analysis_tissue(sce_all_filt, selected_tissue = "RB1B_all_tissue", Select_comparison = 2, comparison_prefix = "_RB1B_spleen_reproductive")   
+
+    summary_df_RB1B_Kidney_reproductive <- DE_analysis_tissue(sce_all_filt, selected_tissue = "RB1B_all_tissue", Select_comparison = 3, comparison_prefix = "_RB1B_Kidney_reproductive")   
+   
+}
+
+if(bsp_num == "bsp_248")
+{
+  # compare between 2 virus in same DPI
+  summary_df_DPI1_avH1N1_FLUd <- DE_analysis(sce_all_filt, selected_DPI = 1,  Select_comparison= 3, comparison_prefix = "_avH1N1_FLUd")
+  summary_df_DPI12_H1N1_PRCV <- DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 3, comparison_prefix = "_H1N1_PRCV")
+
+
+  summary_df_DPI1_ctl_PRCV <- DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 2, comparison_prefix = "_ctl_PRCV")
+  # DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 2, comparison_prefix = "_ctl_t2")
+
+
+  summary_df_DPI1_ctl_H1N1 <- DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 1, comparison_prefix = "_ctl_H1N1")
+  # DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 1, comparison_prefix = "_ctl_t1")
+
+}
+
+
+if(bsp_num == "bsp_306")
+{
+  # compare between 2 virus in same DPI
+
+  summary_df_DPI12_avH1N1_FLUd <- DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 3, comparison_prefix = "_avH1N1_FLUd")
+
+  summary_df_DPI1_ctl_FLUd <- DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 1, comparison_prefix = "_ctl_FLUd")
+  summary_df_DPI12_ctl_FLUd <- DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 1, comparison_prefix = "_ctl_FLUd")
+
+
+  summary_df_DPI12_ctl_avH1N1 <- DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 2, comparison_prefix = "_ctl_avH1N1")
+
+
+}
+
+```
+
+
+
+```{r conduct DE analysis across 2 DPI within same virus condition for each cluster and output formal DE results,  fig.width= 12, fig.height=8}
+
+DE_analysis_across_DPI <- function(sce_all_filt, Select_comparison = 1, comparison_prefix = "t1_t2")
 {
   # at this stage, sce_all_filt contain 30077 genes, 37511 cells, 8 samples, 21 clusters
   
   
   length(unique(sce_all_filt$cluster))
   table(sce_all_filt$cluster)
-  # head(colData(sce_all_filt)) 
+  # head(colData(sce_all_filt))
   
-  # merge 4 control samples as one group
-  sce_all_filt_DPI_selected <- sce_all_filt[, (sce_all_filt$cull_date == selected_DPI) 
-                                            | (sce_all_filt$cull_date != selected_DPI & sce_all_filt$condition == "control")]
-  
-  # not merge 4 control samples as one group  
-  # sce_all_filt_DPI_selected <- sce_all_filt[ , sce_all_filt$cull_date == selected_DPI]
-  
-  
-  # pooling/sum counts from all cells within each cluster for each sample 
+  # pooling/sum counts from all cells within each cluster for each sample
   # Differential expression will then be analysed based on each sample-cluster pair
-  summed <- aggregateAcrossCells(sce_all_filt_DPI_selected, 
-                                 id=colData(sce_all_filt_DPI_selected)[ ,c("cluster", "Sample")])
+  summed <- aggregateAcrossCells(sce_all_filt,
+                                 id=colData(sce_all_filt)[ ,c("cluster", "Sample")])
   
   
   # inside summed@assays@data@listData[["counts"]], the resulting columns should be 21*8=168 (168 sample-cluster pairs) rather than 167, is there a mistake? no, it's because a few samples have 0 cell in certain clusters.
-  # table(summed$cluster, summed$Sample) 
+  # table(summed$cluster, summed$Sample)
   # View(summed@assays@data@listData[["counts"]])
-  head(colData(summed)) 
+  head(colData(summed))
+  # summed
+  # class: SingleCellExperiment
+  # dim: 30479 206
+  
   
   summed.filt <- summed[,summed$ncells >= 10]
   # remove those sample-cluster pairs when one sample has cell number below 10 in certain cluster
-
+  # summed.filt
+  # class: SingleCellExperiment
+  # dim: 30479 171
+  
   
   
   # write.csv(table(summed.filt$cluster, summed.filt$Sample), file = "summed.filt_check.csv")
@@ -1768,7 +2845,7 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
   # colnames(colData(sc))
   rownames(colData(sc)) <- paste(colData(sc)$Sample, colData(sc)$cluster, sep = "_cluster")
   
-  # retrieve 8 samples in cluster 1
+  # create edgeR object
   y <- DGEList(counts=counts(sc), samples=colData(sc))
   
   keep <- filterByExpr(y, group=sc$condition, min.count=20,
@@ -1781,21 +2858,29 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
   
   remain_genes <- rownames(y)
   
-  print(paste("after fitering low-expressed genes, genes retained in all cluster is", 
+  print(paste("after fitering low-expressed genes, genes retained in all cluster is",
               length(remain_genes)) )
-  # those retained genes will be statistically tested to see whether differentially expressed 
+  # those retained genes will be statistically tested to see whether differentially expressed
   
   y <- calcNormFactors(y)
-  # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter 
-  y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
+  # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter
+  if(bsp_num == "bsp_248")
+  {
+    y$samples$condition <- factor(y$samples$condition, levels = c('control', 'H1N1', 'PRCV'))
+    
+  }else if(bsp_num == "bsp_306")
+  {
+    y$samples$condition <- factor(y$samples$condition, levels = c('control', 'FLU-d', 'avH1N1'))
+    
+  }
   
-
-
+  
+  
   cluster <- as.factor(y$samples$cluster)
-
+  
   limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$cluster ,
                   col = c(1:length(unique(cluster)))[cluster],
-                  main = paste("DPI", selected_DPI, "MDS"))
+                  main = paste(comparison_prefix,  "MDS"))
   # print(p)
   
   #######################################################################
@@ -1806,32 +2891,132 @@ DE_analysis <- function(sce_all_filt, selected_DPI, Select_comparison = 3, compa
   
   names(de.results.any) <- clusts
   
+  # iterate i to conduct DE for each cluster, all genes
   for(i in clusts)
   {
-    de.results.any[[i]] <- pseudoBulkDGEmod_m2(clust = i, sce = summed.filt, 
-                                               selected_comparison = Select_comparison,
-                                               DPI = selected_DPI)
+    de.results.any[[i]] <- pseudoBulkDGEmod_compare_DPI(clust = i, sce = summed.filt)
   }
-  length(de.results.any)
+  # length(de.results.any)
   
   
   
-  summary_df <- output_DE_to_files(de.results.any, flag = paste0(comparison_prefix, '_DPI', selected_DPI))
-  melted_df <- DRAW_up_down_summary_barplot(summary_df, prefix = paste0(comparison_prefix, '_DPI', selected_DPI))
+  summary_df <- output_DE_to_files(de.results.any, flag = comparison_prefix)
+  melted_df <- DRAW_up_down_summary_barplot(summary_df, prefix = comparison_prefix)
   return(summary_df)
 }
 
-# compare between 2 virus in same DPI
-summary_df_DPI1_H1N1_PRCV <- DE_analysis(sce_all_filt, selected_DPI = 1,  Select_comparison= 3, comparison_prefix = "_H1N1_PRCV")
-summary_df_DPI12_H1N1_PRCV <- DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 3, comparison_prefix = "_H1N1_PRCV")
 
+pseudoBulkDGEmod_compare_DPI <- function(clust, sce, filtexprsmin=20, filtexprstotal=40,
+                                selected_comparison = 1)
+{
+  
+  sc <- sce[, sce$cluster==clust]
+  sc <- sc[, sc$condition== "FLU-d"]  
+  
+  colData(sc) <- colData(sc)[ , c("Sample", "condition", "run", "cull_date", "animal_id", "cluster",
+                                  "named_cluster", "ncells" )]
+  # head(colData(sc))
+  # colnames(colData(sc))
+  rownames(colData(sc)) <- colData(sc)$Sample
+  
+  # retrieve 8 samples in cluster 1
+  colData(sc)$condition[colData(sc)$condition == "FLU-d"] <- "FLUd"
+  
+  y <- DGEList(counts=counts(sc), samples=colData(sc))
+  
+  
+  if(length(which(table(y$samples$cull_date) < 3)) > 0)
+  {
+    # if repelicates under any condition less than 3, we don't obtain enough repelicates for valid statistic test
+    print(paste('check condition FLU-d replicates in DE edgeR across DPI in cluster', clust ))
+    print(table(y$samples$cull_date))
+    # print("one or more condition contain less than 3 replicates after fitering sample whose cell number < 10")
+    # return()
+  }
+  
+  # Determine which genes have sufficiently large counts to be retained in a statistical analysis.
+  # min.count: a gene needs to have at least 20 counts in at least some samples to be retained
+  # filter genes that has total counts below 40 across all samples  
+  keep <- edgeR::filterByExpr(y, group=sc$cull_date, min.count=filtexprsmin,
+                              min.total.count=filtexprstotal)
 
-summary_df_DPI1_ctl_PRCV <- DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 2, comparison_prefix = "_ctl_PRCV")
-# DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 2, comparison_prefix = "_ctl_t2")
+  
+  y <- y[keep,]
+  
+  remain_genes <- rownames(y)
+  
+  print(paste("after fitering low-expressed genes, genes retained in cluster", clust, "is",
+              length(remain_genes)) )
+  # those retained genes will be statistically tested to see whether differentially expressed
+  
+  y <- calcNormFactors(y)
+  # Calculate scaling factors to convert the raw sample/library sizes into normalized effective sample/library sizes. since raw counts are requested to enter
+  if(bsp_num == "bsp_306")
+  {
+    y$samples$cull_date <- as.character(y$samples$cull_date)
+    y$samples$cull_date <- factor(y$samples$cull_date, levels = c("1", "12"))
+    y$samples$run <- factor(y$samples$run, levels=c('1_3',  '2_4'))
+    
+  }
+  
+  # par(mfrow=c(2,3))
+  
+  # if(length(which(table(y$samples$condition) < 3)) > 0)
+  # {
+  #   print(' fail to plot MDS, one or more condition has less than 3 replicates')
+  # }else
+  # {
+  # limma:::plotMDS(cpm(y, log=TRUE), labels=y$samples$condition ,
+  #                 col = c('red', 'blue', 'turquoise')[as.numeric(factor(y$samples$condition))],
+  #                 main = paste('cluster:', clust, 'in DPI', DPI))
+  # }
+  
+  
+  design <- model.matrix(~ 0 + cull_date + run, y$samples)
+  # print(design)
+  # we don't compare baseline with treatment there, we compare 2 treatment there, so i use 0 + factor
+  
+  
+  if(bsp_num == "bsp_306")
+  {
+    contrasts <- makeContrasts(DPI1_DPI12_FLUd =  cull_date1-cull_date12, levels = design)
+  }
+  
+  
+  # print(contrasts)
+  
+  tc <- tryCatch(estimateDisp(y, design), error=function(e) e, warning=function(w) w)
+  if(is(tc, 'error') | is(tc, 'warning'))
+  {
+    
+    print(paste("estimateDisp error or warning in cluster", clust) )
+    return(paste(tc))
+  }else
+  {
+    y <- estimateDisp(y, design)
+    # The NB dispersion is estimated using the estimateDisp function and visualized with plotBCV.
+    # plotBCV(y, main=clust)
+    fit <- glmQLFit(y, design, robust=TRUE)
+    # estimate quasi-likelihood (QL) dispersions, visualized with plotQLDisp.
+    # plotQLDisp(fit)
+    res <- glmQLFTest(fit, contrast=contrasts[, selected_comparison])
+    
+    # We then perform quasi-likelihood F-test for contrast 2 conditions.
+    topTags(res)
+    restab <- res$table
+    restab$comparison <- colnames(contrasts)[selected_comparison]
+    # print(head(restab))
+    return(restab)
+    
+  }
+  
+}
+if(bsp_num == "bsp_306")
+{
+  DE_analysis_across_DPI(sce_all_filt, comparison_prefix = "_FLUd_DPI1_DPI12")
+  
+}
 
-
-summary_df_DPI1_ctl_H1N1 <- DE_analysis(sce_all_filt, selected_DPI = 1, Select_comparison = 1, comparison_prefix = "_ctl_H1N1")
-# DE_analysis(sce_all_filt, selected_DPI = 12, Select_comparison = 1, comparison_prefix = "_ctl_t1")
 
 ```
 
@@ -1842,208 +3027,208 @@ summary_df_DPI1_ctl_H1N1 <- DE_analysis(sce_all_filt, selected_DPI = 1, Select_c
 # sampSet = "subset_innate_immune_cells"
 # Create the table in R
 
-mod_data_holm <- function(df_re, i, comparison_flag, write_table_flag = TRUE, power_flag = "power80",
-                          DPI_flag = 1) 
-{
-  y_limit <- 1.0e-20
-  # add a column of NAs
-  df_re$diffexpressed <- "NO"
-  # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP"
-  df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_holm_adjust < 0.05] <- "UP"
-  # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
-  df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_holm_adjust < 0.05] <- "DOWN"
-  
-  table(df_re$diffexpressed)
-
-  if(write_table_flag)
-  {
-    write.table(df_re, file=paste0('Results/DE_edgeR_', sampSet, '_', comparison_flag,'_DPI',DPI_flag, '_cluster_', i, '_holm.csv'),
-              sep=',', quote=FALSE, row.names = FALSE)      
-  }
-   
-  
-  df_re_clean <- df_re[ df_re$diffexpressed != "NO", ]
-  if(nrow(df_re_clean) > 0)
-  {
-    # dir.create('Results')
-    if(write_table_flag)
-    {
-      write.table(df_re_clean, 
-                  file=paste0('Results/DE_edgeR_', sampSet, '_', comparison_flag, '_DPI',DPI_flag, '_clean_cluster_', i, '_holm.csv'),
-                  sep=',', quote=FALSE, row.names = FALSE)           
-    }
-  }
- 
-  
-  df_re$delabel <- NA
-  if(sum(df_re$diffexpressed != "NO") == 0)
-  {
-    
-    # print(paste('no qualified DE genes observed in this cluster', i, ', no volcano plot'))
-    return(df_re)
-  }else
-  {
-    
-    # print(paste('qualified DE genes observed in this cluster', i, ', show volcano plot'))
-    df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]
-    # for row/gene who up/down, its delabel column will store the gene symbol again
-    # for row/gene who is not DE, its delabel column is NA
-    # Set p-value floor
-    # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit 
-
-
-
-    selected_logFC_threshold = df_logFC_threshold$log2FC_threshold[(df_logFC_threshold$DPI == DPI_flag & df_logFC_threshold$comparison == comparison_flag)] 
-
-    p1 <- plot_volcano_holm(df_re, title=paste( "cluster", i, "comparison", comparison_flag, DPI_flag, power_flag),
-                             selected_logFC_threshold)
-        
-    # p1 <- plot_volcano_holm(df_re, title=paste(cell_type, "cluster", i, "comparison", flag))
-    # print(p1)
-    
-    png(filename = paste0('Results/DE_edgeR_', sampSet, '_', comparison_flag, DPI_flag, '_volcano_cluster', i, '_',  power_flag, '_holm.png') , height=1600, width=1600, res = 220)
-    # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space 
-    print(p1)
-    dev.off()    
-  }
-  
-  return(df_re)
-}
-
-
-plot_volcano_holm <- function(df_re, title, logFC_threshold=2) 
-{
-  # code below use p values rather than p adjusted value to try
-  # df_re$p_adjust <- df_re$PValue
-    print(logFC_threshold)
-  logFC_threshold <- as.numeric(logFC_threshold)
-
-  ggplot(data=df_re, aes(x = logFC, y = -log10(p_holm_adjust), col=diffexpressed, label=delabel)) +
-    geom_point() +
-    geom_text_repel() +
-    ggtitle(title, paste("DE genes holm, bespoke logFC_threshold")) +
-    labs( x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
-    geom_vline(xintercept=c(-0.6, 0.6), col="red") +
-    geom_vline(xintercept=c(-logFC_threshold, logFC_threshold), col="green") +
-    geom_hline(yintercept=-log10(0.05), col="red") +
-    scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
-    theme(axis.title.x = element_text(size = 15),                     # X-axis label font size
-          axis.title.y = element_text(size = 15)   )
-
-}  
-
-holm_logFC_thresh_main <- function(sce_all_filt, df_logFC_threshold, power_flag = "power80") 
-{
-  # only DPI1 comparison need holm correct
-  for(cluster_id in unique(sce_all_filt$cluster))
-  {
-    # correct for multiple test using holm, only DPI1 need adjust in bsp248
-    # Files to read and write
-    in_files <- c(
-      paste0("Results/DE_edgeR_", sampSet,  "_ctl_PRCV_DPI1_cluster_", cluster_id, ".csv"),
-      paste0("Results/DE_edgeR_", sampSet,  "_ctl_H1N1_DPI1_cluster_", cluster_id, ".csv"),
-      paste0("Results/DE_edgeR_", sampSet,  "_H1N1_PRCV_DPI1_cluster_", cluster_id, ".csv") )
-    
-    
-    if (any(!file.exists(in_files)) ) 
-    {
-      print(paste("File not found, skip: cluster", cluster_id))
-      print(in_files[!file.exists(in_files)] )
-      next 
-    }
-    
-    comparison1 <- read.csv(in_files[1])
-    comparison2 <- read.csv(in_files[2])
-    comparison3 <- read.csv(in_files[3])
-    
-    comparison1$p_holm <- NA
-    comparison2$p_holm <- NA
-    comparison3$p_holm <- NA
-    
-    total_ens_id <- union(comparison1$ensemble_id, comparison2$ensemble_id)
-    total_ens_id <- union(total_ens_id, comparison3$ensemble_id)
-    
-    
-    for (selected_ens_id in total_ens_id) 
-    {
-      comparison1_p <- comparison1[comparison1$ensemble_id == selected_ens_id , 'PValue']
-      comparison2_p <- comparison2[comparison2$ensemble_id == selected_ens_id , 'PValue']  
-      comparison3_p <- comparison3[comparison3$ensemble_id == selected_ens_id , 'PValue']  
-      
-      p_holm <- p.adjust(c(comparison1_p, comparison2_p, comparison3_p), method = "holm")
-      comparison1[comparison1$ensemble_id == selected_ens_id , 'p_holm'] <- p_holm[1]
-      comparison2[comparison2$ensemble_id == selected_ens_id , 'p_holm']  <- p_holm[2]
-      comparison3[comparison3$ensemble_id == selected_ens_id , 'p_holm'] <- p_holm[3]
-      
-    }
-
-    
-    comparison1$p_holm_adjust <- p.adjust(comparison1$p_holm, method='BH')
-    comparison2$p_holm_adjust <- p.adjust(comparison2$p_holm, method='BH')    
-    comparison3$p_holm_adjust <- p.adjust(comparison3$p_holm, method='BH')    
- 
-    # output table after holm correction, draw volcano plot and add bespoke logFC threshold, need to do those for DPI12 data too
-
-    mod_data_holm(comparison1, cluster_id, "ctl_PRCV", write_table_flag = FALSE, power_flag, DPI_flag = 1)  
-    
-    mod_data_holm(comparison2, cluster_id, "ctl_H1N1", write_table_flag = FALSE, power_flag, DPI_flag = 1)  
-    
-    mod_data_holm(comparison3, cluster_id, "H1N1_PRCV", write_table_flag = FALSE, power_flag, DPI_flag = 1)  
-    
-  }
-  
-  
-  #  DPI12 only add bespoke logFC threshold
-  for(cluster_id in unique(sce_all_filt$cluster))
-  {
-    # correct for multiple test using holm, only DPI1 need adjust in bsp248
-    # Files to read and write
-    in_files <- paste0("Results/DE_edgeR_", sampSet,  "_H1N1_PRCV_DPI12_cluster_", cluster_id, ".csv")
-    
-    
-    if (!file.exists(in_files)) 
-    {
-      print(paste("File not found, skip: cluster", cluster_id))
-      print(in_files )
-      next 
-    }
-    
-    comparison1 <- read.csv(in_files)
-    comparison1$p_holm_adjust <- comparison1$p_adjust
-  
-    #  draw volcano plot and add bespoke logFC threshold, need to do those for DPI12 data too
-    mod_data_holm(comparison1, cluster_id, "H1N1_PRCV", write_table_flag = FALSE, power_flag, DPI_flag = 12)  
-    
-  }
-  
-}
-
-
+# mod_data_holm <- function(df_re, i, comparison_flag, write_table_flag = TRUE, power_flag = "power80",
+#                           DPI_flag = 1)
+# {
+#   y_limit <- 1.0e-20
+#   # add a column of NAs
+#   df_re$diffexpressed <- "NO"
+#   # if log2Foldchange > 0.6 and pvalue < 0.05, set as "UP"
+#   df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_holm_adjust < 0.05] <- "UP"
+#   # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
+#   df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_holm_adjust < 0.05] <- "DOWN"
 # 
+#   table(df_re$diffexpressed)
+# 
+#   if(write_table_flag)
+#   {
+#     write.table(df_re, file=paste0('Results/DE_edgeR_', sampSet, '_', comparison_flag,'_DPI',DPI_flag, '_cluster_', i, '_holm.csv'),
+#               sep=',', quote=FALSE, row.names = FALSE)
+#   }
+# 
+# 
+#   df_re_clean <- df_re[ df_re$diffexpressed != "NO", ]
+#   if(nrow(df_re_clean) > 0)
+#   {
+#     # dir.create('Results')
+#     if(write_table_flag)
+#     {
+#       write.table(df_re_clean,
+#                   file=paste0('Results/DE_edgeR_', sampSet, '_', comparison_flag, '_DPI',DPI_flag, '_clean_cluster_', i, '_holm.csv'),
+#                   sep=',', quote=FALSE, row.names = FALSE)
+#     }
+#   }
+# 
+# 
+#   df_re$delabel <- NA
+#   if(sum(df_re$diffexpressed != "NO") == 0)
+#   {
+# 
+#     # print(paste('no qualified DE genes observed in this cluster', i, ', no volcano plot'))
+#     return(df_re)
+#   }else
+#   {
+# 
+#     # print(paste('qualified DE genes observed in this cluster', i, ', show volcano plot'))
+#     df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]
+#     # for row/gene who up/down, its delabel column will store the gene symbol again
+#     # for row/gene who is not DE, its delabel column is NA
+#     # Set p-value floor
+#     # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit
+# 
+# 
+# 
+#     selected_logFC_threshold = df_logFC_threshold$log2FC_threshold[(df_logFC_threshold$DPI == DPI_flag & df_logFC_threshold$comparison == comparison_flag)]
+# 
+#     p1 <- plot_volcano_holm(df_re, title=paste( "cluster", i, "comparison", comparison_flag, DPI_flag, power_flag),
+#                              selected_logFC_threshold)
+# 
+#     # p1 <- plot_volcano_holm(df_re, title=paste(cell_type, "cluster", i, "comparison", flag))
+#     # print(p1)
+# 
+#     png(filename = paste0('Results/DE_edgeR_', sampSet, '_', comparison_flag, DPI_flag, '_volcano_cluster', i, '_',  power_flag, '_holm.png') , height=1600, width=1600, res = 220)
+#     # when we set height=1080, width= higher, more gene symbols can shown on the plot since there are more space
+#     print(p1)
+#     dev.off()
+#   }
+# 
+#   return(df_re)
+# }
+# 
+# 
+# plot_volcano_holm <- function(df_re, title, logFC_threshold=2)
+# {
+#   # code below use p values rather than p adjusted value to try
+#   # df_re$p_adjust <- df_re$PValue
+#     print(logFC_threshold)
+#   logFC_threshold <- as.numeric(logFC_threshold)
+# 
+#   ggplot(data=df_re, aes(x = logFC, y = -log10(p_holm_adjust), col=diffexpressed, label=delabel)) +
+#     geom_point() +
+#     geom_text_repel() +
+#     ggtitle(title, paste("DE genes holm, bespoke logFC_threshold")) +
+#     labs( x = "logFC", y = "-log10(p value)") +  # Customize axis labels here if needed
+#     geom_vline(xintercept=c(-0.6, 0.6), col="red") +
+#     geom_vline(xintercept=c(-logFC_threshold, logFC_threshold), col="green") +
+#     geom_hline(yintercept=-log10(0.05), col="red") +
+#     scale_color_manual(values=c("blue", "black", "red"), breaks=c("DOWN", "NO", "UP"), guide="none")+
+#     theme(axis.title.x = element_text(size = 15),                     # X-axis label font size
+#           axis.title.y = element_text(size = 15)   )
+# 
+# }
+# 
+# holm_logFC_thresh_main <- function(sce_all_filt, df_logFC_threshold, power_flag = "power80")
+# {
+#   # only DPI1 comparison need holm correct
+#   for(cluster_id in unique(sce_all_filt$cluster))
+#   {
+#     # correct for multiple test using holm, only DPI1 need adjust in bsp248
+#     # Files to read and write
+#     in_files <- c(
+#       paste0("Results/DE_edgeR_", sampSet,  "_ctl_PRCV_DPI1_cluster_", cluster_id, ".csv"),
+#       paste0("Results/DE_edgeR_", sampSet,  "_ctl_H1N1_DPI1_cluster_", cluster_id, ".csv"),
+#       paste0("Results/DE_edgeR_", sampSet,  "_H1N1_PRCV_DPI1_cluster_", cluster_id, ".csv") )
+# 
+# 
+#     if (any(!file.exists(in_files)) )
+#     {
+#       print(paste("File not found, skip: cluster", cluster_id))
+#       print(in_files[!file.exists(in_files)] )
+#       next
+#     }
+# 
+#     comparison1 <- read.csv(in_files[1])
+#     comparison2 <- read.csv(in_files[2])
+#     comparison3 <- read.csv(in_files[3])
+# 
+#     comparison1$p_holm <- NA
+#     comparison2$p_holm <- NA
+#     comparison3$p_holm <- NA
+# 
+#     total_ens_id <- union(comparison1$ensemble_id, comparison2$ensemble_id)
+#     total_ens_id <- union(total_ens_id, comparison3$ensemble_id)
+# 
+# 
+#     for (selected_ens_id in total_ens_id)
+#     {
+#       comparison1_p <- comparison1[comparison1$ensemble_id == selected_ens_id , 'PValue']
+#       comparison2_p <- comparison2[comparison2$ensemble_id == selected_ens_id , 'PValue']
+#       comparison3_p <- comparison3[comparison3$ensemble_id == selected_ens_id , 'PValue']
+# 
+#       p_holm <- p.adjust(c(comparison1_p, comparison2_p, comparison3_p), method = "holm")
+#       comparison1[comparison1$ensemble_id == selected_ens_id , 'p_holm'] <- p_holm[1]
+#       comparison2[comparison2$ensemble_id == selected_ens_id , 'p_holm']  <- p_holm[2]
+#       comparison3[comparison3$ensemble_id == selected_ens_id , 'p_holm'] <- p_holm[3]
+# 
+#     }
+# 
+# 
+#     comparison1$p_holm_adjust <- p.adjust(comparison1$p_holm, method='BH')
+#     comparison2$p_holm_adjust <- p.adjust(comparison2$p_holm, method='BH')
+#     comparison3$p_holm_adjust <- p.adjust(comparison3$p_holm, method='BH')
+# 
+#     # output table after holm correction, draw volcano plot and add bespoke logFC threshold, need to do those for DPI12 data too
+# 
+#     mod_data_holm(comparison1, cluster_id, "ctl_PRCV", write_table_flag = FALSE, power_flag, DPI_flag = 1)
+# 
+#     mod_data_holm(comparison2, cluster_id, "ctl_H1N1", write_table_flag = FALSE, power_flag, DPI_flag = 1)
+# 
+#     mod_data_holm(comparison3, cluster_id, "H1N1_PRCV", write_table_flag = FALSE, power_flag, DPI_flag = 1)
+# 
+#   }
+# 
+# 
+#   #  DPI12 only add bespoke logFC threshold
+#   for(cluster_id in unique(sce_all_filt$cluster))
+#   {
+#     # correct for multiple test using holm, only DPI1 need adjust in bsp248
+#     # Files to read and write
+#     in_files <- paste0("Results/DE_edgeR_", sampSet,  "_H1N1_PRCV_DPI12_cluster_", cluster_id, ".csv")
+# 
+# 
+#     if (!file.exists(in_files))
+#     {
+#       print(paste("File not found, skip: cluster", cluster_id))
+#       print(in_files )
+#       next
+#     }
+# 
+#     comparison1 <- read.csv(in_files)
+#     comparison1$p_holm_adjust <- comparison1$p_adjust
+# 
+#     #  draw volcano plot and add bespoke logFC threshold, need to do those for DPI12 data too
+#     mod_data_holm(comparison1, cluster_id, "H1N1_PRCV", write_table_flag = FALSE, power_flag, DPI_flag = 12)
+# 
+#   }
+# 
+# }
+# 
+
+#
 # # when desired power of 80%
 # df_logFC_threshold <- data.frame(
 #   DPI = c(12, 1, 1, 1),
 #   log2FC_threshold = c(1.83, 2.75, 3.18, 3.62),
 #   comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1"))
-# 
+#
 # holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold, power_flag = "power80")
-# 
+#
 # # when desired power of 50%
 # df_logFC_threshold <- data.frame(
 #   DPI = c(12, 1, 1, 1),
 #   log2FC_threshold = c(1.195, 1.98, 2.35, 2.65),
 #   comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
 # )
-# 
+#
 # holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold, power_flag = "power50")
-# 
+#
 # # when desired power of 20%
 # df_logFC_threshold <- data.frame(
 #   DPI = c(12, 1, 1, 1),
 #   log2FC_threshold = c(1.07, 1.43, 1.92, 2.23),
 #   comparison = c("PRCV_H1N1", "PRCV_H1N1", "ctl_PRCV", "ctl_H1N1")
 # )
-# 
+#
 # holm_logFC_thresh_main(sce_all_filt, df_logFC_threshold, power_flag = "power20")
 
 ```
@@ -2056,7 +3241,7 @@ plot VennDiagrams of shared DE genes between main cell population (Macrophages, 
 
 ```{r VennDiagrams functions }
 # library(dplyr)
-# 
+#
 # mod2_data <- function(df_re, i, cell_type)
 # {
 #   y_limit <- 1.0e-20
@@ -2066,34 +3251,34 @@ plot VennDiagrams of shared DE genes between main cell population (Macrophages, 
 #   df_re$diffexpressed[df_re$logFC > 0.6 & df_re$p_adjust < 0.05] <- "UP"
 #   # if log2Foldchange < -0.6 and pvalue < 0.05, set as "DOWN"
 #   df_re$diffexpressed[df_re$logFC < -0.6 & df_re$p_adjust < 0.05] <- "DOWN"
-# 
+#
 #   df_re$delabel <- NA
 #   if(sum(df_re$diffexpressed != "NO") == 0)
 #   {
-# 
+#
 #     print(paste('no qualified DE genes observed in this cluster', i, ', no volcano plot'))
 #     return(df_re)
 #   }else
 #   {
-# 
+#
 #     print(paste('qualified DE genes observed in this cluster', i, ', '))
 #   # df_re$delabel[df_re$diffexpressed != "NO"] <- df_re$symbol[df_re$diffexpressed != "NO"]
 #   # for row/gene who up/down, its delabel column will store the gene symbol again
 #   # for row/gene who is not DE, its delabel column is NA
 #   # Set p-value floor
 #   # df_re$adj.P.Val[df_re$adj.P.Val <= y_limit] <- y_limit
-# 
+#
 #   }
-# 
+#
 #   return(df_re)
 # }
-# 
-# 
-# 
+#
+#
+#
 # modify_data_for_Venn <- function(de.results.any, flag= 'm2', selected_clusters )
 # {
 #   cls <- lapply(de.results.any, class)
-# 
+#
 #   # check which cluster fail to have DE results and remove these clusters in de.results.any
 #   # when a cluster have DE results, class of de.results.any[cluster] is data.frame
 #   # when a cluster fail to have DE results, class of de.results.any[cluster] is character
@@ -2110,26 +3295,26 @@ plot VennDiagrams of shared DE genes between main cell population (Macrophages, 
 #   {
 #     print(i)
 #     output_df <- NULL
-# 
+#
 #     output_df$p_adjust <- p.adjust(de.results.any[[i]]$PValue, method='fdr')
 #     output_df$symbol <- rowData(sce_all_filt)[rownames(de.results.any[[i]]), 'hgnc_symbol']
 #     output_df$ensemble_id <- rownames(de.results.any[[i]])
 #     output_df$logFC <- de.results.any[[i]]$logFC
 #     output_df <- as.data.frame(output_df)
-# 
+#
 #     output_df = output_df[order(output_df$p_adjust) , ]
-# 
+#
 #     # change format GHSR, TNFSF10 into GHSR;TNFSF10 for those duplicates in our DE (edgeR) csv files.
 #     my_vector <- output_df$symbol
-# 
+#
 #     # Function to replace ', ' with ';' for those Ensembl gene ID who has duplicates IDs
 #     replace_comma <- function(x) {
 #       gsub(", ", ";", x)
 #     }
-# 
+#
 #     # Identify elements that match the pattern ', '
 #     matching_indices <- grep(", ", my_vector)
-# 
+#
 #     # Apply the function to identified elements and print each changed element
 #     for (index in matching_indices) {
 #       original_element <- my_vector[index]
@@ -2138,21 +3323,21 @@ plot VennDiagrams of shared DE genes between main cell population (Macrophages, 
 #     }
 #     changed_vector <- sapply(my_vector, replace_comma)
 #     output_df$symbol <- changed_vector
-# 
-# 
+#
+#
 #     cell_type = df_cluster_number_name[df_cluster_number_name$cluster == i, 'named_cluster']
 #     output_df <- mod2_data(output_df, i, cell_type)
 #     output_df$cluster <- i
 #     output_df_main_population <- rbind(output_df_main_population, output_df)
 #     # add column diffexpressed to denote a DE is up or down expressed
 #   }
-# 
-# 
+#
+#
 #   output_df_main_population$symbol[output_df_main_population$symbol == ""] <- output_df_main_population$ensemble_id[output_df_main_population$symbol == ""]
 #   return(output_df_main_population)
-# 
+#
 # }
-# 
+#
 # # Define the aggregation function
 # aggregate_rows <- function(df) {
 #   #   # this version is less strict
@@ -2160,42 +3345,42 @@ plot VennDiagrams of shared DE genes between main cell population (Macrophages, 
 #   # 2.	If a gene is upregulated in one of the clusters, it is considered upregulated in the main population.
 #   # 2.	If a gene is downregulated in one of the clusters, it is considered downregulated in the main population.
 #   # 3.	If a gene is not DE in all clusters, it is considered non DE in the main population.
-# 
+#
 #   # Check if there are any rows with 'UP' or 'DOWN' in 'diffexpressed'
 #   up_down_rows <- df %>% filter(diffexpressed %in% c("UP", "DOWN"))
-# 
+#
 #   if (nrow(up_down_rows) > 0) {
 #     if(nrow(up_down_rows) >= 2 && length(unique(up_down_rows$diffexpressed)) == 1)
 #     {
 #       # print('same direction')
 #     }
-# 
+#
 #     if(length(unique(up_down_rows$diffexpressed)) == 2)
 #     {
 #       print('opposite direction')
 #       print(up_down_rows)
 #     }
 #     # Keep only one of the 'UP' or 'DOWN' rows
-# 
+#
 #     result <- up_down_rows %>% sample_n(1)
 #   } else {
 #     # Randomly select one row if all rows have 'NO' in 'diffexpressed'
 #     result <- df %>% sample_n(1)
 #   }
-# 
+#
 #   return(result)
 # }
-# 
+#
 # aggregate_up_rows <- function(df) {
 #   #   # this version is less strict
 #   # 1.	If a gene is upregulated in one cluster and downregulated in another, I randomly assign it as either up or down in the main population.
 #   # 2.	If a gene is upregulated in one of the clusters, it is considered upregulated in the main population.
 #   # 2.	If a gene is downregulated in one of the clusters, it is considered downregulated in the main population.
 #   # 3.	If a gene is not DE in all clusters, it is considered non DE in the main population.
-# 
+#
 #   # Check if there are any rows with 'UP' or 'DOWN' in 'diffexpressed'
 #   up_down_rows <- df %>% filter(diffexpressed %in% c("UP"))
-# 
+#
 #   if (nrow(up_down_rows) > 0) {
 #     # Keep only one of the 'UP' or 'DOWN' rows
 #     print(up_down_rows)
@@ -2204,10 +3389,10 @@ plot VennDiagrams of shared DE genes between main cell population (Macrophages, 
 #     # Randomly select one row if all rows have 'NO' in 'diffexpressed'
 #     result <- df %>% sample_n(1)
 #   }
-# 
+#
 #   return(result)
 # }
-# 
+#
 # aggregate_rows_strict <- function(df) {
 #   # this version is more strict
 #   # If a gene is upregulated in one cluster and downregulated in another, I now assign it as "not DE" in the main population.
@@ -2216,58 +3401,58 @@ plot VennDiagrams of shared DE genes between main cell population (Macrophages, 
 # #
 #   # Get unique values of 'diffexpressed'
 #   unique_values <- unique(df$diffexpressed)
-# 
+#
 #   # Case 1: All rows have 'DOWN' value
 #   if (all(df$diffexpressed == "DOWN")) {
 #     result <- df %>% sample_n(1)
-# 
+#
 #     # Case 2: All rows have 'UP' value
 #   } else if (all(df$diffexpressed == "UP")) {
 #     result <- df %>% sample_n(1)
-# 
+#
 #     # Case 3: All rows have 'NO' value
 #   } else if (all(df$diffexpressed == "NO")) {
 #     result <- df %>% sample_n(1)
-# 
+#
 #     # Case 4: Rows have mixed 'UP', 'DOWN', 'NO' values
 #   } else {
 #     # Randomly choose one row but set 'diffexpressed' to 'NO'
 #     result <- df %>% sample_n(1)
 #     result$diffexpressed <- "NO"
 #   }
-# 
+#
 #   return(result)
 # }
-# 
+#
 # # to obtain the required Macrophages_Data input for VennDiagrams plot
 # integrete_DE_main_population <- function(de.results.any, selected_clusters = c("5", "10", "12c"),
 #                                          sampSet, main_population )
 # {
 #   output_df_main_population <- modify_data_for_Venn(de.results.any, flag= 'm2', selected_clusters = selected_clusters)
 #   # a large dataframe that merges the DE results for several clusters
-# 
+#
 #   # Apply the function to the data frame
 #   aggregated_data <- output_df_main_population %>%
 #     group_by(ensemble_id) %>%
 #     do(aggregate_rows(.)) %>%
 #     ungroup()
-# 
+#
 #   write.csv(aggregated_data, file = paste0("Results/", sampSet, "_DE_edgeR_", main_population, ".csv"),
 #             row.names = FALSE)
-# 
+#
 #   return(aggregated_data)
 # }
-# 
-# 
+#
+#
 # # add UP DOWN NO lable to DE genes' results
 # Create_Set <- function(Data){
 #   DE_subset <- Data[Data$diffexpressed != "NO",]
 #   # keep the DE genes are up-regulated or down-regulateds
-# 
+#
 #   # remove any DE genes whose symbol column is NA or empty
 #   DE_subset <- DE_subset[!is.na(DE_subset$symbol),]
 #   DE_subset <- DE_subset[DE_subset$symbol != "",]
-# 
+#
 #   # check if any DE genes whose symbol column start with ENSSSCG, and remove those
 #   DE_subset <- DE_subset[!grepl("ENSSSCG", DE_subset$symbol, fixed = TRUE),]
 #   # fixed logical. If TRUE, pattern is a string to be matched as is. Overrides all conflicting arguments.
@@ -2277,13 +3462,13 @@ plot VennDiagrams of shared DE genes between main cell population (Macrophages, 
 #    # give non up-regulated genes value -1
 #   Set[Set == FALSE] <- -1
 #    # add gene name for each value
-# 
+#
 #   Set <- as.integer(Set)
 #   names(Set) <- DE_subset$symbol
 #   return(Set)
 # }
 # # return a named vector of DE genes, with 1 denote up-regulated genes, -1  denote down-regulated genes
-# 
+#
 # # prepare input data to plot Venn Diagrams
 # # save.image(file = paste0('differential_edgeR_',sampSet,'_debug.RData'))
 
@@ -2293,24 +3478,24 @@ plot VennDiagrams of shared DE genes between main cell population (Macrophages, 
 the cluster assignment is based on the slides 'Analysis of scRNA seq data on PRCV samples update 24.07.16.pptx'page 25, but delete cluster 11, 19c in run2. and add plasma cell clusters in B cells main population
 
 ```{r prepare the input data of VennDiagrams by combine multiple clusters into one main population for edgeR DE results}
-# 
+#
 # # back_up = de.results.any
 # head(as.data.frame(de.results.any[2]))
 # #
 # # typeof(de.results.any[1])
-# 
+#
 # if(sampSet == 'run_1' )
 # {
-# 
+#
 #   CD8TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("2", "9a", "14a"),
 #                                                  sampSet, main_population = "CD8T")
 #   # CD8TCells_Data[CD8TCells_Data$symbol == 'LGALS3',]
 #   # table(CD8TCells_Data$diffexpressed)
-# 
+#
 #   Macrophages_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("5", "10", "12c"),
 #                                                  sampSet, main_population = "Macrophages")
 #    # table(aggregated_data$diffexpressed)
-# 
+#
 #   CD4TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("3a", "14c", "17"),
 #                                                  sampSet, main_population = "CD4T")
 #   BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("7", "13", '1', '4', '15'),
@@ -2319,7 +3504,7 @@ the cluster assignment is based on the slides 'Analysis of scRNA seq data on PRC
 #                                                  # sampSet, main_population = "BCells")
 #   # i add plasma cells into B Cells category since there are more DE in plasma cells, worth to have a look at their function
 # }
-# 
+#
 # if(sampSet == 'run_2' )
 # {
 #   Macrophages_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("3", "6", "20"),
@@ -2329,19 +3514,19 @@ the cluster assignment is based on the slides 'Analysis of scRNA seq data on PRC
 #                                                  sampSet, main_population = "CD4T")
 #   # BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("7", "17"),
 #   #                                                sampSet, main_population = "BCells")
-# 
+#
 #   CD8TCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c("1", "9c"),
 #                                                  sampSet, main_population = "CD8T")
 #   BCells_Data <- integrete_DE_main_population(de.results.any, selected_clusters = c('5', '10', '12', '13', '14',
 #                                                                                     '18', "7", "17"), sampSet,
 #                                               main_population = "BCells")
 #   }
-# 
-# 
-# 
-# 
-# 
-# 
+#
+#
+#
+#
+#
+#
 
 
 ```
@@ -2356,51 +3541,51 @@ the cluster assignment is based on the slides 'Analysis of scRNA seq data on PRC
 # # The development version of venndir
 # library(vctrs)
 # library(venndir)
-# 
+#
 # set_colours <- c('#FF999A', '#B2DF8A', '#33A02C', '#A6CEE3')
 # theme_set(theme_minimal(base_size = 35))
-# 
-# 
-# 
-# 
+#
+#
+#
+#
 # DE_genes_Set = list(Macrophages=Create_Set(Macrophages_Data),
 #                  CD4_T_Cells=Create_Set(CD4TCells_Data),
 #                  CD8_T_Cells=Create_Set(CD8TCells_Data),
 #                  B_Cells=Create_Set(BCells_Data))
-# 
+#
 # print(sapply(DE_genes_Set, length))
 # if(sum(sapply(DE_genes_Set, length)) > 0)
 # {
 #   non_empty_DE_genes_Set_flag = TRUE
 #   options("warn"=1)
-# 
+#
 #   venndir(DE_genes_Set, poly_alpha=0.5, proportional=F, set_colors = set_colours, overlap_type="each", verbose = TRUE)
 #   # + ggtitle(paste('edgeR', sampSet, 'Venn Diagrams'))
-# 
+#
 #   library(grid)
 #   png(filename=paste0("Results/", sampSet, "_edgeR_Venn_Diagram.png"), height=1080, width=1600)
 #   options("warn"=-1)
 #   venndir(DE_genes_Set, poly_alpha=0.5, proportional=F, set_colors = set_colours, font_cex = c(3,2,2), overlap_type="each")
 #   # Add a title using grid package
 #   grid.text(paste0(sampSet, " edgeR Venn Diagram"), x = 0.5, y = 0.95, gp = gpar(fontsize = 20))
-# 
+#
 #   dev.off()
 # }else
 # {
 #   print(paste('skip plot venn diagramm because there is no DE genes inside each main population'))
 #   non_empty_DE_genes_Set_flag = FALSE
 # }
-# 
-# 
-# 
+#
+#
+#
 
 ```
 
 create tables of shared genes to accompany venn diagrams
 ```{r create shared-gene-tables}
-# 
+#
 # library(dplyr)
-# 
+#
 # #red for up, blue for down , purple for mix
 # #since changed to append up, down, mixed, to use Excel's conditional formatting
 # set_gene_colour <- function(n_v){
@@ -2420,7 +3605,7 @@ create tables of shared genes to accompany venn diagrams
 #   }
 #   return(colour_vector)
 # }
-# 
+#
 # #create function to convert sets into lists of genes for each possible combination, colour by up or down regulation (purple for both)
 # #convert 4 sets into 15 sets, numerical into vector
 # set_to_df <- function(setlist)
@@ -2431,41 +3616,41 @@ create tables of shared genes to accompany venn diagrams
 #                                      names(setlist$CD8_T_Cells)),
 #                            names(setlist$B_Cells))
 #   # intersect(x, y) finds all rows in both x and y.
-# 
+#
 #   All_4 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% All_4_names],
 #              setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% All_4_names],
 #              setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% All_4_names],
 #              setlist$B_Cells[names(setlist$B_Cells) %in% All_4_names])
-# 
+#
 #   # retrieve DE genes that only exist in one of these 4 main cell populations
 #   Macro_only_DE_genes  <-  setdiff(names(setlist$Macrophages),
 #   c(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells), names(setlist$B_Cells)))
 #   Macro_only <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_only_DE_genes])
 #   # setdiff(x, y) finds all rows in x that aren't in y.
 #   # find DE genes in Macrophages but not in reaming 3 main cell populations then output the rows where such genes locate
-# 
-# 
+#
+#
 #   CD4_only <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% setdiff(names(setlist$CD4_T_Cells), c(names(setlist$Macrophages), names(setlist$CD8_T_Cells), names(setlist$B_Cells)))])
-# 
+#
 #   CD8_only <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% setdiff(names(setlist$CD8_T_Cells), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells), names(setlist$B_Cells)))])
-# 
+#
 #   B_only <- bind_rows(setlist$B_Cells[names(setlist$B_Cells) %in% setdiff(names(setlist$B_Cells), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)))])
-# 
+#
 #   # retrieve DE genes that only exist in 2 of these 4 main cell populations, there are 6 different combinations
 #   Macro_CD4_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), c(names(setlist$CD8_T_Cells), names(setlist$B_Cells)))
-# 
+#
 #   Macro_CD4 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD4_names], setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% Macro_CD4_names])
-# 
+#
 #   Macro_CD8_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$CD8_T_Cells)), c(names(setlist$CD4_T_Cells), names(setlist$B_Cells)))
-# 
+#
 #   Macro_CD8 <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_CD8_names], setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% Macro_CD8_names])
 #   #
 #   Macro_B_names <- setdiff(intersect(names(setlist$Macrophages), names(setlist$B_Cells)), c(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)))
-# 
+#
 #   Macro_B <- bind_rows(setlist$Macrophages[names(setlist$Macrophages) %in% Macro_B_names], setlist$B_Cells[names(setlist$B_Cells) %in% Macro_B_names])
 #   #
 #   CD4_CD8_names <- setdiff(intersect(names(setlist$CD4_T_Cells), names(setlist$CD8_T_Cells)), c(names(setlist$Macrophages), names(setlist$B_Cells)))
-# 
+#
 #   CD4_CD8 <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD4_CD8_names], setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_CD8_names])
 #   #
 #   CD4_B_names <- setdiff(intersect(names(setlist$CD4_T_Cells), names(setlist$B_Cells)), c(names(setlist$Macrophages), names(setlist$CD8_T_Cells)))
@@ -2473,8 +3658,8 @@ create tables of shared genes to accompany venn diagrams
 #   #
 #   CD8_B_names <-setdiff(intersect(names(setlist$B_Cells), names(setlist$CD8_T_Cells)), c(names(setlist$Macrophages), names(setlist$CD4_T_Cells)))
 #   CD8_B <- bind_rows(setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD8_B_names],setlist$B_Cells[names(setlist$B_Cells) %in% CD8_B_names])
-# 
-# 
+#
+#
 #   # # retrieve DE genes that only exist in 3 of these 4 main cell populations,
 #   # there are 3 possible combinations
 #   Macro_CD4_CD8_names <- setdiff(intersect(intersect(names(setlist$Macrophages), names(setlist$CD4_T_Cells)), names(setlist$CD8_T_Cells)), names(setlist$B_Cells))
@@ -2490,7 +3675,7 @@ create tables of shared genes to accompany venn diagrams
 #   CD4_CD8_B <- bind_rows(setlist$CD4_T_Cells[names(setlist$CD4_T_Cells) %in% CD4_CD8_B_names],
 #                          setlist$CD8_T_Cells[names(setlist$CD8_T_Cells) %in% CD4_CD8_B_names],
 #                          setlist$B_Cells[names(setlist$B_Cells) %in% CD4_CD8_B_names])
-# 
+#
 #   All_Combs <- list(Macro_only, CD4_only, CD8_only, B_only, Macro_CD4, Macro_CD8, Macro_B, CD4_CD8, CD4_B, CD8_B, Macro_CD4_CD8, Macro_CD4_B, Macro_CD8_B, CD4_CD8_B, All_4)
 #   All_Names <- c("Macrophages Only", "CD4 T Cells Only", "CD8 T Cells Only", "B Cells Only", "Macrophages/CD4 T Cells",  "Macrophages/CD8 T Cells", "Macrophages/B Cells", "CD4 T Cells/CD8 T Cells", "CD4 T Cells/B Cells", "CD8 T Cells/B Cells", "Macrophages/CD4 T Cells/CD8 T Cells", "Macrophages/CD4 T Cells/B Cells", "Macrophages/CD8 T Cells/B Cells", "CD4 T Cells/CD8 T Cells/B Cells", "All 4")
 #   # make vectors same length (fill with NA)
@@ -2511,20 +3696,20 @@ create tables of shared genes to accompany venn diagrams
 #   }
 #   Export_DF <- Export_DF[,names(Export_DF) != "temp"]
 #   return(Export_DF)
-# 
+#
 #   }
 # if(non_empty_DE_genes_Set_flag)
 # {
 #   setlist = DE_genes_Set
 #   write.csv(set_to_df(DE_genes_Set), paste0("Results/", sampSet, "edgeR_shared_genes_table.csv"))
-# 
+#
 # }else
 # {
 #   print(paste('skip create shared-gene-tables because there is no DE genes inside each main population'))
 # }
-# 
-# 
-# 
+#
+#
+#
 
 
 
@@ -2540,10 +3725,10 @@ Save everything
 
 ```{r save rds}
 
-#
+
 save.image(file = paste0('differential_edgeR_',sampSet,'.RData'))
 sessionInfo()
-# saveRDS(sce_all_filt, file=paste0('sce_',sampSet,'_cluster_filt.rds'))
+# saveRDS(sce_all_filt, file=paste0('sce_',sampSet,'_after_DA_DE.rds'))
 
 
 
