@@ -2300,14 +2300,7 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
                   vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
               color = "black",
               size = 4) +  # Increase text size inside bars
-    theme(axis.text.x = element_text(angle = 90, size = 10),  # Increase x-axis text size
-          axis.text.y = element_text(size = 10),  # Increase y-axis text size
-          axis.title.x = element_text(size = 10, face = "bold"),  # Increase x-axis label size
-          axis.title.y = element_text(size = 10, face = "bold"),  # Increase y-axis label size
-          plot.title = element_text(size = 10, face = "bold", hjust = 0.5),  # Increase title size and center
-          strip.text = element_text(size = 9),  # Increase facet label size
-          legend.text = element_text(size = 10),  # Increase legend text size
-          legend.title = element_text(size = 10, face = "bold")) +  # Increase legend title size
+    theme(axis.text.x = element_text(angle = 90), text=element_text(size=20)) +  
     facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
     theme(strip.background = element_rect(color = "black", fill = "white"))  # Add black rectangle border
   print(p1)
