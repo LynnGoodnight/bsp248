@@ -89,8 +89,7 @@ if(bsp_num == "bsp_248")
 
 selected_cluster <- stringr::str_replace_all(selected_cluster, fixed(" "), "") 
 # remove any blank 
-# save.image('cluster_subset_uniform_debug.RData')
-# load('cluster_subset_uniform_debug.RData')
+
 print(selected_cluster)
 # head(sce_all$cluster)
 # extract cells belong to selected initial clusters
@@ -192,7 +191,7 @@ sce_corrected_clust <- clusterCells(sce_main_group_corrected,
 
 table(sce_corrected_clust)
 sce_main_group_corrected$cluster <- sce_corrected_clust
-sce_main_group$cluster <- sce_corrected_clust
+sce_main_group$cluster <- sce_main_group_corrected$cluster
 
 
 ```
@@ -680,7 +679,7 @@ if(bsp_num == 'bsp_248' & sampSet == "adaptive_immune_cells")
 
 ```
 
-# output DE genes within each clusters and save image
+# output DE genes within each clusters, draw marker genes expression heatmap 
 Finally, we need to re-run our marker scoring because we have added some clusters. 
 
 
@@ -724,8 +723,8 @@ for(i in unique(names(marker.info.corrected)) )
 
 
 
-  # pfx <- paste0(work_dir,"markers_",sampSet,'_k',clustK)
-  # dir.create(pfx, showWarnings = FALSE)
+  pfx <- paste0(work_dir,"markers_",sampSet,'_k',clustK)
+  dir.create(pfx, showWarnings = FALSE)
 
 
 
@@ -756,28 +755,43 @@ saveWorkbook(wb, file = paste0('Results/clustering_', sampSet, '_',
 
 
 
-# additional visulizations
+```{r save workspace image and create file for r shiny visulization}
+# save the R variables
+setwd(work_dir)
+
+save.image(file = paste0("cluster_subset_", sampSet, "_k", clustK, "_with_refined_cluster.RData"))
+
+
+saveRDS(sce_main_group_corrected, file = paste0('sce_subset_',sampSet,'_corrected_with_refined_cluster.rds'))
+saveRDS(sce_main_group, file = paste0('sce_subset_',sampSet,'_with_refined_cluster.rds'))
+
+
+```
+
 
 ```{r draw marker genes expression heatmap for selected genes across clusters, fig.width= 12, fig.height=8}
-# sce_main_group <- readRDS("sce_subset_non_immune_cells_with_named_refined_cluster.rds")
-# sampSet = "non_immune_cells"
 library(stringr)
 library(plyr)
 library(dplyr)
 library(readxl)
 library(tidyr)
 
+# sampSet = "non_immune_cells"
+# this rds is actually produced after run differential script, so in the future, i will move this chunk into differential script
+sce_main_group <- readRDS(paste0("sce_subset_", sampSet, "_with_named_refined_cluster.rds"))
 
-if(bsp_num == "bsp_248" )
+if(bsp_num == "bsp_248" | bsp_num == "bsp_306")
 {
-
+##################################################################### 
+  # obtain the selected marker genes want to display in heatmap
   if(sampSet == "innate_immune_cells")
   {
     df_cell_type_annotation <- read_excel("references/heatmap porcine_innate_clusters_genes_ordered.xlsx")    
-   
+    
   }else if(sampSet == "adaptive_immune_cells")
   {
     df_cell_type_annotation <- read_excel("references/heatmap procine adaptive gene ID.xlsx")    
+    
   }else if(sampSet == "non_immune_cells")
   {
     df_cell_type_annotation <- read_excel("references/heatmap porcine Non immune cell gene list.xlsx")    
@@ -786,7 +800,7 @@ if(bsp_num == "bsp_248" )
   df_cell_type_annotation <- as.data.frame(df_cell_type_annotation)
   # head(df_cell_type_annotation)
 
-  selected_marker_genes <- df_cell_type_annotation[,1]
+  selected_marker_genes <- df_cell_type_annotation[, 1]
   defining_genes_final <- unique(selected_marker_genes) 
 
 
@@ -817,22 +831,23 @@ sce_selected_markers <- sce_selected_markers[rownames(sce_selected_markers) %in%
 selected_markers_matrix_average_expression <- as.data.frame(logcounts(aggregateAcrossCells(sce_selected_markers, ids=sce_selected_markers$cluster, statistics='mean', use.assay.type='logcounts')))
 selected_markers_matrix_average_expression$gene_symbol <- rownames(selected_markers_matrix_average_expression)
 # head(selected_markers_matrix_average_expression)
+
 ################################################# 
 
-# change the df from short format to long format to facilitate plotting 
+# change the selected_markers_matrix_average_expression from short format data frame to long format to facilitate plotting 
 average_expression_df <- tidyr::pivot_longer(data = selected_markers_matrix_average_expression,
                                       cols = !gene_symbol,
                                       names_to = "Cluster",  values_to = "AverageExpression" )
-
+# head(average_expression_df)
   if(sampSet == "innate_immune_cells")
   {
-    df_cell_type_annotation <- read.csv("munual_annotation_innate_immune_cells.csv", header = FALSE)    
+    df_cell_type_annotation <- read.csv("references/munual_annotation_innate_immune_cells.csv", header = FALSE)    
   }else if(sampSet == "adaptive_immune_cells")
   {
-    df_cell_type_annotation <- read.csv("munual_annotation_adaptive_immune_cells.csv", header = FALSE)  
+    df_cell_type_annotation <- read.csv("references/munual_annotation_adaptive_immune_cells.csv", header = FALSE)  
   }else if(sampSet == "non_immune_cells")
   {
-    df_cell_type_annotation <- read.csv("munual_annotation_non_immune_cells.csv", header = FALSE)    
+    df_cell_type_annotation <- read.csv("references/munual_annotation_non_immune_cells.csv", header = FALSE)    
   }
 
 
@@ -874,7 +889,7 @@ plot_data$clean_cell_type = str_wrap(plot_data$clean_cell_type, width = var_widt
 
 plot_data = plot_data[ !stringr::str_detect(plot_data$clean_cell_type, "remove"), ]
 
-if(sampSet == "non_immune_cells")
+if(sampSet == "non_immune_cells" & bsp_num == "bsp_248")
 {
  plot_data = plot_data[ !stringr::str_detect(plot_data$clean_cell_type, "noise"), ]
  plot_data = plot_data[ !stringr::str_detect(plot_data$clean_cell_type, "Not known"), ]   
@@ -898,7 +913,7 @@ celltype_map$y <- -1  # Place the annotation below the lowest gene row
 
 ################################################# 
 # order cell types displayed in the plot
-if(bsp_num == "bsp_248")
+if(bsp_num == "bsp_248" )
 {
   if(sampSet == "innate_immune_cells")
   {
@@ -914,7 +929,6 @@ if(bsp_num == "bsp_248")
   {
     desired_cell_type_order <- read_excel("references/Heatmap cell type order 25.10.07.xlsx", 
                                         col_names = TRUE, sheet = "non-immune structural cells")   
-    
   }
   
   # Specify desired order as a character or integer vector
@@ -936,7 +950,9 @@ if(bsp_num == "bsp_248")
 }else
 {
   desired_cell_type_order <- unique(sce_main_group$named_cluster)  
-  # automatic alphabetic ordering 
+  # automatic alphabetic ordering if we don't have designated order
+  desired_cell_type_order <- str_wrap(desired_cell_type_order, width = var_width)
+  
 }
 # head(desired_cell_type_order)
 
@@ -1001,8 +1017,9 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
     scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) +
     facet_grid(. ~ clean_cell_type,  scales="free_x") +
     guides(fill = guide_legend(override.aes = list(size = 5)))+
-    theme(strip.text.x = element_text(size = 5)  ) +
-    coord_cartesian(clip = "off")
+    theme(strip.text.x = element_text(size = 5), text=element_text(size=20),
+      legend.text = element_text(size = 30) ) +
+    coord_cartesian(clip = "off") 
 
 # add space inside strips
 # scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) 
@@ -1015,16 +1032,16 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
     width_of_plot <- n_clusters * 5 + 5
   }
 
-  print(p1)
+  # print(p1)
   
-  filename1 <- paste0('Results/clustering_markers_per_clusters_', sampSet, '_heatmap.png')
+  filename1 <- paste0('Results/clustering_markers_per_clusters_', sampSet, '_heatmap.svg')
   # png(filename = filename1,
   #     height=1500, width=1500, res = 130)
   # print(p1)
   # dev.off()
   ggsave( filename = filename1,
     plot = p1,
-    height = 1500/130, # tranfer pixels into inches
+    height = 1700/130, # tranfer pixels into inches
     width  = width_of_plot,
     units  = "in",
     dpi    = 300)
@@ -1040,24 +1057,12 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
 ```
 
 
+```{r draw subset composition per sample stacked bar plot }
 
-
-```{r draw subset composition per sample stacked bar plot, fig.width=10 }
-if(bsp_num == "bsp_306")
-{
-  population_divide <- readxl::read_excel("references/Population devision.xlsx")
-  sce_all <- readRDS("sce_all_with_refined_annotated_cluster.rds") 
-  
-}else if(bsp_num == "bsp_248")
-{
-  population_divide <- readxl::read_excel("references/Population_devision_subset_proportion.xlsx")
-  sce_all <- readRDS("sce_all_with_named_subcluster.rds") 
-}
+population_divide <- readxl::read_excel("references/Population devision.xlsx")
 population_divide <- as.data.frame(population_divide)
 # selected_main_group <-  as.character(population_divide[1, 1])
-getwd()
-
-
+sce_all <- readRDS("sce_all_with_refined_annotated_cluster.rds") 
 sce_all$cluster <- as.integer(sce_all$cluster)
 df_subset_cell_number <- NULL
 
@@ -1074,26 +1079,25 @@ for (selected_main_group in c("innate_immune_cells", "adaptive_immune_cells", "n
   print(paste(selected_main_group, selected_cluster))
   # head(sce_all$cluster)
   # extract cells belong to selected initial clusters
-  sce_main_group_composition <- sce_all[ , (sce_all$cluster %in% selected_cluster) ]
-  subset_cell_number <- table(sce_main_group_composition$Sample)
+  sce_main_group_selected_cluster <- sce_all[ , (sce_all$cluster %in% selected_cluster) ]
+  subset_cell_number <- table(sce_main_group_selected_cluster$Sample)
   if(is.null(df_subset_cell_number))
   {
-    df_subset_cell_number <- data.frame(table(sce_main_group_composition$Sample))
+    df_subset_cell_number <- data.frame(table(sce_main_group_selected_cluster$Sample))
     
     colnames(df_subset_cell_number) <- c("sample_id", selected_main_group)
     
   }else
   {
-    cell_number_summary <- as.data.frame(table(sce_main_group_composition$Sample)) 
+    cell_number_summary <- as.data.frame(table(sce_main_group_selected_cluster$Sample)) 
     colnames(cell_number_summary) <- c("sample_id", selected_main_group)
     df_subset_cell_number <- base::merge(df_subset_cell_number, cell_number_summary)
 
   }
 }
-# rowSums(df_subset_cell_number[,-1])
+rowSums(df_subset_cell_number[,-1])
 #################################################
 head(colData(sce_all))
-unique(colData(sce_all)$condition)
 condition_DPI <- unique(colData(sce_all)[, c("condition", "cull_date", "Sample")])
 condition_DPI$combined <- paste(condition_DPI[,1], condition_DPI[,2], sep = "_")
     
@@ -1106,47 +1110,33 @@ df_subset_cell_number <- base::merge(df_subset_cell_number, condition_DPI[, c("S
 df_subset_proportion <- df_subset_cell_number[,2:4]/rowSums(df_subset_cell_number[,2:4])
 df_subset_proportion$"sample_id"  <- df_subset_cell_number[,1]
 df_subset_proportion$"condition_DPI"  <- df_subset_cell_number[, 5]
+# library(tidyr)
 
 
-saveRDS(df_subset_proportion, paste0(bsp_num, "_df_subset_proportion.rds"))
 
 #################################################
-library(tidyr)
 df_subset_proportion_long <- df_subset_proportion %>% 
   tidyr::pivot_longer(
     cols = 1:3, 
     names_to = "subset",
     values_to = "proportion")
 
-
+# library(ggpubr)
+# library(ggrepel)
 p <- ggplot(df_subset_proportion_long, aes(fill=subset, y=proportion, x=sample_id)) +
   geom_bar(position='stack', stat='identity') +
   facet_wrap( ~ condition_DPI,  scales="free_x") +
   labs(title=paste0("SUBSET compostion "))
 
-
-p <- ggplot(df_subset_proportion_long, aes(fill=subset, y=proportion, x=sample_id)) +
-  geom_bar(position='stack', stat='identity') +
-  facet_wrap(. ~ condition_DPI,  scales="free_x", ncol = 6) +
-  labs(title=paste(bsp_num, "subset compostion ")) +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
 print(p)
-
 
 ```
 
 
+```{r sessionInfo}
 
-```{r save workspace image and create file for r shiny visulization}
-# save the R variables
-setwd(work_dir)
-
-save.image(file = paste0(sampSet, "_", "k", clustK, "_with_refined_cluster.RData"))
-
-
-saveRDS(sce_main_group_corrected, file = paste0('sce_subset_',sampSet,'_corrected_with_refined_cluster.rds'))
-saveRDS(sce_main_group, file = paste0('sce_subset_',sampSet,'_with_refined_cluster.rds'))
 sessionInfo()
 
 ```
+
+
