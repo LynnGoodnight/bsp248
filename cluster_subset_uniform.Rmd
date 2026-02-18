@@ -1017,7 +1017,8 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
     scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) +
     facet_grid(. ~ clean_cell_type,  scales="free_x") +
     guides(fill = guide_legend(override.aes = list(size = 5)))+
-    theme(text=element_text(size=20) ) +
+    theme(text=element_text(size=20) ,
+           strip.text.x = element_blank()) +
     coord_cartesian(clip = "off") 
 # strip.text.x = element_text(size = 5), 
 # add space inside strips
