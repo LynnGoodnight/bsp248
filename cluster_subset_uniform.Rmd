@@ -1017,10 +1017,9 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
     scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) +
     facet_grid(. ~ clean_cell_type,  scales="free_x") +
     guides(fill = guide_legend(override.aes = list(size = 5)))+
-    theme(strip.text.x = element_text(size = 5), text=element_text(size=20),
-      legend.text = element_text(size = 30) ) +
+    theme(text=element_text(size=20) ) +
     coord_cartesian(clip = "off") 
-
+# strip.text.x = element_text(size = 5), 
 # add space inside strips
 # scale_y_discrete(expand = expansion(add = c(0.2, 1.5))) 
 # 0.5 extra units at the bottom (for your annotation bar below genes)
@@ -1059,76 +1058,76 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
 
 ```{r draw subset composition per sample stacked bar plot }
 
-population_divide <- readxl::read_excel("references/Population devision.xlsx")
-population_divide <- as.data.frame(population_divide)
-# selected_main_group <-  as.character(population_divide[1, 1])
-sce_all <- readRDS("sce_all_with_refined_annotated_cluster.rds") 
-sce_all$cluster <- as.integer(sce_all$cluster)
-df_subset_cell_number <- NULL
-
-for (selected_main_group in c("innate_immune_cells", "adaptive_immune_cells", "non_immune_cells")) 
-{
-  selected_cluster <- population_divide[ , colnames(population_divide) == selected_main_group]
-  selected_cluster <- selected_cluster[-1]
-  selected_cluster <- as.integer(selected_cluster)
-  
-  selected_cluster <- stringr::str_replace_all(selected_cluster, (" "), "") 
-  selected_cluster <- selected_cluster[!is.na(selected_cluster)]
-  
-  # remove any blank 
-  print(paste(selected_main_group, selected_cluster))
-  # head(sce_all$cluster)
-  # extract cells belong to selected initial clusters
-  sce_main_group_selected_cluster <- sce_all[ , (sce_all$cluster %in% selected_cluster) ]
-  subset_cell_number <- table(sce_main_group_selected_cluster$Sample)
-  if(is.null(df_subset_cell_number))
-  {
-    df_subset_cell_number <- data.frame(table(sce_main_group_selected_cluster$Sample))
-    
-    colnames(df_subset_cell_number) <- c("sample_id", selected_main_group)
-    
-  }else
-  {
-    cell_number_summary <- as.data.frame(table(sce_main_group_selected_cluster$Sample)) 
-    colnames(cell_number_summary) <- c("sample_id", selected_main_group)
-    df_subset_cell_number <- base::merge(df_subset_cell_number, cell_number_summary)
-
-  }
-}
-rowSums(df_subset_cell_number[,-1])
-#################################################
-head(colData(sce_all))
-condition_DPI <- unique(colData(sce_all)[, c("condition", "cull_date", "Sample")])
-condition_DPI$combined <- paste(condition_DPI[,1], condition_DPI[,2], sep = "_")
-    
-
-df_subset_cell_number <- base::merge(df_subset_cell_number, condition_DPI[, c("Sample", "combined")],
-                                     by.x = "sample_id", by.y = "Sample", all.x = TRUE)
-
-# divides each cell value with corresponding
-# row sum value
-df_subset_proportion <- df_subset_cell_number[,2:4]/rowSums(df_subset_cell_number[,2:4])
-df_subset_proportion$"sample_id"  <- df_subset_cell_number[,1]
-df_subset_proportion$"condition_DPI"  <- df_subset_cell_number[, 5]
-# library(tidyr)
-
-
-
-#################################################
-df_subset_proportion_long <- df_subset_proportion %>% 
-  tidyr::pivot_longer(
-    cols = 1:3, 
-    names_to = "subset",
-    values_to = "proportion")
-
-# library(ggpubr)
-# library(ggrepel)
-p <- ggplot(df_subset_proportion_long, aes(fill=subset, y=proportion, x=sample_id)) +
-  geom_bar(position='stack', stat='identity') +
-  facet_wrap( ~ condition_DPI,  scales="free_x") +
-  labs(title=paste0("SUBSET compostion "))
-
-print(p)
+# population_divide <- readxl::read_excel("references/Population devision.xlsx")
+# population_divide <- as.data.frame(population_divide)
+# # selected_main_group <-  as.character(population_divide[1, 1])
+# sce_all <- readRDS("sce_all_with_refined_annotated_cluster.rds") 
+# sce_all$cluster <- as.integer(sce_all$cluster)
+# df_subset_cell_number <- NULL
+# 
+# for (selected_main_group in c("innate_immune_cells", "adaptive_immune_cells", "non_immune_cells")) 
+# {
+#   selected_cluster <- population_divide[ , colnames(population_divide) == selected_main_group]
+#   selected_cluster <- selected_cluster[-1]
+#   selected_cluster <- as.integer(selected_cluster)
+#   
+#   selected_cluster <- stringr::str_replace_all(selected_cluster, (" "), "") 
+#   selected_cluster <- selected_cluster[!is.na(selected_cluster)]
+#   
+#   # remove any blank 
+#   print(paste(selected_main_group, selected_cluster))
+#   # head(sce_all$cluster)
+#   # extract cells belong to selected initial clusters
+#   sce_main_group_selected_cluster <- sce_all[ , (sce_all$cluster %in% selected_cluster) ]
+#   subset_cell_number <- table(sce_main_group_selected_cluster$Sample)
+#   if(is.null(df_subset_cell_number))
+#   {
+#     df_subset_cell_number <- data.frame(table(sce_main_group_selected_cluster$Sample))
+#     
+#     colnames(df_subset_cell_number) <- c("sample_id", selected_main_group)
+#     
+#   }else
+#   {
+#     cell_number_summary <- as.data.frame(table(sce_main_group_selected_cluster$Sample)) 
+#     colnames(cell_number_summary) <- c("sample_id", selected_main_group)
+#     df_subset_cell_number <- base::merge(df_subset_cell_number, cell_number_summary)
+# 
+#   }
+# }
+# rowSums(df_subset_cell_number[,-1])
+# #################################################
+# head(colData(sce_all))
+# condition_DPI <- unique(colData(sce_all)[, c("condition", "cull_date", "Sample")])
+# condition_DPI$combined <- paste(condition_DPI[,1], condition_DPI[,2], sep = "_")
+#     
+# 
+# df_subset_cell_number <- base::merge(df_subset_cell_number, condition_DPI[, c("Sample", "combined")],
+#                                      by.x = "sample_id", by.y = "Sample", all.x = TRUE)
+# 
+# # divides each cell value with corresponding
+# # row sum value
+# df_subset_proportion <- df_subset_cell_number[,2:4]/rowSums(df_subset_cell_number[,2:4])
+# df_subset_proportion$"sample_id"  <- df_subset_cell_number[,1]
+# df_subset_proportion$"condition_DPI"  <- df_subset_cell_number[, 5]
+# # library(tidyr)
+# 
+# 
+# 
+# #################################################
+# df_subset_proportion_long <- df_subset_proportion %>% 
+#   tidyr::pivot_longer(
+#     cols = 1:3, 
+#     names_to = "subset",
+#     values_to = "proportion")
+# 
+# # library(ggpubr)
+# # library(ggrepel)
+# p <- ggplot(df_subset_proportion_long, aes(fill=subset, y=proportion, x=sample_id)) +
+#   geom_bar(position='stack', stat='identity') +
+#   facet_wrap( ~ condition_DPI,  scales="free_x") +
+#   labs(title=paste0("SUBSET compostion "))
+# 
+# print(p)
 
 ```
 
