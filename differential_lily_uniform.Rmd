@@ -2254,8 +2254,6 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
   melted_df <- merge(melted_df ,summary_df[,c('named_cluster', 'cell_type')] ,by=c("named_cluster"))
 
 
-
-  # Plotting overview
   p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
                               fill = variable)) +
     geom_bar(stat = 'identity', position = 'identity') +
@@ -2266,10 +2264,26 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
     theme_minimal() + scale_y_continuous(labels = abs) +
     geom_text(aes(label = value,
                   vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
-              color = "black", size = 3) +
-    theme(axis.text.x = element_text(angle = 90), text=element_text(size=20) ) +
-    facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
-    theme(strip.background = element_rect(color = "black", fill = "white", linewidth = 1))  # Add black rectangle border
+              color = "black", size = 7) +
+    theme(axis.text.x = element_text(angle = 90), text=element_text(size=20),
+           strip.text.x = element_blank(), strip.background = element_blank()) +
+    facet_grid(~ cell_type, scales = "free_x", space = "free_x")
+
+  # # Plotting overview
+  # p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
+  #                             fill = variable)) +
+  #   geom_bar(stat = 'identity', position = 'identity') +
+  #   labs(x = 'named_cluster', y = 'Number of DE Genes (absolute value)') +
+  #   ggtitle(label = sampSet,
+  #         subtitle = paste(prefix, 'edgeR summary of DE genes per cluster') ) +
+  #   scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
+  #   theme_minimal() + scale_y_continuous(labels = abs) +
+  #   geom_text(aes(label = value,
+  #                 vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
+  #             color = "black", size = 3) +
+  #   theme(axis.text.x = element_text(angle = 90), text=element_text(size=20) ) +
+  #   facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
+  #   theme(strip.background = element_rect(color = "black", fill = "white", linewidth = 1))  # Add black rectangle border
 
   print(p1)
 
@@ -2285,22 +2299,8 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
 
   # Save the plot with larger dimensions for better clarity
   png(filename = paste0('Results/DE_edgeR_', sampSet, prefix, '_DEG_num_overview.png'),
-      height = 1000, width = 2000, res = 150)  # Adjust height, width, and resolution for better clarity
+      height = 1500, width = 2000, res = 150)  # Adjust height, width, and resolution for better clarity
   
-  p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
-                              fill = variable)) +
-    geom_bar(stat = 'identity', position = 'identity') +
-    labs(x = 'named_cluster', y = 'Number of DE Genes (absolute value)') +
-    ggtitle(label = sampSet,
-          subtitle = paste(prefix, 'edgeR summary of DE genes per cluster') ) +
-    scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
-    theme_minimal() + scale_y_continuous(labels = abs) +
-    geom_text(aes(label = value,
-                  vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
-              color = "black", size = 3) +
-    theme(axis.text.x = element_text(angle = 90), text=element_text(size=20),
-           strip.text.x = element_blank(), strip.background = element_blank()) +
-    facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
      
   # theme(strip.background = element_rect(color = "black", fill = "white", linewidth = 1)) 
   # p1 <- ggplot(melted_df, aes(x = named_cluster, y = ifelse(variable == "DOWN", -value, value),
@@ -2320,6 +2320,7 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
   #   theme(axis.text.x = element_text(angle = 90), text=element_text(size=20)) +  
   #   facet_grid(~ cell_type, scales = "free_x", space = "free_x") +
   #   theme(strip.background = element_rect(color = "black", fill = "white"))  # Add black rectangle border
+  
   print(p1)
   dev.off()
   return(melted_df)

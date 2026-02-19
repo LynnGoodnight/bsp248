@@ -1034,14 +1034,14 @@ p  <- ggplot(plot_data, aes(x = Cluster, y = gene_symbol)) +
 
   # print(p1)
   
-  filename1 <- paste0('Results/clustering_markers_per_clusters_', sampSet, '_heatmap.svg')
+  filename1 <- paste0('Results/clustering_markers_per_clusters_', sampSet, '_heatmap.png')
   # png(filename = filename1,
   #     height=1500, width=1500, res = 130)
   # print(p1)
   # dev.off()
   ggsave( filename = filename1,
     plot = p1,
-    height = 1700/130, # tranfer pixels into inches
+    height = 2200/130, # tranfer pixels into inches
     width  = width_of_plot,
     units  = "in",
     dpi    = 300)
