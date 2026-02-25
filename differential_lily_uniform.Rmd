@@ -733,13 +733,22 @@ if(bsp_num == "bsp_247")
 
   spleen <- sce_all_filt_DA[, (sce_all_filt_DA$tissue == "spleen") ]
   all_tissue <- sce_all_filt_DA
+  Ctl_spleen_RB1B_kidney <- sce_all_filt_DA[, (sce_all_filt_DA$condition == "CONTROL") | (sce_all_filt_DA$tissue == "kidney") ]  
+  Ctl_spleen_RB1B_reproduce <- sce_all_filt_DA[, (sce_all_filt_DA$condition == "CONTROL") | (sce_all_filt_DA$tissue == "testes") ]    
+  
   
   tissue_within_RB1B <- sce_all_filt_DA[, (sce_all_filt_DA$condition == "RB1B-GFP") ]
 
   head(colData(sce_all_filt)$tissue)
   unique(colData(sce_all_filt)$tissue)
-  subsets <- list("spleen" = spleen, "all_tissue" = all_tissue,
+  subsets <- list("spleen" = spleen, "all_tissue" = all_tissue, 
                   "tissue_within_RB1B" = tissue_within_RB1B)
+  
+  # subsets <- list("spleen" = spleen, "all_tissue" = all_tissue, "spleen_kidney" = Ctl_spleen_RB1B_kidney,
+  #                 "spleen_reproduce" = Ctl_spleen_RB1B_reproduce,
+  #                 "tissue_within_RB1B" = tissue_within_RB1B)
+  
+  
 }
 
 
@@ -966,7 +975,10 @@ if(bsp_num == "bsp_247" )
 {
   DA_ctl_RB1B <- conduct_DA(subsets[-3], selected_comparison = 1)
   output_DA_excel(DA_ctl_RB1B, file_name_tag='_ctl_RB1B_')
-
+  # DA_ctl_RB1B <- conduct_DA(subsets[-5], selected_comparison = 1)
+  # output_DA_excel(DA_ctl_RB1B, file_name_tag='_ctl_RB1B_')
+  
+  
   DA_RB1B_spleen_Kidney <- conduct_DA(subsets["tissue_within_RB1B"], selected_comparison = 1)
   output_DA_excel(DA_RB1B_spleen_Kidney, file_name_tag='_RB1B_spleen_Kidney_') 
   DA_RB1B_spleen_reproductive <- conduct_DA(subsets["tissue_within_RB1B"], selected_comparison = 2)
@@ -1096,6 +1108,7 @@ direct_t_test <- function(x = DPI_1, selected_DPI = "DPI_1")
 
 
 }
+
 if(bsp_num == "bsp_248" | bsp_num == "bsp_306")
 {
   direct_t_test(DPI_1, selected_DPI = "DPI_1")
@@ -1325,7 +1338,7 @@ visulize_abundance(sce_all_filt, annot)
 
 Let's plot box plots of proportions between 2 conditions to have a look.
 
-```{r draw proportion value box plots to visulize cell proportion between conditions}
+```{r draw box plots to visulize cell proportion between conditions}
 
 
 # in bsp185, we only run code below to plot those clusters whose composition changed significantly in certain main populations
@@ -2263,7 +2276,7 @@ DRAW_up_down_summary_barplot <- function(summary_df, prefix = "_t1_t2_DPI1")
     scale_fill_manual(values = c('UP' = 'red', 'DOWN' = 'blue')) +
     theme_minimal() + scale_y_continuous(labels = abs) +
     geom_text(aes(label = value,
-                  vjust = ifelse(variable == "DOWN", 1.2, -0.5)),  # Position text inside or outside the bar
+                  vjust = ifelse(variable == "DOWN", 1, 0)),  # Position text inside or outside the bar
               color = "black", size = 7) +
     theme(axis.text.x = element_text(angle = 90), text=element_text(size=20),
            strip.text.x = element_blank(), strip.background = element_blank()) +
