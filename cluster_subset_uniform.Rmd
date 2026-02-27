@@ -894,7 +894,11 @@ if(sampSet == "non_immune_cells" & bsp_num == "bsp_248")
  plot_data = plot_data[ !stringr::str_detect(plot_data$clean_cell_type, "noise"), ]
  plot_data = plot_data[ !stringr::str_detect(plot_data$clean_cell_type, "Not known"), ]   
 }
+library(openxlsx)
 
+write.xlsx(plot_data,
+           file = paste0('Results/clustering_markers_per_clusters_heatmap_table', sampSet, '.xlsx'),
+           rowNames = FALSE)
 # generate a vector store color of each cell type used for plot
 
 
